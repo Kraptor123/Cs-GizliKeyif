@@ -38,11 +38,11 @@ subprojects {
 
     cloudstream {
         // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "user/repo")
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/Kraptor123/Cs-GizliKeyif")
     }
 
     android {
-        namespace = "com.example"
+        namespace = "com.kraptor"
 
         defaultConfig {
             minSdk = 21
