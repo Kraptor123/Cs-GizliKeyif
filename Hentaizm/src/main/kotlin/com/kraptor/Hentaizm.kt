@@ -10,6 +10,23 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import kotlin.collections.mapOf
 
+private val cloudflareKiller by lazy { CloudflareKiller() }
+private val interceptor      by lazy { CloudflareInterceptor(cloudflareKiller) }
+
+class CloudflareInterceptor(private val cloudflareKiller: CloudflareKiller): Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request  = chain.request()
+        val response = chain.proceed(request)
+        val doc      = Jsoup.parse(response.peekBody(1024 * 1024).string())
+
+        if (doc.html().contains("Just a moment")) {
+            return cloudflareKiller.intercept(chain)
+        }
+
+        return response
+    }
+}
+
 class Hentaizm : MainAPI() {
     override var mainUrl = "https://www.hentaizm6.online"
     override var name = "Hentaizm"
@@ -199,7 +216,7 @@ class Hentaizm : MainAPI() {
 
             url?.let { iframe ->
                 if (iframe.contains("https://short.icu")) {
-                  val iframe =  app.get(iframe, allowRedirects = true).url
+                  val iframe =  app.get(iframe, allowRedirects = true, interceptor = interceptor).url
                     loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
                 } else
                 Log.d("kraptor_$name", "iframe » $iframe")
