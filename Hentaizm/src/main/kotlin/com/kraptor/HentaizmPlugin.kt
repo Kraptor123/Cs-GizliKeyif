@@ -9,5 +9,6 @@ import android.content.Context
 class HentaizmPlugin: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Hentaizm())
+        registerExtractorAPI(VideoHu())
     }
 }

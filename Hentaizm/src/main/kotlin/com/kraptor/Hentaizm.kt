@@ -5,6 +5,7 @@ import android.util.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import kotlin.collections.mapOf
@@ -191,11 +192,16 @@ class Hentaizm : MainAPI() {
                 val vidUrl = rawGet.selectFirst("a")?.attr("href")?.replace("../../","")
                if (vidUrl.toString().contains("ay.live")) {
                     vidUrl?.substringAfter("url=")
-                } else
-                  fixUrlNull(rawGet.selectFirst("iframe")?.attr("src"))
+                }
+               else
+                fixUrlNull(rawGet.selectFirst("iframe")?.attr("src"))
             }
 
             url?.let { iframe ->
+                if (iframe.contains("https://short.icu")) {
+                  val iframe =  app.get(iframe, allowRedirects = true).url
+                    loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
+                } else
                 Log.d("kraptor_$name", "iframe » $iframe")
                 loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
             }
