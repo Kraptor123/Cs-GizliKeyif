@@ -4,7 +4,7 @@ version = 0
 cloudstream {
     authors     = listOf("kraptor")
     language    = "tr"
-    description = "Seatfilmizle sitemizde, donma yaşamadan Türkçe dublaj ve altyazılı filmleri ile dizileri muhteşem 1080p full HD kalitesinde izleyebilirsiniz."
+    description = "Seatfilmiaazle sitemizde, donma yaşamadan Türkçe dublaj ve altyazılı filmleri ile dizileri muhteşem 1080p full HD kalitesinde izleyebilirsiniz."
 
     /**
      * Status int as the following:
