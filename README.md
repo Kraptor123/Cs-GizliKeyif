@@ -1,58 +1,33 @@
-**⚠️ This is currently under development, dont use it yet if you're not comfortable with constantly merging new changes**
+# 📺 cs-kekikanime
 
-# `Cloudstream3 Plugin Repo Template`
+**Kısa kod** = **Cs-GizliKeyif**
 
-Template for a [Cloudstream3](https://github.com/recloudstream) plugin repo
+## ❗Uyarı
 
-**⚠️ Make sure you check "Include all branches" when using this template**
+**Tüm eklentiler 18 yaş ve üzeri kullanıcalar için uygundur.**
 
- 
-## Getting started with writing your first plugin
+## 🎬 Eklentiler
 
-This template includes 1 example plugin.
+- **Hentaizm**
 
-1. Open the root build.gradle.kts, read the comments and replace all the placeholders
-2. Familiarize yourself with the project structure. Most files are commented
-3. Build or deploy your first plugin using:
-   - Windows: `.\gradlew.bat ExampleProvider:make` or `.\gradlew.bat ExampleProvider:deployWithAdb`
-   - Linux & Mac: `./gradlew ExampleProvider:make` or `./gradlew ExampleProvider:deployWithAdb`
+## 💾 Kurulum
 
+1. **[cloudstream/pre-release](https://github.com/recloudstream/cloudstream/releases/tag/pre-release)** _Adresinden güncel APK dosyasını indirip kurun._
+2. **Uygulamanın yüklü olduğu cihazda** _[depoyu otomatik yüklemek için tıklayın](https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/refs/heads/builds/plugins.json)_
+- **veya**
+- `Depo ekle` _butonuyla **manuel** ekleme yapmak isteyen arkadaşlar için_ `gizlikeyif` _**kısa kod**u mevcuttur._ `Depo ismi` _kısmını boş bırakarak_ `Depo URL'si` _kısmına_ `gizlikeyif` yazarak `Depo ekle` _demeniz yeterli.._
 
-## Granting All Files Access on Newer Android Devices
+## 💡 Faydalı Linkler
 
-For local plugin testing, you need to grant the app "All Files Access" on newer Android devices (Android 11 and above). Here’s how to do it:
+- [Tanıtım Videosu](https://www.youtube.com/watch?v=CiYK7zrP00c)
+- [Diğer Eklentiler](https://rentry.org/cs3-repos)
+- [Eklenti Listesi Wiki](https://cloudstream.miraheze.org/wiki/List_of_extensions)
+- [Open Subtitles Desteği (Torrent veya Yabancı Eklentiler İçin)](https://recloudstream.github.io/csdocs/integrations/opensubtitles/)
+- [anicompat (Fazlaca Anime Eklenti Desteği)](https://youtu.be/0Gl48lL7e9Y)
+- [Eklenti Kodlama](https://www.youtube.com/watch?v=gWECdddixyA)
 
-### Using ADB
+---
 
-* `adb shell appops set --uid PACKAGE_NAME MANAGE_EXTERNAL_STORAGE allow`
-* Replace `PACKAGE_NAME` with the name of the package for the Cloudstream3 version you are using:
-   - debug: `com.lagradost.cloudstream3.prerelease.debug`
-   - prerelease: `com.lagradost.cloudstream3.prerelease`
-   - stable: `com.lagradost.cloudstream3`
-
-### Manually
-
-1. **Open Settings**: Go to your device’s Settings menu.
-
-2. **Navigate to Special Access**:
-   - Tap on "Apps & notifications" or "Apps".
-   - Select "Special app access" or "Special access".
-
-3. **Select All Files Access**:
-   - Tap on "All files access".
-   - It may be under the three vertical dots menu towards the top of the screen.
-
-4. **Grant Access to the App**: Find the app in the list and tap on it to toggle it, if it is not already enabled.
-
-6. **Restart the App**: Close and reopen the app to apply the changes.
-
-
-## License
-
-Everything in this repo is released into the public domain. You may use it however you want with no conditions whatsoever
-
-
-## Attribution
-
-This template as well as the gradle plugin and the whole plugin system is **heavily** based on [Aliucord](https://github.com/Aliucord).
-*Go use it, it's a great mobile discord client mod!*
+<a href="https://github.com/Kraptor123/cs-kekikanime/graphs/contributors?selectedMetric=additions" target="_blank">
+  <img src="https://contrib.rocks/image?repo=Kraptor123/Cs-GizliKeyif" />
+</a>
