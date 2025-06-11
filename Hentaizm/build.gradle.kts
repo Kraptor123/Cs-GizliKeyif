@@ -4,7 +4,7 @@ version = 0
 cloudstream {
     authors     = listOf("kraptor")
     language    = "tr"
-    description = "Seatfilmiaaaazle sitemizde, donma yaşamadan Türkçe dublaj ve altyazılı filmleri ile dizileri muhteşem 1080p full HD kalitesinde izleyebilirsiniz."
+    description = "hentaizm, türkçe altyazılı hentai izle."
 
     /**
      * Status int as the following:
@@ -14,6 +14,6 @@ cloudstream {
      * 3: Beta only
     **/
     status  = 1 // will be 3 if unspecified
-    tvTypes = listOf("Movie")
-    iconUrl = "https://www.google.com/s2/favicons?domain=www.setfilmizle.de&sz=%size%"
+    tvTypes = listOf("NSFW")
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.hentaizm6.online/core/views/086f35f924/fav.ico&size=64"
 }
