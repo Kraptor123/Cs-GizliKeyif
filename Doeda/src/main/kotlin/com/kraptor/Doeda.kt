@@ -15,7 +15,7 @@ class Doeda : MainAPI() {
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.Movie)
+    override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
         "${mainUrl}/category/1080p-porno-one/"       to    "1080p",
