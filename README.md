@@ -1,10 +1,10 @@
 # 📺 cs-kekikanime
 
-**Kısa kod** = **Cs-GizliKeyif**
+**Kısa kod** = **gizlikeyif**
 
 ## ❗Uyarı
 
-**Tüm eklentiler 18 yaş ve üzeri kullanıcalar için uygundur.**
+**Tüm eklentiler 18 yaş ve üzeri kullanıcılar için uygundur.**
 
 ## 🎬 Eklentiler
 
