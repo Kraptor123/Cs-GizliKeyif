@@ -199,9 +199,16 @@ class Doeda : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("${mainUrl}/?s=${query}").document
-
-        return document.select("div.thumb").mapNotNull { it.toSearchResult() }
+        val results = mutableListOf<SearchResponse>()
+        for (page in 1..4) {
+            val url = "$mainUrl/page/$page/?s=${query}"
+            val document = app.get(url).document
+            val pageResults = document
+                .select("div.thumb")
+                .mapNotNull { it.toSearchResult() }
+            results += pageResults
+        }
+        return results
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -211,8 +218,6 @@ class Doeda : MainAPI() {
 
         return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
-
-    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
         val documentapp = app.get(url)
@@ -224,23 +229,13 @@ class Doeda : MainAPI() {
         val description     = document.selectFirst("div.entry-content.rich-content p")?.text()?.trim()
         val year            = document.selectFirst("span.time")?.text()?.substringAfterLast(" ")?.trim()?.toIntOrNull()
         val tags            = document.select("#extras a").map { it.text() }
-        val recommendations = document.select("div.thumb").mapNotNull { it.toRecommendationResult() }
 
         return newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl       = poster
             this.plot            = description
             this.year            = year
             this.tags            = tags
-            this.recommendations = recommendations
         }
-    }
-
-    private fun Element.toRecommendationResult(): SearchResponse? {
-        val title     = this.selectFirst("a")?.attr("title") ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
