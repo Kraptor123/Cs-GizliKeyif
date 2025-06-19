@@ -243,7 +243,7 @@ class Hentaizm : MainAPI() {
                 val onclick = element.attr("onclick")
                 val rawUrl = onclick.substringAfter("ajxget('").substringBefore("'").replace("../../","")
                 val fixRaw = fixUrlNull(rawUrl).toString()
-                val rawGet = app.get(fixRaw, referer = "${mainUrl}/", cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750201309")
+                val rawGet = app.get(fixRaw, referer = "${mainUrl}/", cookies = cookies
                 ).document
 //                Log.d("kraptor_$name", "rawGet » $rawGet")
                 val vidUrl = rawGet.selectFirst("a")?.attr("href")?.replace("../../","")
