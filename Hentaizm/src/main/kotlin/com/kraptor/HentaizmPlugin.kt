@@ -10,5 +10,6 @@ class HentaizmPlugin: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Hentaizm())
         registerExtractorAPI(VideoHu())
+        registerExtractorAPI(CloudMailRu())
     }
 }

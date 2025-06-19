@@ -6,13 +6,14 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.extractors.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.network.CloudflareKiller
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.jsoup.Jsoup
 import kotlin.collections.mapOf
+
 
 private val cloudflareKiller by lazy { CloudflareKiller() }
 private val interceptor      by lazy { CloudflareInterceptor(cloudflareKiller) }
@@ -107,11 +108,42 @@ class Hentaizm : MainAPI() {
         "Yüze Oturma" to "Yüze Oturma"
     )
 
+    object SessionManager {
+        private var cachedCookies: Map<String, String>? = null
+        private val loginMutex = Mutex()
+
+        suspend fun login(): Map<String, String> {
+            cachedCookies?.let {
+                return it
+            }
+            return loginMutex.withLock {
+                cachedCookies?.let {
+                    return@withLock it
+                }
+
+                val fresh = app.post(
+                    "https://www.hentaizm6.online/giris",
+                    data = mapOf(
+                        "user" to "igtbyprzkxtigpoqbj@enotj.com",
+                        "pass" to "AU#@d4524\$>yv#V",
+                        "redirect_to" to "https://www.hentaizm6.online"
+                    )
+                ).cookies
+
+                cachedCookies = fresh
+                fresh
+            }
+        }
+    }
+
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val cookies = SessionManager.login()
+//        Log.d("kraptor_${this.name}", "hesap » ${cookies}")
         val document = app.get(
             "${mainUrl}/anime-ara?t=tur&q=$page&tur=${request.data}",
             referer = "${mainUrl}/kategoriler-2",
-            cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750959107|5bNzJ2fB5o6kJjapBhxT1Mv2SoEWBX8butj4UEOmr4M|a7c72a517c891e373e37643770da4c4bfd6d2d65c97129e68ed7a13d6039d7a2")
+            cookies = cookies
         ).document
         val home = document.select("div.moviefilm").mapNotNull { it.toMainPageResult() }
 //        Log.d("kraptor_${this.name}", "document » ${document}")
@@ -131,7 +163,8 @@ class Hentaizm : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("${mainUrl}/?s=${query}").document
+        val cookies = SessionManager.login()
+        val document = app.get("${mainUrl}/?s=${query}", cookies = cookies).document
 
         return document.select("div.moviefilm").mapNotNull { it.toSearchResult() }
     }
@@ -147,9 +180,11 @@ class Hentaizm : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
+        val cookies = SessionManager.login()
+
         val document = app.get(
             url,
-            cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750201309|ruoecMLpexQK9lbznQrrEkTBgPjKPGyBZgFeG4CLyIZ|35e85012a0e702c4a2aca5e5253e4b4649beb3885d4365ea674481969ddc6818")
+            cookies = cookies
         ).document
 
         val title = document.selectFirst("div.filmcontent h1")?.text()?.trim() ?: return null
@@ -190,10 +225,11 @@ class Hentaizm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        val cookies = SessionManager.login()
         Log.d("kraptor_$name", "data » ${data}")
         val document = app.get(
             data,
-            cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750201309|ruoecMLpexQK9lbznQrrEkTBgPjKPGyBZgFeG4CLyIZ|35e85012a0e702c4a2aca5e5253e4b4649beb3885d4365ea674481969ddc6818")
+            cookies = cookies
         ).document
 
         val anchors = document.select("div.filmicerik a")
@@ -207,7 +243,7 @@ class Hentaizm : MainAPI() {
                 val onclick = element.attr("onclick")
                 val rawUrl = onclick.substringAfter("ajxget('").substringBefore("'").replace("../../","")
                 val fixRaw = fixUrlNull(rawUrl).toString()
-                val rawGet = app.get(fixRaw, referer = "${mainUrl}/", cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750201309|ruoecMLpexQK9lbznQrrEkTBgPjKPGyBZgFeG4CLyIZ|35e85012a0e702c4a2aca5e5253e4b4649beb3885d4365ea674481969ddc6818")
+                val rawGet = app.get(fixRaw, referer = "${mainUrl}/", cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750201309")
                 ).document
 //                Log.d("kraptor_$name", "rawGet » $rawGet")
                 val vidUrl = rawGet.selectFirst("a")?.attr("href")?.replace("../../","")
