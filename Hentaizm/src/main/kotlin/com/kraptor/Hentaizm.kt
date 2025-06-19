@@ -111,7 +111,7 @@ class Hentaizm : MainAPI() {
         val document = app.get(
             "${mainUrl}/anime-ara?t=tur&q=$page&tur=${request.data}",
             referer = "${mainUrl}/kategoriler-2",
-            cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750201309|ruoecMLpexQK9lbznQrrEkTBgPjKPGyBZgFeG4CLyIZ|35e85012a0e702c4a2aca5e5253e4b4649beb3885d4365ea674481969ddc6818")
+            cookies = mapOf("wordpress_logged_in_1d71d407c5a965a3f58396033421c9f5" to "igtbyprzkxtigpoqbj@enotj.com|1750959107|5bNzJ2fB5o6kJjapBhxT1Mv2SoEWBX8butj4UEOmr4M|a7c72a517c891e373e37643770da4c4bfd6d2d65c97129e68ed7a13d6039d7a2")
         ).document
         val home = document.select("div.moviefilm").mapNotNull { it.toMainPageResult() }
 //        Log.d("kraptor_${this.name}", "document » ${document}")
