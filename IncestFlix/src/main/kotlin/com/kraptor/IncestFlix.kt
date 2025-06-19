@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class IncestFlix : MainAPI() {
-    override var mainUrl              = "https://www.incestflix.com/"
+    override var mainUrl              = "https://www.incestflix.com"
     override var name                 = "IncestFlix"
     override val hasMainPage          = true
     override var lang                 = "en"
