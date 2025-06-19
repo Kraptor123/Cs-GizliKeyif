@@ -191,7 +191,7 @@ class Hentaizm : MainAPI() {
         val poster = fixUrlNull(document.selectFirst("div.filmcontent img")?.attr("src"))
         val description =
             document.selectFirst("table.anime-detay > tbody:nth-child(1) > tr:nth-child(5) > td:nth-child(1)")?.text()
-                ?.trim()
+                ?.trim()?.replace("\\","")
         val year =
             document.selectFirst("dıv.anime-detay > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(1) > b:nth-child(1)")
                 ?.text()?.trim()?.toIntOrNull()
