@@ -6,10 +6,6 @@
 
 **Tüm eklentiler 18 yaş ve üzeri kullanıcılar için uygundur.**
 
-## 🎬 Eklentiler
-
-- **Hentaizm**
-
 ## 💾 Kurulum
 
 1. **[cloudstream/pre-release](https://github.com/recloudstream/cloudstream/releases/tag/pre-release)** _Adresinden güncel APK dosyasını indirip kurun._
