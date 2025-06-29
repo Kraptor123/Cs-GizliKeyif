@@ -9,7 +9,7 @@ import org.jsoup.nodes.Document
 
 @Suppress("ClassName")
 class xHamster : MainAPI() {
-    override var mainUrl = "https://tr.xhamster.com"
+    override var mainUrl = "https://xhamster.com"
     override var name = "xHamster"
     override val hasMainPage = true
     override var lang = "en"
@@ -21,7 +21,7 @@ class xHamster : MainAPI() {
 //        "${mainUrl}/newest/"  to "En Yeniler",
 //        "${mainUrl}/most-viewed/weekly/"  to "Haftalık En Çok Görüntülenenler",
 //        "${mainUrl}/most-viewed/monthly/" to "Aylık En Çok Görüntülenenler",
-        "${mainUrl}/most-viewed/"  to "Tüm Zamanların En Çok İzlenenleri",
+//        "${mainUrl}/most-viewed/"  to "Tüm Zamanların En Çok İzlenenleri",
         "${mainUrl}/4k/"                       to "4K",
         "${mainUrl}/hd/2?quality=1080p/"       to "1080p",
         "${mainUrl}/categories/teen/"          to "Genç",
@@ -74,7 +74,7 @@ class xHamster : MainAPI() {
         val href = fixUrl(this.selectFirst("a.video-thumb-info__name")!!.attr("href"))
         val posterUrl = fixUrlNull(this.select("img.thumb-image-container__image").attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
