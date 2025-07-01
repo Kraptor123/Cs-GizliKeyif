@@ -1,6 +1,7 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 package com.kraptor
 
+import android.annotation.SuppressLint
 import android.util.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
@@ -159,7 +160,7 @@ class Hentaizm : MainAPI() {
 //        Log.d("kraptor_${name}", "href » ${href}")
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -174,7 +175,7 @@ class Hentaizm : MainAPI() {
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")?.replace("../..", "")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
@@ -208,7 +209,7 @@ class Hentaizm : MainAPI() {
             )
         }
 
-        return newAnimeLoadResponse(title, url, TvType.Anime, true) {
+        return newAnimeLoadResponse(title, url, TvType.NSFW, true) {
             this.posterUrl = poster
             this.plot = description
             this.year = year
@@ -219,6 +220,7 @@ class Hentaizm : MainAPI() {
         }
     }
 
+    @SuppressLint("SuspiciousIndentation")
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,

@@ -127,7 +127,7 @@ class IncestFlix : MainAPI() {
         val posterUrl = fixUrlNull(this.selectFirst("div.img-overflow")?.attr("style")?.substringBefore(")")
             ?.substringAfter("url("))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
 
@@ -140,7 +140,7 @@ class IncestFlix : MainAPI() {
         val recommendations = document.select("a#videolink").mapNotNull { it.toRecommendationResult() }
         val actors          = document.select("a.studiolink1").map { Actor(it.text()) }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl       = poster
             this.tags            = tags
             this.recommendations = recommendations
@@ -154,7 +154,7 @@ class IncestFlix : MainAPI() {
         val posterUrl = fixUrlNull(this.selectFirst("div.img-overflow")?.attr("style")?.substringBefore(")")
             ?.substringAfter("url("))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
