@@ -5,10 +5,13 @@ package com.kraptor
 import android.util.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.APIHolder.unixTimeMS
+import com.lagradost.cloudstream3.ui.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.network.CloudflareKiller
+import kotlinx.coroutines.delay
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.jsoup.Jsoup
@@ -21,12 +24,12 @@ class LiveCamRips : MainAPI() {
     override var name                 = "LiveCamRips"
     override val hasMainPage          = true
     override var lang                 = "en"
-    override val hasQuickSearch       = true
+    override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
     override var sequentialMainPage   = true        // * https://recloudstream.github.io/dokka/-cloudstream/com.lagradost.cloudstream3/-main-a-p-i/index.html#-2049735995%2FProperties%2F101969414
-    override var sequentialMainPageDelay = 600L // ? 0.25 saniye
-    override var sequentialMainPageScrollDelay = 600L // ? 0.25 saniye
-    private var sessionCookies: String? = null
+    override var sequentialMainPageDelay       = 550L // ? 0.25 saniye
+    override var sequentialMainPageScrollDelay = 550L // ? 0.25 saniye
+    private var sessionCookies: Map<String, String>? = null
     private val initMutex = Mutex()
 
     private suspend fun initSession() {
@@ -40,10 +43,10 @@ class LiveCamRips : MainAPI() {
                 "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0",
                 "Referer" to "${mainUrl}/",
             ))
-            sessionCookies = resp.cookies.toString()
+            sessionCookies = resp.cookies
+            Log.d("kraptor_LiveCamRips", "🔄 cookie alindi = $sessionCookies")
         }
     }
-
 
     private val cloudflareKiller by lazy { CloudflareKiller() }
     private val interceptor      by lazy { CloudflareInterceptor(cloudflareKiller) }
@@ -54,8 +57,8 @@ class LiveCamRips : MainAPI() {
             val response = chain.proceed(request)
             val doc      = Jsoup.parse(response.peekBody(1024 * 1024).string())
 
-            if (doc.html().contains("Just a moment") || doc.html().contains("verifying")) {
-                Log.d("kraptor_livecamrips", "!!cloudflare geldi!!")
+            if (doc.html().contains("Just a moment")) {
+                Log.d("kraptor_livecamrips", "cloudflare geldi!")
                 return cloudflareKiller.intercept(chain)
             }
 
@@ -64,27 +67,25 @@ class LiveCamRips : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/category/Female/" to "Latest",
+//        "${mainUrl}/category/Female/" to "Latest",
         "${mainUrl}/tag/18/"                      to "18",
         "${mainUrl}/tag/petite/"                  to "Petite",
-        "${mainUrl}/tag/smalltits/"               to "Small Tits",
+//        "${mainUrl}/tag/smalltits/"               to "Small Tits",
 //        "${mainUrl}/tag/milf/"                    to "Milf",
-        "${mainUrl}/tag/skinny/"                  to "Skinny",
+//        "${mainUrl}/tag/skinny/"                  to "Skinny",
         "${mainUrl}/tag/cute/"                    to "Cute",
-        "${mainUrl}/tag/latina/"                  to "Latina",
+//        "${mainUrl}/tag/latina/"                  to "Latina",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         initSession()
-        val cookies = sessionCookies.toString()
-        Log.d("kraptor_$name", "cookies = ${cookies}")
-        val document = app.get("${request.data}/$page", interceptor = interceptor, headers = mapOf(
+        waitForHomeDelay()
+        val document = app.get("${request.data}/$page", cookies = sessionCookies!!, interceptor = interceptor, headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language" to "en-US,en;q=0.5",
             "Cache-Control" to "no-cache",
             "Connection" to "keep-alive",
             "DNT" to "1",
-            "Cookies" to cookies,
             "Host" to "livecamrips.su",
             "Pragma" to "no-cache",
             "Priority" to "u=0, i",
@@ -117,25 +118,21 @@ class LiveCamRips : MainAPI() {
         }
     }
 
+     suspend fun waitForHomeDelay() {
+        val delta = sequentialMainPageScrollDelay + lastHomepageRequest - unixTimeMS
+        if (delta < 0) return
+        delay(delta)
+    }
+
     override suspend fun search(query: String): List<SearchResponse> {
-        val cookies = sessionCookies.toString()
-        val document = app.get("${mainUrl}/search/${query}/1",interceptor = interceptor , headers = mapOf(
+        initSession()
+        waitForHomeDelay()
+        val document = app.get("${mainUrl}/search/${query}/1",interceptor = interceptor , cookies = sessionCookies!!, headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language" to "en-US,en;q=0.5",
-            "Cache-Control" to "no-cache",
-            "Connection" to "keep-alive",
-            "DNT" to "1",
-            "Cookies" to cookies,
-            "Host" to "livecamrips.su",
-            "Pragma" to "no-cache",
-            "Priority" to "u=0, i",
             "Referer" to "${mainUrl}/",
             "Sec-Fetch-Dest" to "document",
             "Sec-Fetch-Mode" to "navigate",
             "Sec-Fetch-Site" to "same-origin",
-            "Sec-Fetch-User" to "?1",
-            "Sec-GPC" to "1",
-            "Upgrade-Insecure-Requests" to "1",
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
         )).document
 
@@ -157,11 +154,12 @@ class LiveCamRips : MainAPI() {
         }
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
+//    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val cookies = sessionCookies.toString()
-        val document = app.get(url, interceptor = interceptor, headers = mapOf(
+        initSession()
+        waitForHomeDelay()
+        val document = app.get(url, interceptor = interceptor, cookies = sessionCookies!!, headers = mapOf(
                 "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language" to "en-US,en;q=0.5",
             "Cache-Control" to "no-cache",
@@ -170,7 +168,6 @@ class LiveCamRips : MainAPI() {
             "Host" to "livecamrips.su",
             "Pragma" to "no-cache",
             "Priority" to "u=0, i",
-            "Cookies" to cookies,
             "Referer" to url,
             "Sec-Fetch-Dest" to "document",
             "Sec-Fetch-Mode" to "navigate",
@@ -183,7 +180,6 @@ class LiveCamRips : MainAPI() {
 
         val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
         val poster          = fixUrlNull(document.selectFirst("img.img-fluid")?.attr("src"))
-        Log.d("kraptor_$name", "poster = ${poster}")
         val posterHeaders   = mapOf(
             "Referer" to "${mainUrl}/",
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
@@ -215,15 +211,22 @@ class LiveCamRips : MainAPI() {
         val title     = this.selectFirst("div:nth-child(2) > a:nth-child(1) > span")?.text() ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val posterHeaders   = mapOf(
+            "Referer" to "${mainUrl}/",
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
+        )
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+            this.posterHeaders = posterHeaders
+        }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         Log.d("kraptor_$name", "data » ${data}")
-        val cookies = sessionCookies.toString()
-        val document = app.get(data, interceptor = interceptor, headers = mapOf(
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        initSession()
+        val document = app.get(data, interceptor = interceptor, cookies = sessionCookies!!, headers = mapOf(
+            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language" to "en-US,en;q=0.5",
             "Cache-Control" to "no-cache",
             "Connection" to "keep-alive",
@@ -232,7 +235,6 @@ class LiveCamRips : MainAPI() {
             "Pragma" to "no-cache",
             "Priority" to "u=0, i",
             "Referer" to data,
-            "Cookies" to cookies,
             "Sec-Fetch-Dest" to "document",
             "Sec-Fetch-Mode" to "navigate",
             "Sec-Fetch-Site" to "same-origin",
