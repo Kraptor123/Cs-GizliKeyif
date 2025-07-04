@@ -11,6 +11,12 @@ buildscript {
         maven("https://jitpack.io")
     }
 
+    configurations.all {
+        resolutionStrategy {
+            force("com.github.vidstige:jadb:1.2.1")
+        }
+    }
+
     dependencies {
         classpath("com.android.tools.build:gradle:8.7.3")
         // Cloudstream gradle plugin which makes everything work and builds plugins
