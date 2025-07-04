@@ -20,7 +20,7 @@ class LiveCamRips : MainAPI() {
     override var mainUrl              = "https://livecamrips.su"
     override var name                 = "LiveCamRips"
     override val hasMainPage          = true
-    override var lang                 = "tr"
+    override var lang                 = "en"
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
     override var sequentialMainPage   = true        // * https://recloudstream.github.io/dokka/-cloudstream/com.lagradost.cloudstream3/-main-a-p-i/index.html#-2049735995%2FProperties%2F101969414
@@ -119,7 +119,7 @@ class LiveCamRips : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val cookies = sessionCookies.toString()
-        val document = app.get("${mainUrl}/search/${query}/1",interceptor = interceptor , headers = mapOf(
+        val document = app.get("${mainUrl}/search/${query}/",interceptor = interceptor , headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language" to "en-US,en;q=0.5",
             "Cache-Control" to "no-cache",
