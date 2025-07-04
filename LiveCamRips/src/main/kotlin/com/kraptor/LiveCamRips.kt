@@ -124,7 +124,6 @@ class LiveCamRips : MainAPI() {
             "Sec-Fetch-Site" to "same-origin",
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
         )).document
-
         return document.select("div.col-xl-3").mapNotNull { it.toSearchResult() }
     }
 
@@ -136,14 +135,11 @@ class LiveCamRips : MainAPI() {
             "Referer" to "${mainUrl}/",
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
         )
-
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
             this.posterHeaders = posterHeaders
         }
     }
-
-//    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
         initSession()
