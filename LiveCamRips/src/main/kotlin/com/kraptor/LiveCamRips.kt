@@ -5,13 +5,10 @@ package com.kraptor
 import android.util.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.APIHolder.unixTimeMS
-import com.lagradost.cloudstream3.ui.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.network.CloudflareKiller
-import kotlinx.coroutines.delay
 import okhttp3.Interceptor
 import okhttp3.Response
 import org.jsoup.Jsoup
@@ -79,7 +76,6 @@ class LiveCamRips : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         initSession()
-        waitForHomeDelay()
         val document = app.get("${request.data}/$page", cookies = sessionCookies!!, interceptor = interceptor, headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language" to "en-US,en;q=0.5",
@@ -118,15 +114,8 @@ class LiveCamRips : MainAPI() {
         }
     }
 
-     suspend fun waitForHomeDelay() {
-        val delta = sequentialMainPageScrollDelay + lastHomepageRequest - unixTimeMS
-        if (delta < 0) return
-        delay(delta)
-    }
-
     override suspend fun search(query: String): List<SearchResponse> {
         initSession()
-        waitForHomeDelay()
         val document = app.get("${mainUrl}/search/${query}/1",interceptor = interceptor , cookies = sessionCookies!!, headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Referer" to "${mainUrl}/",
@@ -158,7 +147,6 @@ class LiveCamRips : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         initSession()
-        waitForHomeDelay()
         val document = app.get(url, interceptor = interceptor, cookies = sessionCookies!!, headers = mapOf(
                 "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language" to "en-US,en;q=0.5",
@@ -224,7 +212,6 @@ class LiveCamRips : MainAPI() {
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         Log.d("kraptor_$name", "data » ${data}")
-        initSession()
         val document = app.get(data, interceptor = interceptor, cookies = sessionCookies!!, headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language" to "en-US,en;q=0.5",
