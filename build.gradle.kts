@@ -71,6 +71,8 @@ subprojects {
         val cloudstream by configurations
         val implementation by configurations
 
+        // https://mvnrepository.com/artifact/com.github.vidstige/jadb
+        implementation("com.github.vidstige:jadb:1.2.1")
         // Stubs for all cloudstream classes
         cloudstream("com.lagradost:cloudstream3:pre-release")
 
