@@ -15,7 +15,7 @@ class Temel : MainAPI() {
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.Movie)
+    override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
         "${mainUrl}/tur/aile/"      to "Aile",
@@ -36,7 +36,7 @@ class Temel : MainAPI() {
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -50,7 +50,7 @@ class Temel : MainAPI() {
         val href      = fixUrlNull(this.selectFirst("div.title a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
@@ -69,7 +69,7 @@ class Temel : MainAPI() {
         val actors          = document.select("span.valor a").map { Actor(it.text()) }
         val trailer         = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl       = poster
             this.plot            = description
             this.year            = year
@@ -87,11 +87,11 @@ class Temel : MainAPI() {
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("Temel", "data » ${data}")
+        Log.d("kraptor_$name", "data = ${data}")
         val document = app.get(data).document
 
         // TODO:
