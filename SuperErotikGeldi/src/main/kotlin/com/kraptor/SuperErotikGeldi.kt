@@ -24,7 +24,8 @@ class SuperErotikGeldi : MainAPI() {
         "${mainUrl}/hdizle/category/yesilcam-erotik-izle/page/"   to "Yeşilçam Erotik",
         "${mainUrl}/hdizle/category/hd-erotik-filmler-izle/page/" to "Erotik Filmler",
         "${sinezyUrl}/izle/erotik-film-izle/"                     to "Sinezy Erotik",
-        "${sinezyUrl}/izle/yetiskin-film/"                        to "Sinezy Yetişkin +18"
+        "${sinezyUrl}/izle/yetiskin-film/"                        to "Sinezy Yetişkin +18",
+        "${mainUrl}/izle/turkce-altyazili-promo/"                 to "Sinezy Altyazılı Porno"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
