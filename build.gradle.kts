@@ -10,13 +10,6 @@ buildscript {
         // Shitpack repo which contains our tools and dependencies
         maven("https://jitpack.io")
     }
-
-    configurations.all {
-        resolutionStrategy {
-            force("com.github.vidstige:jadb:1.2.1")
-        }
-    }
-
     dependencies {
         classpath("com.android.tools.build:gradle:8.7.3")
         // Cloudstream gradle plugin which makes everything work and builds plugins
@@ -77,11 +70,8 @@ subprojects {
         val cloudstream by configurations
         val implementation by configurations
 
-        // https://mvnrepository.com/artifact/com.github.vidstige/jadb
-        implementation("com.github.vidstige:jadb:1.2.1")
         // Stubs for all cloudstream classes
         cloudstream("com.lagradost:cloudstream3:pre-release")
-
         // These dependencies can include any of those which are added by the app,
         // but you don't need to include any of them if you don't need them.
         // https://github.com/recloudstream/cloudstream/blob/master/app/build.gradle.kts
