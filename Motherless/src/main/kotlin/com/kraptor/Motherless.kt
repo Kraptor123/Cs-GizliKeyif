@@ -23,6 +23,7 @@ class Motherless : MainAPI() {
         "${mainUrl}/GV0DC9FD6"             to "Group Sex",
         "${mainUrl}/porn/gothic/videos"    to "Gothic",
         "${mainUrl}/porn/japanese/videos"  to "Japanese",
+        "${mainUrl}/porn/vintage/videos"   to "Vintage",
         "${mainUrl}/porn/cfnm/videos"      to "CFNM",
         "${mainUrl}/GV2B87965"             to "Oral",
         "${mainUrl}/GV637AC0A"             to "SHSY",
