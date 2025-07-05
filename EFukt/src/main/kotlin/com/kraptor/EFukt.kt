@@ -173,9 +173,6 @@ class EFukt : MainAPI() {
             type   = INFER_TYPE
         ))
 
-        // TODO:
-        // loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
-
         return true
     }
 }
