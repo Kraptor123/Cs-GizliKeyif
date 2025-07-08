@@ -158,7 +158,7 @@ class Motherless : MainAPI() {
             // Scat & dışkı
             "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play",
             // Kusma ve eşlik eden ifadeler
-            "vomit", "puke", "throw up", "barf", "hurl", "spew", "emesis", "regurgitate", "chunder",
+            "vomit", "puke", "puking" , "throw up", "barf", "hurl", "spew", "emesis", "regurgitate", "chunder",
             // Bedensel sıvılar
             "urine", "urinate", "pee", "piss", "snot", "mucus",
             // Gore / aşırı şiddet
@@ -169,9 +169,9 @@ class Motherless : MainAPI() {
             "maggot", "rotten", "decay", "mildew", "mold", "fungus", "toilet bowl", "disgusting",
             // Gaylar
             "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
-            "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
-            "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
+            "G.O.A.T.", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
+            "Clocked", "Shade", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
             "Henny", "gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon", "tranny", "tribute"
+            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "strap-on", "strapon", "tranny", "tribute", "crossdress"
         )
     
