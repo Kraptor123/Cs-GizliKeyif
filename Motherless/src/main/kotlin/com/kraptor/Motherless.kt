@@ -54,27 +54,6 @@ class Motherless : MainAPI() {
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val igrencKelimeler = listOf(
-            "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
-            // Scat & dışkı
-            "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play",
-            // Kusma ve eşlik eden ifadeler
-            "vomit", "puke", "throw up", "barf", "hurl", "spew", "emesis", "regurgitate", "chunder",
-            // Bedensel sıvılar
-            "urine", "urinate", "pee", "piss", "snot", "mucus",
-            // Gore / aşırı şiddet
-            "gore", "blood", "splatter", "disembowel", "decapitate", "mutilate", "necrophilia", "bestiality", "zoophilia",
-            // Diğer iğrenç fiiller
-            "fart", "burp",
-            // Genel iğrençlik
-            "maggot", "rotten", "decay", "mildew", "mold", "fungus", "toilet bowl", "disgusting",
-            // Gaylar
-            "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
-            "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
-            "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
-            "Henny", "gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
-        )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val title     = this.selectFirst("div.captions a")?.text() ?: return null
@@ -98,27 +77,6 @@ class Motherless : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val igrencKelimeler = listOf(
-            "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
-            // Scat & dışkı
-            "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play",
-            // Kusma ve eşlik eden ifadeler
-            "vomit", "puke", "throw up", "barf", "hurl", "spew", "emesis", "regurgitate", "chunder",
-            // Bedensel sıvılar
-            "urine", "urinate", "pee", "piss", "snot", "mucus",
-            // Gore / aşırı şiddet
-            "gore", "blood", "splatter", "disembowel", "decapitate", "mutilate", "necrophilia", "bestiality", "zoophilia",
-            // Diğer iğrenç fiiller
-            "fart", "burp",
-            // Genel iğrençlik
-            "maggot", "rotten", "decay", "mildew", "mold", "fungus", "toilet bowl", "disgusting",
-            // Gaylar
-            "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
-            "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
-            "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
-            "Henny", "Baby gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
-        )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val title     = this.selectFirst("a.caption.title.pop.plain")?.text() ?: return null
@@ -135,28 +93,6 @@ class Motherless : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
-
-        val igrencKelimeler = listOf(
-            "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
-            // Scat & dışkı
-            "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play",
-            // Kusma ve eşlik eden ifadeler
-            "vomit", "puke", "throw up", "barf", "hurl", "spew", "emesis", "regurgitate", "chunder",
-            // Bedensel sıvılar
-            "urine", "urinate", "pee", "piss", "snot", "mucus",
-            // Gore / aşırı şiddet
-            "gore", "blood", "splatter", "disembowel", "decapitate", "mutilate", "necrophilia", "bestiality", "zoophilia",
-            // Diğer iğrenç fiiller
-            "fart", "burp",
-            // Genel iğrençlik
-            "maggot", "rotten", "decay", "mildew", "mold", "fungus", "toilet bowl", "disgusting",
-            // Gaylar
-            "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
-            "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
-            "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
-            "Henny", "Baby gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
-        )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val title           = document.selectFirst("div.media-meta-title h1")?.text()?.trim() ?: return null
@@ -185,27 +121,6 @@ class Motherless : MainAPI() {
     }
 
     private fun Element.toRecommendationResult(): SearchResponse? {
-        val igrencKelimeler = listOf(
-            "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
-            // Scat & dışkı
-            "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play",
-            // Kusma ve eşlik eden ifadeler
-            "vomit", "puke", "throw up", "barf", "hurl", "spew", "emesis", "regurgitate", "chunder",
-            // Bedensel sıvılar
-            "urine", "urinate", "pee", "piss", "snot", "mucus",
-            // Gore / aşırı şiddet
-            "gore", "blood", "splatter", "disembowel", "decapitate", "mutilate", "necrophilia", "bestiality", "zoophilia",
-            // Diğer iğrenç fiiller
-            "fart", "burp",
-            // Genel iğrençlik
-            "maggot", "rotten", "decay", "mildew", "mold", "fungus", "toilet bowl", "disgusting",
-            // Gaylar
-            "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
-            "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
-            "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
-            "Henny", "Baby gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
-        )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val title     = this.selectFirst("div.captions a")?.text() ?: return null
@@ -237,3 +152,26 @@ class Motherless : MainAPI() {
         return true
     }
 }
+    
+    private val igrencKelimeler = listOf(
+            "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
+            // Scat & dışkı
+            "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play",
+            // Kusma ve eşlik eden ifadeler
+            "vomit", "puke", "throw up", "barf", "hurl", "spew", "emesis", "regurgitate", "chunder",
+            // Bedensel sıvılar
+            "urine", "urinate", "pee", "piss", "snot", "mucus",
+            // Gore / aşırı şiddet
+            "gore", "blood", "splatter", "disembowel", "decapitate", "mutilate", "necrophilia", "bestiality", "zoophilia",
+            // Diğer iğrenç fiiller
+            "fart", "burp",
+            // Genel iğrençlik
+            "maggot", "rotten", "decay", "mildew", "mold", "fungus", "toilet bowl", "disgusting",
+            // Gaylar
+            "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
+            "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
+            "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
+            "Henny", "gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
+            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon", "tranny", "tribute"
+        )
+    
