@@ -21,6 +21,10 @@ class Motherless : MainAPI() {
         "${mainUrl}/porn/public/videos"    to "Public",
         "${mainUrl}/GV02DE763"             to "Best Bodies",
         "${mainUrl}/GV0DC9FD6"             to "Group Sex",
+        "${mainUrl}/porn/milf/videos"      to "Milf",
+        "${mainUrl}/porn/pov/videos"       to "Pov",
+        "${mainUrl}/porn/big-ass/videos"   to "Big Ass",
+        "${mainUrl}/porn/big-tits/videos"  to "Big Tits",
         "${mainUrl}/porn/gothic/videos"    to "Gothic",
         "${mainUrl}/porn/lingerie/videos"  to "Lingerie",
         "${mainUrl}/porn/japanese/videos"  to "Japanese",
@@ -68,8 +72,8 @@ class Motherless : MainAPI() {
             "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
             "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
             "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
-            "Henny", "Baby gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship",
+            "Henny", "gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
+            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
         )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
@@ -113,7 +117,7 @@ class Motherless : MainAPI() {
             "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
             "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
             "Henny", "Baby gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship",
+            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
         )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
@@ -151,7 +155,7 @@ class Motherless : MainAPI() {
             "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
             "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
             "Henny", "Baby gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship",
+            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
         )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
@@ -200,7 +204,7 @@ class Motherless : MainAPI() {
             "G.O.A.T.", "Tea", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
             "Clocked", "Shade", "Read", "Yas", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
             "Henny", "Baby gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-            "Situationship",
+            "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "futanari", "strap-on", "strapon"
         )
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
