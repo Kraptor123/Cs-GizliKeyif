@@ -1,4 +1,4 @@
-// ! Bu araç @kerimmkirac tarafından | @kerimmkirac için yazılmıştır.
+// ! Bu araç @kerimmkirac ve @Kraptor123 tarafından | @@Cs-GizliKeyif için yazılmıştır.
 
 package com.kerimmkirac
 
