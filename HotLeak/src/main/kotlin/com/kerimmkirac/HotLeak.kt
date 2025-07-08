@@ -88,14 +88,16 @@ class HotLeak : MainAPI() {
 
             for (video in response) {
                 val id = video["id"]?.toString() ?: continue
-                val originUrl = video["origin_url"]?.toString() ?: continue
+                val originUrl = video["stream_url_play"]?.toString() ?: continue
                 val thumb = video["thumbnail"]?.toString()
 
                 episodes.add(
-                    Episode(
-                        data = "$userSlug|$originUrl",
-                        name = "ID: $id",
-                        posterUrl = thumb
+                    newEpisode(
+                        url = "$userSlug|$originUrl",
+                        {
+                            name = "ID: $id"
+                            posterUrl = thumb
+                        }
                     )
                 )
             }
@@ -125,15 +127,25 @@ class HotLeak : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        Log.d("kraptor_hotleak", "data = $data")
         val (userSlug, originUrl) = data.split("|")
-        val streamUrl = fixUrl(originUrl)
+        val video = originUrl
+            .drop(16)
+            .dropLast(16)
+            .reversed()
+
+        val urlCoz = base64Decode(video)
+
+        Log.d("kraptor_hotleak", "urlCoz = $urlCoz")
+
+        val username = userSlug.substringAfterLast("/")
 
         callback.invoke(
             newExtractorLink(
-                name = "HotLeak",
-                source = "hotleak.vip",
-                url = streamUrl,
-                type = ExtractorLinkType.M3U8
+                name   = "HotLeak $username",
+                source = "HotLeak $username",
+                url    =  urlCoz,
+                type   =  ExtractorLinkType.M3U8
             ) {
                 this.referer = "$mainUrl/"
                 this.quality = Qualities.Unknown.value
