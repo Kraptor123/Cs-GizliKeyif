@@ -87,7 +87,7 @@ class DirtyShip : MainAPI() {
         if (!galeri.isNullOrEmpty()) {
             val title = "Bu bir fotograf galerisi o yüzden çalışmıyor."
             val description = "Bu bir fotograf galerisi o yüzden çalışmıyor."
-            return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            return newMovieLoadResponse(title, "", TvType.NSFW, "") {
                 this.posterUrl       = poster
                 this.plot            = description
             }

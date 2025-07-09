@@ -1,10 +1,10 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 1
+version = 2
 
 cloudstream {
     authors     = listOf("kraptor")
     language    = "en"
-    description = "DirtyShip"
+    description = "Dirtyship.com is the hub of daily free leaked nudes from the hottest female Twitch, Snapchat, YouTube, Instagram, Patreon models, Cosplay, Gamer Girls, and streamers. Choose from the biggest selection of Sexy Leaked Nude Photos, Accidental Slips, Bikini Photos, Banned Streamers and Patreon Creators."
 
     /**
      * Status int as the following:
@@ -15,5 +15,5 @@ cloudstream {
     **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://www.google.com/s2/favicons?domain=www.setfilmizle.de&sz=%size%"
+    iconUrl = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://dirtyship.com&size=48"
 }
