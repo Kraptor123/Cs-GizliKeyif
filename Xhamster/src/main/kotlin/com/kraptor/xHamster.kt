@@ -23,38 +23,52 @@ class xHamster : MainAPI() {
 //        "${mainUrl}/most-viewed/monthly/" to "Aylık En Çok Görüntülenenler",
 //        "${mainUrl}/most-viewed/"  to "Tüm Zamanların En Çok İzlenenleri",
         "${mainUrl}/4k/"                       to "4K",
-        "${mainUrl}/hd/2?quality=1080p/"       to "1080p",
-        "${mainUrl}/categories/teen/"          to "Genç",
-        "${mainUrl}/categories/mom/"           to "Üvey Anne",
-        "${mainUrl}/categories/milf/"          to "Milf",
-        "${mainUrl}/categories/mature/"        to "Olgun",
-        "${mainUrl}/categories/big-ass/"       to "Büyük Göt",
-        "${mainUrl}/categories/anal/"          to "Anal",
-        "${mainUrl}/categories/hardcore/"      to "Sert",
-        "${mainUrl}/categories/homemade/"      to "Ev Yapımı",
-        "${mainUrl}/categories/amateur/"       to "Amatör Çekim",
-        "${mainUrl}/categories/complilation/"  to "Derlemeler",
-        "${mainUrl}/categories/lesbian/"       to "Lezbiyen",
-        "${mainUrl}/categories/russian/"       to "Rus",
-        "${mainUrl}/categories/european/"      to "Avrupalı",
-        "${mainUrl}/categories/latina/"        to "Latin",
-        "${mainUrl}/categories/asian/"         to "Asyalı",
-        "${mainUrl}/categories/jav/"           to "Japon",
+        "${mainUrl}/hd/2?quality=1080p"       to "1080p",
+        "${mainUrl}/categories/teen"          to "Genç",
+        "${mainUrl}/categories/mom"           to "Üvey Anne",
+        "${mainUrl}/categories/milf"          to "Milf",
+        "${mainUrl}/categories/mature"        to "Olgun",
+        "${mainUrl}/categories/big-ass"       to "Büyük Göt",
+        "${mainUrl}/categories/anal"          to "Anal",
+        "${mainUrl}/categories/hardcore"      to "Sert",
+        "${mainUrl}/categories/homemade"      to "Ev Yapımı",
+        "${mainUrl}/categories/amateur"       to "Amatör Çekim",
+        "${mainUrl}/categories/complilation"  to "Derlemeler",
+        "${mainUrl}/categories/lesbian"       to "Lezbiyen",
+        "${mainUrl}/categories/russian"       to "Rus",
+        "${mainUrl}/categories/european"      to "Avrupalı",
+        "${mainUrl}/categories/latina"        to "Latin",
+        "${mainUrl}/categories/asian"         to "Asyalı",
+        "${mainUrl}/categories/jav"           to "Japon",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get(request.data + page + "?x_platform_switch=desktop").document
-        val home = document.select("div.thumb-list div.thumb-list__item").mapNotNull { it.toSearchResult() }
-
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = true
-        )
+    
+    val pageUrl = buildString {
+        append(request.data)
+        if (!request.data.endsWith("/")) append("/")
+        append(page)
+        append("?x_platform_switch=desktop")
     }
+
+    
+    val document = app.get(pageUrl).document
+
+    
+    val home = document.select("div.thumb-list div.thumb-list__item")
+        .mapNotNull { it.toSearchResult() }
+
+    
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = true
+        ),
+        hasNext = true
+    )
+}
+
 
     private fun getInitialsJson(html: String): InitialsJson? {
         return try {
