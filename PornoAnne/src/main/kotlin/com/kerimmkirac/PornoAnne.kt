@@ -1,4 +1,4 @@
-// ! Bu araç @kerimmkirac tarafından | @kerimmkirac için yazılmıştır.
+// ! Bu araç @kerimmkirac tarafından | @Cs-GizliKeyif için yazılmıştır.
 
 package com.kerimmkirac
 
@@ -116,7 +116,7 @@ class PornoAnne : MainAPI() {
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         Log.d("STF", "data » ${data}")
         
-        // URL'i ayır (data formatı: "url|poster")
+        
         val url = data.split("|")[0]
         Log.d("STF", "extracted url » ${url}")
         
@@ -163,4 +163,5 @@ class PornoAnne : MainAPI() {
         }
     )
     return true
-}}
+}
+}
