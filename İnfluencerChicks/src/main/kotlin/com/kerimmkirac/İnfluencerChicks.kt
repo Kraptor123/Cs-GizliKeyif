@@ -1,5 +1,6 @@
 // ! Bu araç @kerimmkirac tarafından | @Cs-GizliKeyif için yazılmıştır.
 
+
 package com.kerimmkirac
 
 import android.util.Log
@@ -71,30 +72,43 @@ private fun Element.toMainPageResult(): SearchResponse? {
     
 override suspend fun load(url: String): LoadResponse? {
     val document = app.get(url).document
-    
+
     val title = document.selectFirst("h1")?.text()?.trim() ?: return null
-    
-    
+
     val poster = fixUrlNull(document.selectFirst("video")?.attr("poster"))
         ?: fixUrlNull(document.selectFirst("div.g1-content-narrow img")?.let { img ->
             img.attr("data-src").takeIf { it.isNotBlank() } ?: img.attr("src")
         })
-    
-    
+
     val description = document.selectFirst("div.g1-content-narrow p")?.text()?.trim()
-    
-    
+
     val tags = document.select("p.entry-tags a").map { it.text().trim() }.take(5)
-    
+
     val recommendations = document.select("a.g1-frame").mapNotNull { it.toRecommendationResult() }
-    
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-        this.posterUrl = poster
-        this.plot = description
-        this.tags = tags
-        this.recommendations = recommendations
+
+    val videoExists = document.selectFirst("video")?.attr("src").isNullOrBlank().not()
+        || document.selectFirst("video source")?.attr("src").isNullOrBlank().not()
+
+    return if (videoExists) {
+        newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = poster
+            this.plot = description
+            this.tags = tags
+            this.recommendations = recommendations
+        }
+    } else {
+        val dummyTitle = "Bu bir fotograf galerisi o yüzden çalışmıyor."
+        val dummyDescription = "Bu bir fotograf galerisi o yüzden çalışmıyor."
+
+        newTvSeriesLoadResponse(dummyTitle, url, TvType.NSFW, emptyList()) {
+            this.posterUrl = poster
+            this.plot = dummyDescription
+            
+            this.recommendations = recommendations
+        }
     }
 }
+
 
 private fun Element.toRecommendationResult(): SearchResponse? {
     
