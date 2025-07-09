@@ -1,4 +1,4 @@
-// ! Bu araç @kerimmkirac tarafından | @Cs-GizliKeyif için yazılmıştır.
+// ! Bu araç @kerimmkirac tarafından | @kerimmkirac için yazılmıştır.
 
 package com.kerimmkirac
 
@@ -114,39 +114,44 @@ class PornoAnne : MainAPI() {
     
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-    Log.d("STF", "data » ${data}")
-    val document = app.get(data).document
+        Log.d("STF", "data » ${data}")
+        
+        // URL'i ayır (data formatı: "url|poster")
+        val url = data.split("|")[0]
+        Log.d("STF", "extracted url » ${url}")
+        
+        val document = app.get(url).document
 
-    
-    val iframe = document.selectFirst("iframe")?.attr("src") ?: return false
-    Log.d("STF", "iframe » ${iframe}")
+        
+        val iframe = document.selectFirst("iframe")?.attr("src") ?: return false
+        Log.d("STF", "iframe » ${iframe}")
 
-    
-    val iframeDocument = app.get(iframe, referer = mainUrl).document
-    
-    
-    val scriptText = iframeDocument.select("script").joinToString("\n") { it.html() }
-    val fileRegex = """file:\s*["']([^"']+)["']""".toRegex()
-    val fileMatch = fileRegex.find(scriptText)
-    val m3u8Url = fileMatch?.groupValues?.get(1) ?: return false
-    
-   
-    val fullM3u8Url = if (m3u8Url.startsWith("http")) {
-        m3u8Url
-    } else {
-        "${iframe.substringBefore("/player.php")}$m3u8Url"
-    }
-    
-    Log.d("STF", "m3u8Url » ${fullM3u8Url}")
+        
+        val iframeDocument = app.get(iframe, referer = mainUrl).document
+        
+        
+        val scriptText = iframeDocument.select("script").joinToString("\n") { it.html() }
+        val fileRegex = """file:\s*["']([^"']+)["']""".toRegex()
+        val fileMatch = fileRegex.find(scriptText)
+        val m3u8Url = fileMatch?.groupValues?.get(1) ?: return false
+        
+       
+        val fullM3u8Url = if (m3u8Url.startsWith("http")) {
+            m3u8Url
+        } else {
+            "${iframe.substringBefore("/player.php")}$m3u8Url"
+        }
+        
+        Log.d("STF", "m3u8Url » ${fullM3u8Url}")
 
-    
-    val playlistResponse = app.get(fullM3u8Url, referer = iframe)
-    val playlistContent = playlistResponse.text
-    
-    Log.d("STF", "playlist content » ${playlistContent.take(200)}")
-    
-   
-    callback.invoke(
+        
+        val playlistResponse = app.get(fullM3u8Url, referer = iframe)
+        val playlistContent = playlistResponse.text
+        
+        Log.d("STF", "playlist content » ${playlistContent.take(200)}")
+        
+       
+        callback.invoke(
         newExtractorLink(
             name = "PornoAnne",
             source = "PornoAnne",
