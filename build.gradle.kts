@@ -83,6 +83,9 @@ subprojects {
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1") // JSON Parser
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")      // Kotlin için asenkron işlemler
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+        implementation("com.fasterxml.jackson.core:jackson-databind:2.13.1")
+        implementation("io.karn:khttp-android:0.1.2")
+        implementation("com.faendir.rhino:rhino-android:1.6.0")
     }
 }
 
