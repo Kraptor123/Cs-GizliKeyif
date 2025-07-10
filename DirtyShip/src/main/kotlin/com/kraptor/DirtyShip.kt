@@ -82,6 +82,7 @@ class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
         val galeriResimleri = document.select("div.col-md-7 div#album img").mapNotNull { it.attr("src") }
         Log.d("kraptor_$name", "galeriResimleri = ${galeriResimleri}")
         val title = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val topluResimler = galeriResimleri.joinToString(",") + "|$title"
         val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
         val description = "Sadece 18 Yaş ve Üzeri İçin Uygundur!"
         val tags = document.select("p.data-row a").map { it.text() }
@@ -93,8 +94,8 @@ class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
         }
 
         if (galeriResimleri.isNotEmpty()) {
-            plugin.loadChapter(title, galeriResimleri)
-            return newMovieLoadResponse(title, "", TvType.NSFW, "") {
+//            plugin.loadChapter(title, galeriResimleri)
+            return newMovieLoadResponse(title, topluResimler, TvType.NSFW, topluResimler) {
                 this.posterUrl = poster
                 this.plot = "Bu bir resim galerisi!"
                 this.tags = tags
@@ -123,6 +124,11 @@ class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         Log.d("kraptor_$name", "data = ${data}")
+        if (data.contains(",")){
+            val galeriResimleri = data.substringBefore("|").split(",").toList()
+            val title = data.substringAfter("|")
+            plugin.loadChapter(title, galeriResimleri)
+        }
         val document = app.get(data).document
         val videoSource = document
             .selectFirst("div.embed-responsive source")
