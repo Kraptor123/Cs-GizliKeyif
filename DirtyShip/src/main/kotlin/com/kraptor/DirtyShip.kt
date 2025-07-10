@@ -4,6 +4,7 @@ package com.kraptor
 
 import android.util.Log
 import android.widget.ImageView
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -11,7 +12,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import org.json.JSONObject
 
-class DirtyShip : MainAPI() {
+class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
     override var mainUrl              = "https://dirtyship.com"
     override var name                 = "DirtyShip"
     override val hasMainPage          = true
@@ -54,7 +55,6 @@ class DirtyShip : MainAPI() {
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("a")?.attr("title") ?: return null
-        if (title.contains("photos", ignoreCase = true)) return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
@@ -69,7 +69,6 @@ class DirtyShip : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title     = this.selectFirst("a")?.attr("title") ?: return null
-        if (title.contains("photos", ignoreCase = true)) return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
@@ -79,34 +78,38 @@ class DirtyShip : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val document        = app.get(url).document
-        val galeri          = document.selectFirst("div.col-md-7 div#album img")?.attr("src")
-        Log.d("kraptor_$name", "galeri = ${galeri}")
-        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        if (!galeri.isNullOrEmpty()) {
-            val title = "Bu bir fotograf galerisi o yüzden çalışmıyor."
-            val description = "Bu bir fotograf galerisi o yüzden çalışmıyor."
-            return newMovieLoadResponse(title, "", TvType.NSFW, "") {
-                this.posterUrl       = poster
-                this.plot            = description
-            }
-        }
-        val description     = "Sadece 18 Yaş ve Üzeri İçin Uygundur!"
-        val tags            = document.select("p.data-row a").map { it.text() }
+        val document = app.get(url).document
+        val galeriResimleri = document.select("div.col-md-7 div#album img").mapNotNull { it.attr("src") }
+        Log.d("kraptor_$name", "galeriResimleri = ${galeriResimleri}")
+        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val description = "Sadece 18 Yaş ve Üzeri İçin Uygundur!"
+        val tags = document.select("p.data-row a").map { it.text() }
         val recommendations = document.select("li.thumi").mapNotNull { it.toRecommendationResult() }
-        val actors          = document.select("div.content-data.clearfix ul.post_performers").map { aktor ->
-            val actorIsim   = aktor.selectFirst("a")?.attr("title").toString()
+        val actors = document.select("div.content-data.clearfix ul.post_performers").map { aktor ->
+            val actorIsim = aktor.selectFirst("a")?.attr("title").toString()
             val actorPoster = aktor.selectFirst("img")?.attr("src")
             Actor(name = actorIsim, actorPoster)
         }
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = poster
-            this.plot            = description
-            this.tags            = tags
-            this.recommendations = recommendations
-            addActors(actors)
+        if (galeriResimleri.isNotEmpty()) {
+            plugin.loadChapter(title, galeriResimleri)
+            return newMovieLoadResponse(title, "", TvType.NSFW, "") {
+                this.posterUrl = poster
+                this.plot = "Bu bir resim galerisi!"
+                this.tags = tags
+                this.recommendations = recommendations
+                addActors(actors)
+            }
+        } else {
+
+            return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+                this.posterUrl = poster
+                this.plot = description
+                this.tags = tags
+                this.recommendations = recommendations
+                addActors(actors)
+            }
         }
     }
 
