@@ -94,7 +94,7 @@ class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
         }
 
         if (galeriResimleri.isNotEmpty()) {
-//            plugin.loadChapter(title, galeriResimleri)
+            plugin.loadChapter(title, galeriResimleri)
             return newMovieLoadResponse(title, topluResimler, TvType.NSFW, topluResimler) {
                 this.posterUrl = poster
                 this.plot = "Bu bir resim galerisi!"
