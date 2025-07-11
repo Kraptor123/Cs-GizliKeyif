@@ -1,4 +1,4 @@
-# 📺 cs-kekikanime
+# 📺 cs-gizlikeyif
 
 **Kısa kod** = **gizlikeyif**
 
