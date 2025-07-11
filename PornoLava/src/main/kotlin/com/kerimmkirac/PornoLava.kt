@@ -43,7 +43,7 @@ private fun Element.toMainPageResult(): SearchResponse? {
     val titleTag = this.selectFirst("h6.card-title a") ?: return null
     val title = titleTag.text()
 
-    return newMovieSearchResponse(title, href, TvType.Movie) {
+    return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
     }
 }
@@ -60,7 +60,7 @@ private fun Element.toMainPageResult(): SearchResponse? {
         val href      = fixUrlNull(this.selectFirst("div.title a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
@@ -74,7 +74,7 @@ private fun Element.toMainPageResult(): SearchResponse? {
     val recommendations = document.select("div.card").mapNotNull { it.toRecommendationResult() }
    
 
-    return newMovieLoadResponse(title, url, TvType.Movie, url) {
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
         this.posterUrl = poster
         this.recommendations = recommendations
         
@@ -94,7 +94,7 @@ private fun Element.toMainPageResult(): SearchResponse? {
     val titleTag = this.selectFirst("h6.card-title a") ?: return null
     val title = titleTag.text()
 
-    return newMovieSearchResponse(title, href, TvType.Movie) {
+    return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
     }
     }

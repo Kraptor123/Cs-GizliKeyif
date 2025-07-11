@@ -33,7 +33,7 @@ class MomLover : MainAPI() {
         val href = fixUrlNull(this.selectFirst("div#title-posta > h2 > a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("div.thumbz img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
@@ -62,7 +62,7 @@ class MomLover : MainAPI() {
         val href = fixUrlNull(this.selectFirst("div#title-posta > h2 > a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("div.thumbz img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
@@ -85,7 +85,7 @@ class MomLover : MainAPI() {
 
         val recommendations = document.select("li.recent-post-item").mapNotNull { it.toRecommendationResult() }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, videoUrl) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, videoUrl) {
             this.posterUrl = poster
             this.year = year
             this.recommendations = recommendations
@@ -100,7 +100,7 @@ class MomLover : MainAPI() {
 
         val posterUrl = fixUrlNull(this.selectFirst("img.wp-post-image")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }

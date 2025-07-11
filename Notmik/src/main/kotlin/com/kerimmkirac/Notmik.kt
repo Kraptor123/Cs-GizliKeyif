@@ -42,7 +42,7 @@ class Notmik : MainAPI() {
         val title = anchor.attr("title")?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie){
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW){
             posterUrl = poster
         }
     }
@@ -67,7 +67,7 @@ class Notmik : MainAPI() {
         val href = fixUrlNull(anchor.attr("href")) ?: return null
         val title = anchor.attr("title")?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie){
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW){
             posterUrl = poster
         }
     }
@@ -85,7 +85,7 @@ class Notmik : MainAPI() {
         val description = doc.selectFirst("div.entry-content.rich-content p")?.text()?.trim()
         val tags = doc.select("span.kategoriPorno a").map { it.text().trim() }
 
-        return newMovieLoadResponse(title, data, TvType.Movie, data) {
+        return newMovieLoadResponse(title, data, TvType.NSFW, data) {
             this.plot = description
             this.tags = tags
             this.posterUrl = poster

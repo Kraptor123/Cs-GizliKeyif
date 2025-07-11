@@ -49,7 +49,7 @@ class Domlepen : MainAPI() {
                 ?: this.selectFirst("img")?.attr("data-src")
         )
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie) {
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW) {
             posterUrl = poster
         }
     }
@@ -77,7 +77,7 @@ class Domlepen : MainAPI() {
                 ?: this.selectFirst("img")?.attr("data-src")
         )
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie) { posterUrl = poster }
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW) { posterUrl = poster }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
@@ -99,7 +99,7 @@ class Domlepen : MainAPI() {
        
         val tags = doc.select("span.post-cats a").take(5).map { it.text().trim() }
 
-        return newMovieLoadResponse(title, data, TvType.Movie, data) {
+        return newMovieLoadResponse(title, data, TvType.NSFW, data) {
             this.posterUrl = poster
             this.tags = tags
         }
@@ -110,7 +110,7 @@ class Domlepen : MainAPI() {
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     

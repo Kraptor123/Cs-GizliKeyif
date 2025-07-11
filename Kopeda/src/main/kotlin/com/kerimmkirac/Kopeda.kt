@@ -42,7 +42,7 @@ class Kopeda : MainAPI() {
         val title = anchor.attr("title")?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie){
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW){
           posterUrl = poster  
         }
         
@@ -69,7 +69,7 @@ class Kopeda : MainAPI() {
         val title = anchor.attr("title")?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie){
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW){
           posterUrl = poster  
         }
     }
@@ -89,7 +89,7 @@ class Kopeda : MainAPI() {
 
         
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.plot = description
             this.tags = tags
             this.posterUrl = poster

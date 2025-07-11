@@ -40,7 +40,7 @@ class BadTv : MainAPI() {
         val title = anchor.attr("title")?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie) {
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW) {
             posterUrl = poster
         }
     }
@@ -66,7 +66,7 @@ class BadTv : MainAPI() {
         val title = anchor.attr("title")?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie) {
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW) {
             posterUrl = poster
         }
     }
@@ -89,7 +89,7 @@ class BadTv : MainAPI() {
     val recommendations = doc.select("div.related-posts div.item-video")
         .mapNotNull { it.toRecommendationResult() }
 
-    return newMovieLoadResponse(title, url, TvType.Movie, url) {
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
         this.posterUrl = realPoster
         this.plot = description
         this.tags = tags
@@ -104,7 +104,7 @@ class BadTv : MainAPI() {
         val title = aTag.attr("title")?.trim() ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$poster", TvType.Movie) {
+        return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW) {
             posterUrl = poster
         }
     }

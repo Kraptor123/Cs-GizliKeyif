@@ -1,42 +1,36 @@
-// ! Bu araç @kerimmkirac tarafından | @Cs-GizliKeyif için yazılmıştır.
+// ! Bu araç @kerimmkirac tarafından | @kerimmkirac için yazılmıştır.
 
 package com.kerimmkirac
 
 import android.util.Log
-import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import org.jsoup.nodes.Element
 
-class Maheir : MainAPI() {
-    override var mainUrl              = "https://maheir.com"
-    override var name                 = "Maheir"
-    override val hasMainPage          = true
-    override var lang                 = "tr"
-    override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.NSFW)
+class HdAbla : MainAPI() {
+    override var mainUrl = "https://hdabla.net"
+    override var name = "HdAbla"
+    override val hasMainPage = true
+    override var lang = "tr"
+    override val hasQuickSearch = false
+    override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}"      to "Tüm Videolar",
-        "${mainUrl}/category/anne-porno"   to "Üvey Anne",
-        "${mainUrl}/category/kardes-porno"  to "Üvey Kardeş",
-        "${mainUrl}/category/latin-porno"  to "Latin",
-        "${mainUrl}/category/buyuk-gotlu-porno" to "Büyük Göt",
-        "${mainUrl}/category/buyuk-memeli-porno"  to "Büyük Meme",
-        "${mainUrl}/category/ensest-porno"  to "Ensest",
-        "${mainUrl}/category/hizmetci-porno"  to "Hizmetçi",
-        "${mainUrl}/category/olgun-milf-porno"  to "Milf",
-        "${mainUrl}/category/konulu-porno"  to "Konulu",
-        
-        
+        "$mainUrl" to "Tüm Videolar",
+        "$mainUrl/porno/anne" to "Üvey Anne",
+        "$mainUrl/porno/kardes/" to "Üvey Kardeş",
+        "$mainUrl/porno/hizmetci/" to "Hizmetçi",
+        "$mainUrl/porno/esmer" to "Esmer",
+        "$mainUrl/porno/buyuk-memeli" to "Büyük Meme",
+        "$mainUrl/porno/buyuk-gotlu/" to "Büyük Göt",
+        "$mainUrl/porno/konulu/" to "Konulu",
+        "$mainUrl/porno/olgun-milf/" to "Milf"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}/page/$page").document
-        val home     = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
-
-        return newHomePageResponse(request.name, home)
+        val doc = app.get("${request.data}/page/$page").document
+        val items = doc.select("div.item-video").mapNotNull { it.toMainPageResult() }
+        return newHomePageResponse(request.name, items)
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
@@ -50,16 +44,18 @@ class Maheir : MainAPI() {
         }
     }
 
-     override suspend fun search(query: String): List<SearchResponse> {
+    override suspend fun search(query: String): List<SearchResponse> {
         val results = mutableListOf<SearchResponse>()
-        for (page in 1..7) {
-            val url = "$mainUrl/page/$page/?s=${query}"
-            val document = app.get(url).document
-            val pageResults = document
-                .select("div.item-video")
-                .mapNotNull { it.toSearchResult() }
-            results += pageResults
+
+        for (page in 1..3) {
+            val document = app.get("${mainUrl}/page/$page/?s=${query}").document
+            val pageResults = document.select("div.item-video").mapNotNull { it.toSearchResult() }
+
+            if (pageResults.isEmpty()) break
+
+            results.addAll(pageResults)
         }
+
         return results
     }
 
@@ -115,7 +111,7 @@ class Maheir : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("Maheir", "data » $data")
+        Log.d("HdAbla", "data » $data")
         val document = app.get(data).document
 
         val iframeElement = document.selectFirst("div.screen.fluid-width-video-wrapper iframe")
@@ -123,7 +119,7 @@ class Maheir : MainAPI() {
             val iframeSrc = iframeElement.attr("src")
             if (iframeSrc.isNotEmpty()) {
                 val fullIframeUrl = fixUrl(iframeSrc)
-                Log.d("Maheir", "iframe url » $fullIframeUrl")
+                Log.d("HdAbla", "iframe url » $fullIframeUrl")
 
                 val iframeDoc = app.get(fullIframeUrl, referer = mainUrl).document
                 val scriptTags = iframeDoc.select("script")
@@ -152,7 +148,7 @@ class Maheir : MainAPI() {
                                 !foundUrls.contains(videoUrl)) {
 
                                 foundUrls.add(videoUrl)
-                                Log.d("Maheir", "video url » $videoUrl")
+                                Log.d("HdAbla", "video url » $videoUrl")
 
 
                                 val headers = if (videoUrl.contains(".mp4")) {
@@ -179,20 +175,20 @@ class Maheir : MainAPI() {
 
                                 callback.invoke(
 
-                                    newExtractorLink(
-                                        name = name,
-                                        source = name,
-                                        url = videoUrl,
+                                        newExtractorLink(
+                                            name = name,
+                                            source = name,
+                                            url = videoUrl,
 
 
-                                        type = if (videoUrl.contains(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
+                                            type = if (videoUrl.contains(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
 
-                                    ){
-                                        this.headers = headers
-                                        this.referer = if (videoUrl.contains(".mp4")) "https://wai.moonfast.site/" else mainUrl
-                                        this.quality = Qualities.P720.value
-                                    }
-                                )
+                                        ){
+                                            this.headers = headers
+                                            this.referer = if (videoUrl.contains(".mp4")) "https://wai.moonfast.site/" else mainUrl
+                                            this.quality = Qualities.P720.value
+                                        }
+                                    )
 
                             }
                         }
