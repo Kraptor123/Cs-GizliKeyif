@@ -90,7 +90,7 @@ class Coomer (val plugin: CoomerPlugin) : MainAPI() {
         val service = jsonMap["service"].toString()
 
         // Post listesini çek
-        val postUrl = "$mainUrl/api/v1/$service/user/$user/posts-legacy?o=100"
+        val postUrl = "$mainUrl/api/v1/$service/user/$user/posts-legacy?o=0"
         val postGet = app.get(postUrl).textLarge
 
         // JSON'u Post sınıfına çevir
