@@ -1,4 +1,4 @@
-version = 4
+version = 5
 
 dependencies {
     implementation("com.google.android.material:material:1.12.0")
