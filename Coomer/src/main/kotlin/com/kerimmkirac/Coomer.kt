@@ -96,23 +96,21 @@ class Coomer (val plugin: CoomerPlugin) : MainAPI() {
         // JSON'u Post sınıfına çevir
         val mapper = jacksonObjectMapper()
         val postsJson = mapper.readTree(postGet).get("results").toString()
+        Log.d("kraptor_$this","postjson =$postsJson")
         val posts: List<Post> = mapper.readValue(postsJson, object : TypeReference<List<Post>>() {})
 
         // Görselleri topla
         val allImages = mutableListOf<String>()
         for (post in posts) {
             post.file.path?.let { p ->
-                Log.d("kraptor_$this","p = ${"https://img.coomer.su/thumbnail/data$p"}")
-                allImages.add("https://img.coomer.su/thumbnail/data$p").toString().trim()
+                allImages.add("https://n2.coomer.su/data$p").toString().trim()
             }
             post.attachments.forEach { att ->
                 att.path?.let { p ->
-                    allImages.add("https://img.coomer.su/thumbnail/data$p")
+                    allImages.add("https://n2.coomer.su/data$p")
                 }
             }
         }
-
-        // Başlık ve görselleri yükle
         plugin.loadChapter(user, allImages)
         return true
     }

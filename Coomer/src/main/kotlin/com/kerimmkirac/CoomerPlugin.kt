@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.CommonActivity.showToast
 import android.util.Log
 import android.os.Handler
 import android.os.Looper
-import com.kraptor.CoomerChapterFragment
+import com.kerimmkirac.CoomerChapterFragment
 
 @CloudstreamPlugin
 class CoomerPlugin: Plugin() {

@@ -1,4 +1,4 @@
-package com.kraptor
+package com.kerimmkirac
 
 import android.annotation.SuppressLint
 import android.app.Dialog
@@ -186,12 +186,22 @@ class CoomerChapterFragment(
         }
     }
 
-    private suspend fun downloadImage(url: String): Bitmap = withContext(Dispatchers.IO) {
-        val response = app.get(url)
-        val body = response.body
-        val imageBytes = body.bytes()
-        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+    private suspend fun downloadImage(url: String): Bitmap? {
+        val listUrl = listOf("n1.coomer.su", "n2.coomer.su", "n3.coomer.su", "n4.coomer.su")
+
+        // Klasik for-döngüsü sayesinde return doğrudan fonksiyondan çıkış yapabilir
+        for (domain in listUrl) {
+            val testUrl = url.replace(Regex("n[1-4]\\.coomer\\.su"), domain)
+            val response = app.get(testUrl)
+
+            if (response.isSuccessful) {
+                val imageBytes = response.body.bytes()
+                return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            }
+        }
+        return null
     }
+
 
     private fun showFullscreenImage(startPos: Int) {
         val context = requireContext()
