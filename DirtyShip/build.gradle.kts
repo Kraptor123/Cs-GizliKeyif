@@ -1,5 +1,5 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 5
+version = 6
 dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.recyclerview:recyclerview:1.4.0")
