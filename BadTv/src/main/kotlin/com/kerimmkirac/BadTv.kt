@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class BadTv : MainAPI() {
-    override var mainUrl              = "https://www.badtv.net"
+    override var mainUrl              = "https://www.badtv.net/six"
     override var name                 = "BadTv"
     override val hasMainPage          = true
     override var lang                 = "tr"
