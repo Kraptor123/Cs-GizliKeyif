@@ -1,5 +1,6 @@
 package com.kraptor
 
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
 import android.util.Log
@@ -24,8 +25,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.InputStream
-import java.net.URL
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -34,6 +33,8 @@ import android.graphics.PointF
 import com.kerimmkirac.CoomerPlugin
 import kotlin.math.min
 import kotlin.math.sqrt
+import com.lagradost.cloudstream3.*
+import androidx.core.graphics.toColorInt
 
 class CoomerChapterFragment(
     private val plugin: CoomerPlugin,
@@ -55,6 +56,7 @@ class CoomerChapterFragment(
         return dialog
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -74,7 +76,7 @@ class CoomerChapterFragment(
         val headerLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 32, 32, 16)
-            setBackgroundColor(Color.parseColor("#AA000000"))
+            setBackgroundColor("#AA000000".toColorInt())
         }
 
         titleText = TextView(context).apply {
@@ -86,7 +88,7 @@ class CoomerChapterFragment(
         pageIndicator = TextView(context).apply {
             text = "${pages.size} images"
             textSize = 14f
-            setTextColor(Color.parseColor("#CCCCCC"))
+            setTextColor("#CCCCCC".toColorInt())
         }
 
         headerLayout.addView(titleText)
@@ -178,9 +180,11 @@ class CoomerChapterFragment(
     }
 
     private suspend fun downloadImage(url: String): Bitmap = withContext(Dispatchers.IO) {
-        val conn = URL(url).openConnection().apply { doInput = true }
-        conn.connect()
-        BitmapFactory.decodeStream(conn.getInputStream())
+        // app.get() Cloudstream Plugin altyapısındaki HTTP client’ı kullanır
+        val response = app.get(url)
+        val body = response.body
+        val imageBytes = body.bytes()
+        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
     }
 
     private fun showFullscreenImage(startPos: Int) {
