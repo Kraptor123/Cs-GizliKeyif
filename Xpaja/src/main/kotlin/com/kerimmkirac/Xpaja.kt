@@ -47,7 +47,7 @@ class Xpaja : MainAPI() {
         val href = fixUrlNull(aTag.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
@@ -79,7 +79,7 @@ class Xpaja : MainAPI() {
         val href = fixUrlNull(aTag.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
@@ -114,7 +114,7 @@ class Xpaja : MainAPI() {
             it.toRecommendationResult()
         }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.tags = tags
             this.recommendations = recommendations
@@ -130,7 +130,7 @@ class Xpaja : MainAPI() {
         val href = fixUrlNull(aTag.attr("href")) ?: return null
         val poster = fixUrlNull(this.selectFirst("img")?.attr("data-src") ?: this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = poster
         }
     }
