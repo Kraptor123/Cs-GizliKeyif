@@ -244,11 +244,6 @@ class PornWatch : MainAPI() {
             val videolar = iframe.attr("href")
             loadExtractor(videolar, "${mainUrl}/", subtitleCallback, callback)
         }
-
-
-        // TODO:
-        // loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
-
         return true
     }
 }
