@@ -28,6 +28,7 @@ class LiveCamRips : MainAPI() {
     override var sequentialMainPageScrollDelay = 550L // ? 0.25 saniye
     private var sessionCookies: Map<String, String>? = null
     private val initMutex = Mutex()
+    private val posterCache = mutableMapOf<String, String>()
 
     private suspend fun initSession() {
         if (sessionCookies != null) return
@@ -103,6 +104,7 @@ class LiveCamRips : MainAPI() {
         val title     = this.selectFirst("div:nth-child(2) > a:nth-child(1) > span")?.text() ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img.img-fluid")?.attr("src"))
+        posterUrl?.let { posterCache[href] = it }
         val posterHeaders   = mapOf(
             "Referer" to "${mainUrl}/",
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
@@ -163,11 +165,13 @@ class LiveCamRips : MainAPI() {
         )).document
 
         val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster          = fixUrlNull(document.selectFirst("img.img-fluid")?.attr("src"))
-        val posterHeaders   = mapOf(
-            "Referer" to "${mainUrl}/",
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
-        )
+        val poster = posterCache[url]
+        val posterHeaders = poster?.let {
+            mapOf(
+                "Referer" to "${mainUrl}/",
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
+            )
+        }
         val description     = document.selectFirst("div.wp-content p")?.text()?.trim()
         val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
         val tags            = document.select("div.video-caption a").map { it.text().replace("#","") }
