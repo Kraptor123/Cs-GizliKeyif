@@ -43,18 +43,7 @@ class xHamster : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    
-    val pageUrl = buildString {
-        append(request.data)
-        if (!request.data.endsWith("/")) append("/")
-        append(page)
-        append("?x_platform_switch=desktop")
-    }
-
-    
-    val document = app.get(pageUrl).document
-
-    
+    val document = app.get("${request.data}/$page").document
     val home = document.select("div.thumb-list div.thumb-list__item")
         .mapNotNull { it.toSearchResult() }
 
