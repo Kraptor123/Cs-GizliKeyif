@@ -59,7 +59,6 @@ class PornWatch : MainAPI() {
         "${mainUrl}/director/purple-bitch/"                 to  "Purple Bitch",
         "${mainUrl}/director/adult-source-media/"           to  "Adult Source Media",
         "${mainUrl}/director/eagle/"                        to  "EAGLE",
-        "${mainUrl}/director/bi-empire/"                    to  "Bi Empire",
         "${mainUrl}/director/jerky-girls/"                  to  "Jerky Girls",
         "${mainUrl}/director/pink-eiga/"                    to  "Pink Eiga",
         "${mainUrl}/director/west-coast-productions/"       to  "West Coast",
@@ -191,7 +190,12 @@ class PornWatch : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
+        val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
+        val nohomo = Regex(desen, RegexOption.IGNORE_CASE)
         val title     = this.selectFirst("h2")?.text() ?: return null
+        if (title.contains(nohomo)) {
+            return null
+        }
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-lazy-src"))
 
@@ -251,9 +255,9 @@ class PornWatch : MainAPI() {
 private val igrencKelimeler = listOf(
     "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
     "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
-    "G.O.A.T.", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
+    "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
     "Zaddy", "Chosen family", "Closet case", "Out and proud",
     "Henny", "gay", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
     "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "strap-on", "strapon", "tranny", "tribute", "crossdress",
-    "t-girl", "tgirl"
+    "t-girl", "tgirl", "Bisexual", "Intersex", "LGBTQ", "Trans"
 )
