@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class XMoviesForYou : MainAPI() {
-    override var mainUrl              = "https://xmoviesforyou.com/"
+    override var mainUrl              = "https://xmoviesforyou.com"
     override var name                 = "XMoviesForYou"
     override val hasMainPage          = true
     override var lang                 = "en"
