@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class DoedaOrijinal : MainAPI() {
-    override var mainUrl              = "https://www.doeda.com"
+    override var mainUrl              = "http://www.doeda.com/eda"
     override var name                 = "DoedaOrijinal"
     override val hasMainPage          = true
     override var lang                 = "tr"
