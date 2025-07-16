@@ -24,6 +24,6 @@
 
 ---
 
-<a href="https://github.com/Kraptor123/cs-kekikanime/graphs/contributors?selectedMetric=additions" target="_blank">
+<a href="https://github.com/Kraptor123/Cs-GizliKeyif/graphs/contributors?selectedMetric=additions" target="_blank">
   <img src="https://contrib.rocks/image?repo=Kraptor123/Cs-GizliKeyif" />
 </a>
