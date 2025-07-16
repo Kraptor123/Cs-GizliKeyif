@@ -13,7 +13,7 @@ class Porn36 : MainAPI() {
     override var mainUrl              = "https://www.porn36.com"
     override var name                 = "Porn36"
     override val hasMainPage          = true
-    override var lang                 = "un"
+    override var lang                 = "en"
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
 
@@ -48,9 +48,15 @@ class Porn36 : MainAPI() {
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("a")?.attr("title") ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val posterUrl    = this.selectFirst("img")?.attr("src")
+        val posterAlt    = this.selectFirst("a.thumb_img img")?.attr("data-src")
+        val poster       = if (posterUrl?.contains("data:image/gif;base64") ?: return null) {
+            posterAlt
+        }else{
+            posterUrl
+        }
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = poster }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {

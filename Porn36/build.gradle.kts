@@ -1,9 +1,9 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 1
+version = 2
 
 cloudstream {
     authors     = listOf("kraptor")
-    language    = "un"
+    language    = "en"
     description = "Dive into a wild world of Porn Videos! Feast on free movies in spicy 4K & HD. Ads won’t crash your party!"
 
     /**
