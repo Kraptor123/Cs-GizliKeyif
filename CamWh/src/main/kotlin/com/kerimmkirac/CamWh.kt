@@ -20,7 +20,7 @@ class CamWh : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/latest-updates/?mode=async&function=get_block&block_id=list_videos_latest_videos_list&sort_by=post_date&from=1" to "En Yeni",
+        "$mainUrl/latest-updates/?mode=async&function=get_block&block_id=list_videos_latest_videos_list&sort_by=post_date&from=1" to "Latest Videos",
         "$mainUrl/top-rated/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=rating&from=1" to "Top Rated Videos",
         "$mainUrl/most-popular/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=video_viewed&from=1" to "Most Viewed Videos"
         
