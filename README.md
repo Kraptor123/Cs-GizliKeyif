@@ -10,8 +10,6 @@
 
 1. **[cloudstream/pre-release](https://github.com/recloudstream/cloudstream/releases/tag/pre-release)** _Adresinden güncel APK dosyasını indirip kurun._
 2. **Uygulamanın yüklü olduğu cihazda** _[depoyu otomatik yüklemek için tıklayın](https://self-similarity.github.io/http-protocol-redirector?r=cloudstreamrepo://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/refs/heads/builds/plugins.json)_
-- **veya**
-- `Depo ekle` _butonuyla **manuel** ekleme yapmak isteyen arkadaşlar için_ `gizlikeyif` _**kısa kod**u mevcuttur._ `Depo ismi` _kısmını boş bırakarak_ `Depo URL'si` _kısmına_ `gizlikeyif` yazarak `Depo ekle` _demeniz yeterli.._
 
 ## 💡 Faydalı Linkler
 
