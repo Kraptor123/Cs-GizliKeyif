@@ -23,7 +23,7 @@ data class Creator(
 )
 
 class Coomer (val plugin: CoomerPlugin) : MainAPI() {
-    override var mainUrl = "https://coomer.su"
+    override var mainUrl = "https://coomer.st"
     override var name = "Coomer"
     override val hasMainPage = true
     override var lang = "en"
