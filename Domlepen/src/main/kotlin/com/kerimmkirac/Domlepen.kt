@@ -12,7 +12,7 @@ import java.util.zip.GZIPInputStream
 import java.io.ByteArrayInputStream
 
 class Domlepen : MainAPI() {
-    override var mainUrl              = "https://www.creativewoodtrade.com"
+    override var mainUrl              = "https://www.eescobarvip.com"
     override var name                 = "Domlepen"
     override val hasMainPage          = true
     override var lang                 = "tr"
