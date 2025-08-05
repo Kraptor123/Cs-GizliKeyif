@@ -2,7 +2,7 @@
 
 package com.kraptor
 
-import android.util.Log
+import com.lagradost.api.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -10,13 +10,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
+
 
 class AZNude : MainAPI() {
     override var mainUrl = "https://www.aznude.com"
@@ -162,7 +156,6 @@ class AZNude : MainAPI() {
             results
         } catch (e: Exception) {
             Log.e("kraptor_$name", "Jackson parsing error: ${e.message}")
-            Log.e("kraptor_$name", "Exception: ", e)
             emptyList()
         }
     }

@@ -1,12 +1,11 @@
 package com.kerimmkirac
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.plugins.Plugin
-import android.content.Context
+import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
-class Kalite18Plugin: Plugin() {
-    override fun load(context: Context) {
+class Kalite18Plugin: BasePlugin() {
+    override fun load() {
         registerMainAPI(Kalite18())
     }
 }
