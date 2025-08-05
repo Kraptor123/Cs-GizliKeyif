@@ -153,7 +153,7 @@ private fun Element.toSearchResult(): SearchResponse? {
             this.plot            = description
             this.tags            = tags
             this.recommendations = recommendations
-            this.rating          = rating
+            this.score           = Score.from10(rating)
             this.duration        = duration
             addActors(actors)
         }
