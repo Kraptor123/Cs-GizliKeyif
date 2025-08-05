@@ -2,9 +2,6 @@
 package com.kraptor
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.keyiflerolsun.MixPlayHD
-import com.keyiflerolsun.MixTiger
-import com.keyiflerolsun.SuperErotikGeldi
 import com.lagradost.cloudstream3.extractors.MixDrop
 import com.lagradost.cloudstream3.plugins.BasePlugin
 
