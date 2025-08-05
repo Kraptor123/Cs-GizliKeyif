@@ -1,12 +1,11 @@
 package com.kerimmkirac
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.plugins.Plugin
-import android.content.Context
+import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
-class CollectionOfBestPornPlugin: Plugin() {
-    override fun load(context: Context) {
+class CollectionOfBestPornPlugin: BasePlugin() {
+    override fun load() {
         registerMainAPI(CollectionOfBestPorn())
     }
 }

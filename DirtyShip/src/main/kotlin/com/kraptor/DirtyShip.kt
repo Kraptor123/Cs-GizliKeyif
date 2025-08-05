@@ -2,7 +2,7 @@
 
 package com.kraptor
 
-import android.util.Log
+import com.lagradost.api.Log
 import android.widget.ImageView
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jsoup.nodes.Element

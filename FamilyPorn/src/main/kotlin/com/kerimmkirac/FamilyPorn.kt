@@ -2,7 +2,7 @@
 
 package com.kerimmkirac
 
-import android.util.Log
+import com.lagradost.api.Log
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.intOrNull

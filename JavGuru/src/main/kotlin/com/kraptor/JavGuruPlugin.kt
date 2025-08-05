@@ -2,15 +2,14 @@
 package com.kraptor
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.plugins.Plugin
-import android.content.Context
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
+import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
-class JavGuruPlugin: Plugin() {
-    override fun load(context: Context) {
+class JavGuruPlugin: BasePlugin() {
+    override fun load() {
         registerMainAPI(JavGuru())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(DoodJav())

@@ -3,7 +3,7 @@ package com.kerimmkirac
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
-import android.util.Log
+import com.lagradost.api.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

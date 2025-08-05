@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import com.lagradost.cloudstream3.CommonActivity.showToast
-import android.util.Log
+import com.lagradost.api.Log
 import android.os.Handler
 import android.os.Looper
 

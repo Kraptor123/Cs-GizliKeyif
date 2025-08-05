@@ -1,8 +1,8 @@
 // ! SuperErotikGeldi eklentisi @Kraptor123 tarafından | @gizlikeyif için yazılmıştır.
 
-package com.keyiflerolsun
+package com.kraptor
 
-import android.util.Log
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
