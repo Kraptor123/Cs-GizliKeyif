@@ -3,11 +3,16 @@
 package com.kraptor
 
 import android.util.Log
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -83,49 +88,82 @@ class AZNude : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
+
+
     override suspend fun search(query: String): List<SearchResponse> {
-        val apiUrl =
-            "https://search-aznude.aznude.workers.dev/initial-search?q=${query}&gender=f&type=null&sortByDate=DESC&dateRange=anytime"
+        val apiUrl = "https://search-aznude.aznude.workers.dev/initial-search?q=${query}&gender=f&type=null&sortByDate=DESC&dateRange=anytime"
         val jsonString = app.get(apiUrl, referer = "${mainUrl}/").textLarge
         Log.d("kraptor_$name", "jsonString = ${jsonString}")
-        try {
-            // Parse the JSON
-            val wrapper = Json { ignoreUnknownKeys = true }
-                .decodeFromString<SearchWrapper>(jsonString)
-            Log.d("kraptor_$name", "videos count = ${wrapper.count.videos}")
-            Log.d("kraptor_$name", "actual videos list size = ${wrapper.data.videos.size}")
 
-            // Check if videos list is empty
-            if (wrapper.data.videos.isEmpty()) {
-                Log.d("kraptor_$name", "No videos found in response")
-                return emptyList()
-            }
+        return try {
+            val mapper = jacksonObjectMapper().registerKotlinModule()
+            Log.d("kraptor_$name", "Jackson parsing başladı")
+            val searchWrapper: SearchWrapper = mapper.readValue(jsonString)
+            Log.d("kraptor_$name", "Jackson parsing başarılı, celebs count: ${searchWrapper.data.celebs.size}")
+            val results = mutableListOf<SearchResponse>()
 
-            // Process videos with regex filter
-            return wrapper.data.videos.mapNotNull { video ->
-                val zamanText = video.duration // örn: "00:14"
-                Log.d("kraptor_$name", "Processing video: ${video.text}, duration: $zamanText")
-
-                // 00:00–00:20 arasıysa null dön (very short videos)
-                if (zamanText.matches(Regex("^00:(?:[0-1]\\d|20)$"))) {
-                    Log.d("kraptor_$name", "Filtered out short video: ${video.text} (${zamanText})")
-                    return@mapNotNull null
+            // Celebs'leri ekle (sadece /view/celeb/ içerenler)
+            searchWrapper.data.celebs
+                .filter { it.url.contains("/view/celeb/") }
+                .forEach { celeb ->
+                    val href = fixUrlNull(celeb.url).toString()
+                    Log.d("kraptor_$name", "href = ${href}")
+                    Log.d("kraptor_$name", "celeb.text = ${celeb.text}")
+                    Log.d("kraptor_$name", "celeb.thumb = ${fixUrlNull(celeb.thumb)}")
+                    results.add(
+                        newMovieSearchResponse(
+                            name = celeb.text,
+                            url = href,
+                            type = TvType.NSFW
+                        ) {
+                            posterUrl = fixUrlNull("https://cdn2.aznude.com${celeb.thumb}")
+                            posterHeaders = mapOf("referer" to "${mainUrl}/")
+                        }
+                    )
                 }
 
-                Log.d("kraptor_$name", "video = ${video.text} url = ${video.url} poster = ${video.thumb}")
-
-                // Create SearchResponse
-                newMovieSearchResponse(
-                    name = video.text,
-                    url = fixUrlNull(video.url)!!,
-                    type = TvType.NSFW
-                ) {
-                    posterUrl = fixUrlNull(video.thumb)
+            // Videos'ları ekle (sadece /view/celeb/ içerenler)
+            searchWrapper.data.videos
+                .filter { it.url.contains("/view/celeb/") }
+                .forEach { video ->
+                    val href = fixUrlNull(video.url).toString()
+                    Log.d("kraptor_$name", "video href = ${href}")
+                    Log.d("kraptor_$name", "video.text = ${video.text}")
+                    results.add(
+                        newMovieSearchResponse(
+                            name = video.text,
+                            url = href,
+                            type = TvType.NSFW
+                        ) {
+                            posterUrl = fixUrlNull(video.thumb)
+                        }
+                    )
                 }
-            }
+
+            // Stories'leri ekle (sadece /view/celeb/ içerenler)
+            searchWrapper.data.stories
+                .filter { it.url.contains("/view/celeb/") }
+                .forEach { story ->
+                    val href = fixUrlNull(story.url).toString()
+                    Log.d("kraptor_$name", "story href = ${href}")
+                    Log.d("kraptor_$name", "story.text = ${story.text}")
+                    results.add(
+                        newMovieSearchResponse(
+                            name = story.text,
+                            url = href,
+                            type = TvType.NSFW
+                        ) {
+                            posterUrl = fixUrlNull(story.thumb)
+                        }
+                    )
+                }
+
+            Log.d("kraptor_$name", "Total results: ${results.size}")
+            results
         } catch (e: Exception) {
-            Log.e("kraptor_$name", "Error parsing search response", e)
-            return emptyList()
+            Log.e("kraptor_$name", "Jackson parsing error: ${e.message}")
+            Log.e("kraptor_$name", "Exception: ", e)
+            emptyList()
         }
     }
 
@@ -134,17 +172,43 @@ class AZNude : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
-        val title = document.selectFirst("meta[name=title]")?.attr("content") ?: return null
-        val poster = fixUrlNull(document.selectFirst("link[rel=preload][as=image]")?.attr("href"))
-        val description = document.selectFirst("meta[name=description]")?.attr("content")
-        val tags = document.select("div.col-md-12 h2.video-tags a").map { it.text() }
-        val recommendations = document.select("div.col-lg-3 a.video").mapNotNull { it.toRecommendationResult() }
+        if (url.contains("/view/celeb/")) {
+            val title = document.selectFirst("div.col-sm-8 h1")?.text() ?: return null
+            val poster = fixUrlNull(document.selectFirst("img.img-circle")?.attr("src"))
+            val score  = document.selectFirst("span.rating-score")?.text()
+            val tags = document.select("div.col-md-12 h2.video-tags a").map { it.text() }
+            val recommendations = document.select("div.container:nth-child(18) div.col-lg-2").mapNotNull { it.toRecommendationResult() }
+            val bolumler        = document.select("div.movie.grid_load").map { bolum ->
+                val bolumHref   = bolum.selectFirst("a")?.attr("href").toString()
+                val poster      = bolum.selectFirst("img")?.attr("src")
+                val bolumIsim   = bolum.selectFirst("img")?.attr("title")
+                newEpisode(bolumHref,{
+                    this.name      = bolumIsim
+                    this.posterUrl = poster
+                })
+            }
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = description
-            this.tags = tags
-            this.recommendations = recommendations
+            return newTvSeriesLoadResponse(title, url, TvType.NSFW, bolumler) {
+                this.posterUrl = poster
+                this.plot = "$title +18"
+                this.tags = tags
+                this.recommendations = recommendations
+                this.score = Score.from5(score)
+            }
+        } else {
+
+            val title = document.selectFirst("meta[name=title]")?.attr("content") ?: return null
+            val poster = fixUrlNull(document.selectFirst("link[rel=preload][as=image]")?.attr("href"))
+            val description = document.selectFirst("meta[name=description]")?.attr("content")
+            val tags = document.select("div.col-md-12 h2.video-tags a").map { it.text() }
+            val recommendations = document.select("div.col-lg-3 a.video").mapNotNull { it.toRecommendationResult() }
+
+            return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+                this.posterUrl = poster
+                this.plot = description
+                this.tags = tags
+                this.recommendations = recommendations
+            }
         }
     }
 
@@ -220,13 +284,11 @@ class AZNude : MainAPI() {
 }
 
 
-@Serializable
 data class SearchWrapper(
     val count: Count,
     val data: Data
 )
 
-@Serializable
 data class Count(
     val celebs: Int,
     val movies: Int,
@@ -234,46 +296,61 @@ data class Count(
     val videos: Int
 )
 
-@Serializable
 data class Data(
     val celebs: List<Actor>,
-    val movies: List<JsonObject> = emptyList(),
-    val stories: List<JsonObject> = emptyList(),
-    val videos: List<Video> = emptyList() // Make sure this has default empty list
+    val movies: List<Any> = emptyList(),
+    val stories: List<Story> = emptyList(),
+    val videos: List<Video> = emptyList()
 )
 
-@Serializable
 data class Video(
-    @SerialName("video_id") val id: Long,
+    @JsonProperty("video_id") val id: Long,
     val text: String,
     val thumb: String,
     val url: String,
-    val duration: String,   // "mm:ss"
-    @SerialName("date_added") val dateAdded: String,
-    // Add other fields as needed with defaults
-    @SerialName("views_1day") val views1day: Int = 0,
-    @SerialName("views_7days") val views7days: Int = 0,
-    @SerialName("views_month") val viewsMonth: Int = 0,
-    @SerialName("views_3months") val views3months: Int = 0,
-    @SerialName("views_6months") val views6months: Int = 0,
-    @SerialName("views_year") val viewsYear: Int = 0,
-    @SerialName("views_alltime") val viewsAlltime: Int = 0,
-    @SerialName("date_modified") val dateModified: String = ""
+    val duration: String,
+    @JsonProperty("date_added") val dateAdded: String,
+    @JsonProperty("views_1day") val views1day: Int = 0,
+    @JsonProperty("views_7days") val views7days: Int = 0,
+    @JsonProperty("views_month") val viewsMonth: Int = 0,
+    @JsonProperty("views_3months") val views3months: Int = 0,
+    @JsonProperty("views_6months") val views6months: Int = 0,
+    @JsonProperty("views_year") val viewsYear: Int = 0,
+    @JsonProperty("views_alltime") val viewsAlltime: Int = 0,
+    @JsonProperty("date_modified") val dateModified: String = "",
+    @JsonProperty("avg_rating") val avgRating: Int = 0
 )
 
-@Serializable
 data class Actor(
-    @SerialName("celeb_id") val id: Long,
+    @JsonProperty("celeb_id") val id: Long,
     val text: String,
     val thumb: String,
     val url: String,
-    @SerialName("date_added") val dateAdded: String,
-    @SerialName("date_modified") val dateModified: String,
-    @SerialName("views_1day") val views1day: Int = 0,
-    @SerialName("views_7days") val views7days: Int = 0,
-    @SerialName("views_month") val viewsMonth: Int = 0,
-    @SerialName("views_3months") val views3months: Int = 0,
-    @SerialName("views_6months") val views6months: Int = 0,
-    @SerialName("views_year") val viewsYear: Int = 0,
-    @SerialName("views_alltime") val viewsAlltime: Int = 0
+    @JsonProperty("date_added") val dateAdded: String,
+    @JsonProperty("date_modified") val dateModified: String,
+    @JsonProperty("views_1day") val views1day: Int = 0,
+    @JsonProperty("views_7days") val views7days: Int = 0,
+    @JsonProperty("views_month") val viewsMonth: Int = 0,
+    @JsonProperty("views_3months") val views3months: Int = 0,
+    @JsonProperty("views_6months") val views6months: Int = 0,
+    @JsonProperty("views_year") val viewsYear: Int = 0,
+    @JsonProperty("views_alltime") val viewsAlltime: Int = 0,
+    @JsonProperty("avg_rating") val avgRating: Int = 0
+)
+
+data class Story(
+    @JsonProperty("story_id") val id: String,
+    val text: String,
+    val thumb: String,
+    val url: String,
+    @JsonProperty("date_added") val dateAdded: String,
+    @JsonProperty("date_modified") val dateModified: String,
+    @JsonProperty("views_1day") val views1day: Int = 0,
+    @JsonProperty("views_7days") val views7days: Int = 0,
+    @JsonProperty("views_month") val viewsMonth: Int = 0,
+    @JsonProperty("views_3months") val views3months: Int = 0,
+    @JsonProperty("views_6months") val views6months: Int = 0,
+    @JsonProperty("views_year") val viewsYear: Int = 0,
+    @JsonProperty("views_alltime") val viewsAlltime: Int = 0,
+    @JsonProperty("avg_rating") val avgRating: Int = 0
 )
