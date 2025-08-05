@@ -54,7 +54,7 @@ class DirtyShipPlugin : Plugin() {
 
                 frag.show(fragmentManager, "DirtyShipChapter")
             } catch (e: Exception) {
-                Log.e("DirtyShipPlugin", "Fragment gösterilirken hata: ${e.message}", e)
+                Log.e("DirtyShipPlugin", "Fragment gösterilirken hata: ${e.message}")
                 showToast("Failed to display gallery: ${e.message}")
             }
         }

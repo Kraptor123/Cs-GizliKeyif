@@ -177,7 +177,7 @@ class CoomerChapterFragment(
                     imageView.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                Log.e("Coomer", "Error loading image: ${e.message}", e)
+                Log.e("Coomer", "Error loading image: ${e.message}")
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
                     imageView.visibility = View.VISIBLE
@@ -289,7 +289,7 @@ class CoomerChapterFragment(
                     imageView.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                Log.e("Coomer", "Error loading image: ${e.message}", e)
+                Log.e("Coomer", "Error loading image: ${e.message}")
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
                     imageView.visibility = View.VISIBLE

@@ -55,7 +55,7 @@ class CoomerPlugin: Plugin() {
 
                 frag.show(fragmentManager, "CoomerChapter")
             } catch (e: Exception) {
-                Log.e("CoomerPlugin", "Fragment gösterilirken hata: ${e.message}", e)
+                Log.e("CoomerPlugin", "Fragment gösterilirken hata: ${e.message}")
                 showToast("Failed to display gallery: ${e.message}")
             }
         }

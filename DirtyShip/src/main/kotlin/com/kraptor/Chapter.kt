@@ -167,7 +167,7 @@ class DirtyShipChapterFragment(
                     imageView.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                Log.e("DirtyShip", "Error loading image: ${e.message}", e)
+                Log.e("DirtyShip", "Error loading image: ${e.message}")
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
                     imageView.visibility = View.VISIBLE
@@ -269,7 +269,7 @@ class DirtyShipChapterFragment(
                     imageView.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                Log.e("DirtyShip", "Error loading image: ${e.message}", e)
+                Log.e("DirtyShip", "Error loading image: ${e.message}")
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
                     imageView.visibility = View.VISIBLE
