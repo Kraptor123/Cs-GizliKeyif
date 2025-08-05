@@ -14,7 +14,7 @@ class Xpaja : MainAPI() {
     override var mainUrl              = "https://www.xpaja.net"
     override var name                 = "Xpaja"
     override val hasMainPage          = true
-    override var lang                 = "en"
+    override var lang                 = "es"
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
 
