@@ -1,12 +1,11 @@
-package com.kerimmkirac
+package com.kraptor
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.plugins.Plugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
 
 @CloudstreamPlugin
-class CamWhPlugin: BasePlugin() {
+class ChatrubatePlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(CamWh())
+        registerMainAPI(Chatrubate())
     }
 }
