@@ -173,7 +173,7 @@ class Notmik : MainAPI() {
 
         } catch (e: Exception) {
 
-            Log.e("Notmik", "Hata oluştu", e)
+            Log.e("Notmik", "Hata oluştu")
             return false
         }
     }
