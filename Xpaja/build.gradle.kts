@@ -2,7 +2,7 @@ version = 5
 
 cloudstream {
     authors     = listOf("kerimmkirac")
-    language    = "en"
+    language    = "es"
     description = "Xpaja te ofrece vídeos porno amateur y HD gratis todos los días. Tenemos el mejor porno casero del mundo con chicas hermosas, ven disfrútalo ahora!"
 
     /**
