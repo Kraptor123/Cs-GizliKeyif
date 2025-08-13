@@ -17,7 +17,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.collections.mapOf
 
 class LiveCamRips : MainAPI() {
-    override var mainUrl              = "https://livecamrips.su"
+    override var mainUrl              = "https://livecamrips.to"
     override var name                 = "LiveCamRips"
     override val hasMainPage          = true
     override var lang                 = "en"
