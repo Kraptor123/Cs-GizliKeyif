@@ -19,7 +19,7 @@ class Xpaja : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/videos"      to "All Porn Videos",
+        "${mainUrl}/videos"         to "All Porn Videos",
         "${mainUrl}/exclusive"      to "Exclusive Porn Videos",
         "${mainUrl}/most-viewed"   to "Most Viewed Porn Videos",
         "${mainUrl}/top-rated" to "Top Rated Porn Videos",
@@ -29,6 +29,8 @@ class Xpaja : MainAPI() {
         "${mainUrl}/category/big-ass"  to "Big Ass Porn Videos",
         "${mainUrl}/category/asian"  to "Asian Porn Videos",
         "${mainUrl}/category/amateur"  to "Amateur Porn Videos",
+        "${mainUrl}/category/sexual-follies"  to "Sexual Follies",
+        "${mainUrl}/category/hardcore"  to "Hardcore Porn Videos",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
