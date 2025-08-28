@@ -2,7 +2,7 @@
 
 package com.kerimmkirac
 
-import com.lagradost.api.Log
+import android.util.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -31,8 +31,15 @@ class BadTv : MainAPI() {
         val document = app.get("${request.data}/page/$page").document
         val home     = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
-    }
+        return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = true
+        ),
+        hasNext = true
+    )
+}
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val anchor = selectFirst("a.clip-link") ?: return null
@@ -89,7 +96,7 @@ class BadTv : MainAPI() {
     val recommendations = doc.select("div.related-posts div.item-video")
         .mapNotNull { it.toRecommendationResult() }
 
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+    return newMovieLoadResponse(title, data, TvType.NSFW, data) {
         this.posterUrl = realPoster
         this.plot = description
         this.tags = tags
@@ -116,13 +123,23 @@ class BadTv : MainAPI() {
         
         val document = app.get(url).document
         
-       
-        val iframeSrc = document.selectFirst("div.screen iframe")?.attr("src") ?: return false
-        Log.d("BadTv", "iframe : $iframeSrc")
-        
 
-        val vid = Regex("vid=([^&]+)").find(iframeSrc)?.groupValues?.get(1) ?: return false
-        Log.d("BadTv", "vid: $vid")
+        val iframeSrc = document.selectFirst("div.screen iframe")?.attr("src") ?: return false
+        Log.d("Badtv", "iframe : $iframeSrc")
+        
+        
+        val vid = when {
+        
+        iframeSrc.contains(".html") -> {
+            Regex("/([^/]+)\\.html").find(iframeSrc)?.groupValues?.get(1)
+        }
+        
+        iframeSrc.contains("vid=") -> {
+            Regex("vid=([^&]+)").find(iframeSrc)?.groupValues?.get(1)
+        }
+        else -> null
+    } ?: return false
+        Log.d("Badtv", "vid: $vid")
         
         
         val postData = mapOf(
@@ -134,19 +151,19 @@ class BadTv : MainAPI() {
         try {
             
             val response = app.post(
-                url = "https://www.canlitvnews.xyz/player/ajax_sources.php",
+                url = "https://www.canlitvnews2.xyz/player/ajax_sources.php",
                 data = postData,
                 headers = mapOf(
                     "X-Requested-With" to "XMLHttpRequest",
                     "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
                     "Referer" to iframeSrc,
-                    "Origin" to "https://www.canlitvnews.xyz",
+                    "Origin" to "https://www.canlitvnews2.xyz",
                     "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
                 )
             )
             
             val jsonResponse = response.parsedSafe<VideoResponse>()
-            Log.d("BadTv", "response: ${response.text}")
+            Log.d("Badtv", "response: ${response.text}")
             
             if (jsonResponse?.status == "true" && jsonResponse.source?.isNotEmpty() == true) {
                 jsonResponse.source.forEach { source ->
@@ -158,7 +175,7 @@ class BadTv : MainAPI() {
 
                             type = ExtractorLinkType.VIDEO
                         ){
-                            this.referer = "https://www.canlitvnews.xyz/"
+                            this.referer = "https://www.canlitvnews2.xyz/"
                             this.quality = Qualities.Unknown.value
                         }
                     )
@@ -166,7 +183,7 @@ class BadTv : MainAPI() {
                 return true
             }
         } catch (e: Exception) {
-            Log.e("BadTv", "hata baba: ${e.message}")
+            Log.e("Badtv", "hatacık : ${e.message}")
         }
         
         return false
