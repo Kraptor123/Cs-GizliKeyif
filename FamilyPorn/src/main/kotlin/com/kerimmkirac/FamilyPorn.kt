@@ -2,7 +2,7 @@
 
 package com.kerimmkirac
 
-import com.lagradost.api.Log
+import android.util.Log
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.intOrNull
@@ -44,7 +44,14 @@ class FamilyPorn : MainAPI() {
     val document = app.get(url).document
     val home = document.select("li.g1-collection-item").mapNotNull { it.toMainPageResult() }
 
-    return newHomePageResponse(request.name, home)
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = true
+        ),
+        hasNext = true
+    )
 }
 
 
@@ -81,21 +88,21 @@ class FamilyPorn : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
     
+    
     val document = app.get(url).document
+    
 
     val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
-   
+    
     
     val description = document.selectFirst("div.entry-content p")?.text()?.trim() ?: ""
     val tags = document.select("p.entry-tags a").map { it.text().lowercase() }.take(5)
     
     
+    val iframeElement = document.selectFirst("div.embed-container iframe")
     
     
-    
-    
-    
-    val iframeUrl = document.selectFirst("div.embed-container iframe")?.attr("src")
+    val iframeUrl = iframeElement?.attr("src")
         ?.takeIf { it.contains("bestwish.lol") }
     
     
@@ -105,49 +112,65 @@ class FamilyPorn : MainAPI() {
         return null
     }
 
-    val fileCode = iframeUrl.substringAfterLast("/")
-    val apiUrl = "https://bestwish.lol/data.php?filecode=$fileCode"
-    
-
+   
     try {
-        val json = app.get(
-            apiUrl,
-            headers = mapOf(
-                "x-requested-with" to "XMLHttpRequest",
-                "referer" to iframeUrl,
-                "user-agent" to "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36"
-            )
-        ).parsedSafe<Map<String, Any>>()
-        
        
-
-        if (json == null) {
-            
-            return null
-        }
-
-        val VideoUrl = json["streaming_url"] as? String
+        
+        val iframeResponse = app.get(iframeUrl, headers = mapOf(
+            "referer" to url,
+            "user-agent" to "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36"
+        ))
+        
+        val iframeContent = iframeResponse.text
         
         
-        if (VideoUrl == null) {
+        
+        val streamingUrlRegex = Regex("streaming_url\\s*:\\s*[\"']([^\"']+)[\"']")
+        val thumbnailRegex = Regex("thumbnail\\s*:\\s*[\"']([^\"']+)[\"']")
+        
+        val streamingUrlMatch = streamingUrlRegex.find(iframeContent)
+        val thumbnailMatch = thumbnailRegex.find(iframeContent)
+        
+        val videoUrl = streamingUrlMatch?.groupValues?.get(1)
+        val thumbnail = thumbnailMatch?.groupValues?.get(1)
+        
+        
+        
+        if (videoUrl != null) {
+            return newMovieLoadResponse(title, url, TvType.NSFW, videoUrl) {
+                this.posterUrl = thumbnail
+                this.tags = tags
+                this.plot = description
+            }
+        } else {
            
+            
+            
+            val alternativePatterns = listOf(
+                Regex("file\\s*:\\s*[\"']([^\"']+\\.m3u8[^\"']*)[\"']"),
+                Regex("[\"']([^\"']*\\.m3u8[^\"']*)[\"']"),
+                Regex("source\\s*:\\s*[\"']([^\"']+)[\"']")
+            )
+            
+            for (pattern in alternativePatterns) {
+                val match = pattern.find(iframeContent)
+                if (match != null) {
+                    val altVideoUrl = match.groupValues[1]
+                    
+                    
+                    return newMovieLoadResponse(title, url, TvType.NSFW, altVideoUrl) {
+                        this.posterUrl = thumbnail
+                        this.tags = tags
+                        this.plot = description
+                    }
+                }
+            }
+            
             return null
         }
         
-        val poster = json["thumbnail"] as? String
-        val duration = (json["duration"] as? Double)?.toInt()
-        
-        
-
-        return newMovieLoadResponse(title, url, TvType.NSFW, VideoUrl) {
-            this.posterUrl = poster
-            this.tags = tags
-            this.plot = description
-            this.duration = duration
-            
-        }
     } catch (e: Exception) {
-        
+        Log.e("FamilyPorn", "iframe extraction failed: ${e.message}")
         return null
     }
 }
