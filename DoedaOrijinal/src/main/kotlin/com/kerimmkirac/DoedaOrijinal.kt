@@ -31,8 +31,15 @@ class DoedaOrijinal : MainAPI() {
         val document = app.get("${request.data}/page/$page").document
         val home     = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
-    }
+        return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = true
+        ),
+        hasNext = true
+    )
+}
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val anchor = selectFirst("a.clip-link") ?: return null
