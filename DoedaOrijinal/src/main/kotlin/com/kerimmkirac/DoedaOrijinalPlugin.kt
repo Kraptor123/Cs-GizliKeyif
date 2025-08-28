@@ -1,11 +1,12 @@
 package com.kerimmkirac
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.lagradost.cloudstream3.plugins.Plugin
+import android.content.Context
 
 @CloudstreamPlugin
-class DoedaOrijinalPlugin: BasePlugin() {
-    override fun load() {
+class DoedaOrijinalPlugin: Plugin() {
+    override fun load(context: Context) {
         registerMainAPI(DoedaOrijinal())
     }
 }

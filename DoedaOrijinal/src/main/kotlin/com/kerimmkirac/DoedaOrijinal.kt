@@ -2,7 +2,7 @@
 
 package com.kerimmkirac
 
-import com.lagradost.api.Log
+import android.util.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -134,13 +134,13 @@ class DoedaOrijinal : MainAPI() {
         try {
             
             val response = app.post(
-                url = "https://www.canlitvnews.xyz/player/ajax_sources.php",
+                url = "https://www.canlitvnews2.xyz/player/ajax_sources.php",
                 data = postData,
                 headers = mapOf(
                     "X-Requested-With" to "XMLHttpRequest",
                     "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
                     "Referer" to iframeSrc,
-                    "Origin" to "https://www.canlitvnews.xyz",
+                    "Origin" to "https://www.canlitvnews2.xyz",
                     "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
                 )
             )
@@ -158,7 +158,7 @@ class DoedaOrijinal : MainAPI() {
 
                             type = ExtractorLinkType.VIDEO
                         ){
-                            this.referer = "https://www.canlitvnews.xyz/"
+                            this.referer = "https://www.canlitvnews2.xyz/"
                             this.quality = Qualities.Unknown.value
                         }
                     )
