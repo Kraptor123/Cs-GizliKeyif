@@ -152,7 +152,7 @@ class xHamster : MainAPI() {
                 Log.e(sourceName, "M3u8Helper failed: ${e.message}")
                 callback(
                     newExtractorLink(source = sourceName, name = "${sourceName} HLS", url = fixed, type = ExtractorLinkType.M3U8) {
-                        this.referer = data; this.quality = Qualities.Unknown.value
+                        this.referer = "https://xhamster.com"; this.quality = Qualities.Unknown.value
                     }
                 )
                 foundLinks = true
@@ -168,7 +168,7 @@ class xHamster : MainAPI() {
                 Log.d(sourceName, "MP4 $q: $fixed")
                 callback(
                     newExtractorLink(source = sourceName, name = "${sourceName} MP4 $q", url = fixed, type = ExtractorLinkType.VIDEO) {
-                        this.referer = data; this.quality = qualityValue
+                        this.referer = "https://xhamster.com"; this.quality = qualityValue
                     }
                 )
                 foundLinks = true
