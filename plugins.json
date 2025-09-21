@@ -1,5 +1,24 @@
 [
   {
+    "iconUrl": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://adult-tv-channels.com&size=128",
+    "apiVersion": 1,
+    "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
+    "fileSize": 8946,
+    "status": 1,
+    "language": "en",
+    "authors": [
+      "kraptor"
+    ],
+    "tvTypes": [
+      "NSFW"
+    ],
+    "version": 1,
+    "internalName": "AdultTvChannels",
+    "description": "Watch free adult TV channels online",
+    "url": "https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/builds/AdultTvChannels.cs3",
+    "name": "AdultTvChannels"
+  },
+  {
     "iconUrl": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://allclassic.porn&size=48",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
