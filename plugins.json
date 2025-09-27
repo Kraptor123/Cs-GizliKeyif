@@ -595,19 +595,20 @@
     "name": "Koreaye"
   },
   {
-    "iconUrl": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://livecamrips.su&size=128",
+    "iconUrl": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://livecamrips.to&size=128",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
-    "fileSize": 19144,
+    "fileSize": 23093,
     "status": 1,
     "language": "en",
     "authors": [
-      "kraptor"
+      "kraptor",
+      "kerimmkirac"
     ],
     "tvTypes": [
       "NSFW"
     ],
-    "version": 8,
+    "version": 9,
     "internalName": "LiveCamRips",
     "description": "LiveCamRips",
     "url": "https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/builds/LiveCamRips.cs3",
