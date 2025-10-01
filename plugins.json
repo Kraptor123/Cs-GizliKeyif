@@ -406,7 +406,7 @@
     "iconUrl": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://manga.hentaizm6.online/&size=64",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
-    "fileSize": 26377,
+    "fileSize": 26235,
     "status": 1,
     "language": "tr",
     "authors": [
@@ -415,7 +415,7 @@
     "tvTypes": [
       "NSFW"
     ],
-    "version": 1,
+    "version": 2,
     "internalName": "HentaizmManga",
     "description": "[TEST AŞAMASINDA]Hentai Manga Oku, Yetişkin Webtoon Oku.",
     "url": "https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/builds/HentaizmManga.cs3",
