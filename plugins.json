@@ -41,7 +41,7 @@
     "iconUrl": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.aznude.com/&size=48",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
-    "fileSize": 25112,
+    "fileSize": 21775,
     "status": 1,
     "language": "en",
     "authors": [
@@ -50,7 +50,7 @@
     "tvTypes": [
       "NSFW"
     ],
-    "version": 4,
+    "version": 5,
     "internalName": "AZNude",
     "description": "Welcome to AZNUDE! We have a large, free, every day growing universe of celebrity nudity where stars from all movies and series shine.",
     "url": "https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/builds/AZNude.cs3",
