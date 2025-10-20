@@ -134,22 +134,21 @@
     "name": "CollectionOfBestPorn"
   },
   {
-    "iconUrl": "https://www.google.com/s2/favicons?domain=coomer.sue&sz=%size%",
+    "iconUrl": "https://www.google.com/s2/favicons?domain=coomer.ste&sz=%size%",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
-    "fileSize": 30320,
+    "fileSize": 30196,
     "status": 1,
     "language": "en",
     "authors": [
-      "kerimmkirac",
       "kraptor"
     ],
     "tvTypes": [
       "NSFW"
     ],
-    "version": 6,
+    "version": 7,
     "internalName": "Coomer",
-    "description": "coomer.su",
+    "description": "coomer gallery",
     "url": "https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/builds/Coomer.cs3",
     "name": "Coomer"
   },
