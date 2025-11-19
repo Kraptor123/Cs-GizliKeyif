@@ -194,7 +194,7 @@
     "iconUrl": "https://www.google.com/s2/favicons?domain=coomer.ste&sz=%size%",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
-    "fileSize": 30789,
+    "fileSize": 31010,
     "status": 1,
     "language": "en",
     "authors": [
@@ -203,7 +203,7 @@
     "tvTypes": [
       "NSFW"
     ],
-    "version": 7,
+    "version": 8,
     "internalName": "Coomer",
     "description": "coomer gallery",
     "url": "https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/builds/Coomer.cs3",
