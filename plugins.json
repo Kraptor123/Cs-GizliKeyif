@@ -749,17 +749,18 @@
     "iconUrl": "http://mangoporn.net/wp-content/uploads/2024/07/mangoporn.net_.png",
     "apiVersion": 1,
     "repositoryUrl": "https://github.com/Kraptor123/Cs-GizliKeyif",
-    "fileSize": 23272,
+    "fileSize": 25120,
     "status": 1,
     "language": "en",
     "authors": [
       "kraptor",
+      "ByAyzen",
       "HindiProvider"
     ],
     "tvTypes": [
       "NSFW"
     ],
-    "version": 6,
+    "version": 7,
     "internalName": "Mangoporn",
     "description": "MangoPorn",
     "url": "https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/builds/Mangoporn.cs3",
