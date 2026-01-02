@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
 class xVideos : MainAPI() {
-    override var mainUrl = "https://www.xvv1deos.com"
+    override var mainUrl = "http://www.xvideos.com"
     override var name = "xVideos"
     override val hasMainPage = true
     override var lang = "en"
