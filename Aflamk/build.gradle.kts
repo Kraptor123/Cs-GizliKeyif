@@ -1,0 +1,19 @@
+// ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
+version = 2
+
+cloudstream {
+    authors     = listOf("kraptor")
+    language    = "ar"
+    description = "Xnxx افلام سكس عربي و اجنبى سكس نسوانجى محجبات سكس مترجم عربى احترافى مترجمة عالمى محجبة سكس جماعى امهات محارم الام مصرى صور مقاطع اخ واختة خليجى تحرش وعنف نيك اخت اختى جوردى مرات الأب برازر سحاق خيانة حماتى امى  محرم نيك."
+
+    /**
+     * Status int as the following:
+     * 0: Down
+     * 1: Ok
+     * 2: Slow
+     * 3: Beta only
+    **/
+    status  = 1 // will be 3 if unspecified
+    tvTypes = listOf("NSFW")
+    iconUrl = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.aflamk1.net&size=16"
+}
