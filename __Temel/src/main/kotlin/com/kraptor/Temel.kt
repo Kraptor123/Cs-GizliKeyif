@@ -16,7 +16,6 @@ class Temel : MainAPI() {
     override var lang                 = "en"
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
-
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
