@@ -17,11 +17,13 @@ class Temel : MainAPI() {
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
 
+    override val vpnStatus            = VPNStatus.MightBeNeeded
+
     override val mainPage = mainPageOf(
-        "${mainUrl}/tur/aile/"      to "Aile",
-        "${mainUrl}/tur/aksiyon/"   to "Aksiyon",
-        "${mainUrl}/tur/animasyon/" to "Animasyon",
-        "${mainUrl}/tur/belgesel/"  to "Belgesel"
+        "${mainUrl}/adult" to "Adult",
+        "${mainUrl}/videos" to "Videos",
+        "${mainUrl}/cs" to "Cs",
+        "${mainUrl}/gizlikeyif" to "GizliKeyif"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
