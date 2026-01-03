@@ -18,7 +18,7 @@ class SuperErotikGeldi : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     // Sinezy URL'si
-    private val sinezyUrl = "https://sinezy.org"
+    private val sinezyUrl = "https://sinezy.fit"
 
     override val mainPage = mainPageOf(
         "${mainUrl}/hdizle/category/yesilcam-erotik-izle/page/"   to "Yeşilçam Erotik",

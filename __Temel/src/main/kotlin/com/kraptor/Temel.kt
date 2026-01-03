@@ -20,9 +20,9 @@ class Temel : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
+        "${mainUrl}/" to ""
         "${mainUrl}/adult" to "Adult",
         "${mainUrl}/videos" to "Videos",
-        "${mainUrl}/cs" to "Cs",
         "${mainUrl}/gizlikeyif" to "GizliKeyif"
     )
 
