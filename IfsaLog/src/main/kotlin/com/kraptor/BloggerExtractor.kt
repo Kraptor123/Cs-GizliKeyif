@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -14,7 +15,7 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 
 open class BloggerExtractor : ExtractorApi() {
     override val name            = "Blogger"
-    override val mainUrl         = "https://www.blogger.com/"
+    override val mainUrl         = "https://www.blogger.com"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
@@ -33,9 +34,20 @@ open class BloggerExtractor : ExtractorApi() {
 
         val regex = Regex(pattern = "\"play_url\":\"([^\"]*)\"", options = setOf(RegexOption.IGNORE_CASE))
 
+
         val videoUrl = regex.find(document)?.groupValues[1].toString()
 
-        loadExtractor(videoUrl, subtitleCallback, callback)
+        Log.d("kraptor_${this.name}", "videoUrl = $videoUrl")
+
+        callback.invoke(newExtractorLink(
+            "Youtube",
+            "Youtube",
+            videoUrl,
+            ExtractorLinkType.VIDEO,
+            {
+                this.referer = "https://www.youtube.com/"
+            }
+        ))
 
     }
 }

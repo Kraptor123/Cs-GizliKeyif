@@ -1,5 +1,5 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 3
+version = 4
 
 cloudstream {
     authors     = listOf("kraptor")
@@ -13,7 +13,7 @@ cloudstream {
      * 2: Slow
      * 3: Beta only
     **/
-    status  = 0 // will be 3 if unspecified
+    status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ifsalog4.club/&size=128"
+    iconUrl =  "https://turkifsaalemivip1.blog/wp-content/uploads/2025/10/cropped-yeni-logo-anasite-180x180.png"
 }
