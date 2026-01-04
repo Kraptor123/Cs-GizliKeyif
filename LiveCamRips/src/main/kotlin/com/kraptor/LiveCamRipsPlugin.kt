@@ -3,10 +3,10 @@ package com.kraptor
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.extractors.MixDrop
-import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class LiveCamRipsPlugin: BasePlugin() {
+class LiveCamRipsPlugin: Plugin() {
     override fun load() {
         registerMainAPI(LiveCamRips())
         registerExtractorAPI(Xpornium())

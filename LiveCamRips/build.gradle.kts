@@ -1,8 +1,8 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 11
+version = 12
 
 cloudstream {
-    authors     = listOf("kraptor","kerimmkirac")
+    authors     = listOf("kraptor", "kerimmkirac")
     language    = "en"
     description = "LiveCamRips"
 
