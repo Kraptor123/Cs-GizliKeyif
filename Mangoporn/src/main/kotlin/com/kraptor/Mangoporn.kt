@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 
 
 class Mangoporn : MainAPI() {
-    override var mainUrl              = "http://mangoporn.net"
+    override var mainUrl              = "https://mangoporn.net"
     override var name                 = "Mangoporn"
     override val hasMainPage          = true
     override var lang                 = "en"

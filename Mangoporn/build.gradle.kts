@@ -1,4 +1,4 @@
-version = 10
+version = 11
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.1")
 }
@@ -9,7 +9,7 @@ cloudstream {
     description = "MangoPorn"
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "http://mangoporn.net/wp-content/uploads/2024/07/mangoporn.net_.png"
+    iconUrl = "https://mangoporn.net/wp-content/uploads/2024/07/mangoporn.net_.png"
 }
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.1")
