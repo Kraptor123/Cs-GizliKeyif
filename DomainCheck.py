@@ -125,9 +125,10 @@ class MainUrlUpdater:
             logger.exception("Versiyon arttırılamadı: %s", build_gradle_yolu)
         return None
 
-    def _sadece_domain_al(self, url):
+    def _sadece_domain_al(self, url, https_tercih=True):
         """URL'den sadece scheme + netloc (domain) kısmını alır, path'i atar.
            Eğer scheme yoksa 'http' varsayılarak devam eder.
+           https_tercih=True ise, her zaman https kullanır.
         """
         if not url:
             return None
@@ -135,7 +136,10 @@ class MainUrlUpdater:
             parsed = urlparse(url if re.match(r'^[a-zA-Z]+://', url) else f"http://{url}")
             if not parsed.netloc:
                 return None
-            return f"{parsed.scheme}://{parsed.netloc}"
+
+            # HTTPS'i her zaman tercih et
+            scheme = "https" if https_tercih else parsed.scheme
+            return f"{scheme}://{parsed.netloc}"
         except Exception:
             logger.exception("_sadece_domain_al hata: %s", url)
             return None
@@ -169,8 +173,8 @@ class MainUrlUpdater:
                 logger.warning("[!] mainUrl boş, atlandı: %s", dosya)
                 continue
 
-            # mainUrl'den sadece domain kısmını al (path'siz)
-            mainurl_sadece_domain = self._sadece_domain_al(mainurl)
+            # mainUrl'den sadece domain kısmını al (path'siz) - HTTPS tercih et
+            mainurl_sadece_domain = self._sadece_domain_al(mainurl, https_tercih=True)
             if not mainurl_sadece_domain:
                 logger.warning("[!] mainUrl parse edilemedi, atlandı: %s -> %s", dosya, mainurl)
                 continue
@@ -198,7 +202,8 @@ class MainUrlUpdater:
                 continue
 
             final_url = final_url.rstrip('/')
-            yeni_domain = self._sadece_domain_al(final_url)
+            # Yeni domain'i de HTTPS olarak al
+            yeni_domain = self._sadece_domain_al(final_url, https_tercih=True)
 
             if not yeni_domain:
                 logger.warning("[!] Yeni domain belirlenemedi, atlandı: %s", dosya)
