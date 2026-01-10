@@ -19,23 +19,38 @@ class HentaiWorld : MainAPI() {
 
     override val mainPage = mainPageOf(
         "${mainUrl}/all-episodes/" to "All Episodes",
-        "${mainUrl}/uncensored/" to "Uncensored",
-        "${mainUrl}/gizlikeyif" to "GizliKeyif"
+        "${mainUrl}/hentai-videos/tag/uncensored/" to "Uncensored",
+        "${mainUrl}/hentai-videos/tag/vanilla/" to "Vanilla",
+        "${mainUrl}/hentai-videos/tag/big-boobs/" to "Big Boobs",
+        "${mainUrl}/hentai-videos/tag/milf/" to "MILF",
+        "${mainUrl}/hentai-videos/tag/school-girl/" to "School Girl",
+        "${mainUrl}/hentai-videos/tag/cosplay/" to "Cosplay",
+        "${mainUrl}/hentai-videos/tag/fantasy/" to "Fantasy",
+        "${mainUrl}/hentai-videos/tag/nurse/" to "Nurse",
+        "${mainUrl}/hentai-videos/tag/threesome/" to "Threesome",
+        "${mainUrl}/hentai-videos/tag/public-sex/" to "Public Sex",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}").document
-        val home = document.select("article a").mapNotNull { it.toMainPageResult() }
+        val url = request.data + if (page > 1) "page/$page/" else ""
+        val document = app.get(url).document
+        val content = document.selectFirst("div#primary, main#main") ?: document
+        val home = content.select("a.card-container, article a:has(img)")
+            .distinctBy { it.attr("href") }
+            .mapNotNull { element ->
+                val href = fixUrlNull(element.attr("href")) ?: return@mapNotNull null
+                if (href.contains("/page/") || element.attr("rel") == "tag") return@mapNotNull null
+                val img = element.selectFirst("img") ?: return@mapNotNull null
+                val title = element.selectFirst(".video-title-text")?.text()
+                    ?: element.attr("title").ifEmpty { img.attr("title") }
+                val poster = img.attr("srcset").substringBefore(" ").ifEmpty { img.attr("src") }
+
+                newMovieSearchResponse(title, href, TvType.NSFW) {
+                    this.posterUrl = fixUrlNull(poster)
+                }
+            }
 
         return newHomePageResponse(request.name, home)
-    }
-
-    private fun Element.toMainPageResult(): SearchResponse? {
-        val title = this.selectFirst("img")?.attr("title") ?: return null
-        val href = fixUrlNull(this.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
