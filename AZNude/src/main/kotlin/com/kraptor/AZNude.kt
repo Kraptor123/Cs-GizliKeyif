@@ -86,15 +86,30 @@ class AZNude : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val apiUrl = "https://main-aq7es5tiuq-uc.a.run.app/app/cache/initial-search?q=${query}&gender=f&type=null&sortByDate=DESC&dateRange=anytime"
-        val jsonString = app.get(apiUrl, referer = "${mainUrl}/").textLarge
-        Log.d("kraptor_$name", "jsonString = ${jsonString}")
+
+        val searchToken = app.get("https://main-aq7es5tiuq-uc.a.run.app/app/search-token", mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
+            "Accept" to "*/*",
+            "Accept-Language" to "en-US,en;q=0.5",
+            "Referer" to "$mainUrl/",
+        )).text
+
+        val mapSearch = mapper.readValue<SearchToken>(searchToken)
+
+        val sid = mapSearch.sid ?: ""
+        val xst = mapSearch.token ?: ""
+
+        val apiUrl = "https://main-aq7es5tiuq-uc.a.run.app/app/exp/initial-search?q=$query&gender=f&type=null&sortByDate=DESC&sortByViews=views_alltime&dateRange=anytime"
+        val jsonString = app.get(apiUrl, referer = "${mainUrl}/", headers = mapOf(
+            "x-sid" to sid,
+            "x-st" to xst,
+            "Referer" to "$mainUrl/",
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+        )).textLarge
 
         return try {
             val mapper = jacksonObjectMapper().registerKotlinModule()
-            Log.d("kraptor_$name", "Jackson parsing başladı")
             val searchWrapper: SearchWrapper = mapper.readValue(jsonString)
-            Log.d("kraptor_$name", "Jackson parsing başarılı, celebs count: ${searchWrapper.data.celebs.size}")
             val results = mutableListOf<SearchResponse>()
 
             // Celebs'leri ekle (sadece /view/celeb/ içerenler)
@@ -105,13 +120,17 @@ class AZNude : MainAPI() {
                     Log.d("kraptor_$name", "href = ${href}")
                     Log.d("kraptor_$name", "celeb.text = ${celeb.text}")
                     Log.d("kraptor_$name", "celeb.thumb = ${fixUrlNull(celeb.thumb)}")
+                    val thumbPath = celeb.thumb
                     results.add(
                         newMovieSearchResponse(
                             name = celeb.text,
                             url = href,
                             type = TvType.NSFW
                         ) {
-                            posterUrl = fixUrlNull("https://cdn2.aznude.com${celeb.thumb}")
+                            if (!thumbPath.isNullOrBlank()) {
+                                posterUrl = fixUrlNull("https://cdn2.aznude.com${thumbPath}")
+                                posterHeaders = mapOf("referer" to "${mainUrl}/")
+                            }
                             posterHeaders = mapOf("referer" to "${mainUrl}/")
                         }
                     )
@@ -295,50 +314,58 @@ class AZNude : MainAPI() {
         return true
     }
 }
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SearchWrapper(
-    val count: Count,
+    val count: Count? = null,
     val data: Data
 )
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Count(
-    val celebs: Int,
-    val movies: Int,
-    val stories: Int,
-    val videos: Int
+    val celebs: Int? = 0,
+    val movies: Int? = 0,
+    val stories: Int? = 0,
+    val videos: Int? = 0
 )
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Data(
-    val celebs: List<Actor>,
+    val celebs: List<Actor> = emptyList(),
     val movies: List<Movies> = emptyList(),
     val stories: List<Story> = emptyList(),
     val videos: List<Video> = emptyList()
 )
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Movies(
     val text: String,
-    val thumb: String?,
+    val thumb: String? = null,
     val url: String,
 )
-
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Video(
     val text: String,
-    val thumb: String,
+    val thumb: String? = null,
     val url: String,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Actor(
     val text: String,
-    val thumb: String,
+    val thumb: String? = null,
     val url: String,
 )
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Story(
     val text: String,
-    val thumb: String,
+    val thumb: String? = null,
     val url: String,
+)
+
+data class SearchToken(
+    val token: String?,
+    val exp: String?,
+    val sid: String?
 )
