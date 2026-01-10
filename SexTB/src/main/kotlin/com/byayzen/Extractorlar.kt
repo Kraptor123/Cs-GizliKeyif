@@ -21,7 +21,6 @@ import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 
-// --- DOODSTREAM MERKEZİ ---
 open class DoodStream : ExtractorApi() {
     override var name = "DoodStream"
     override var mainUrl = "https://myvidplay.com"
@@ -74,7 +73,6 @@ class DoodVideo : DoodStream() { override var mainUrl = "https://vide0.net"; ove
 class Ds2Play : DoodStream() { override var mainUrl = "https://ds2play.com" }
 class d000d : DoodStream() { override var mainUrl = "https://d000d.com" }
 
-// --- STREAMWISH MERKEZİ ---
 open class Streamwish : ExtractorApi() {
     override var name = "Streamwish"
     override var mainUrl = "https://streamwish.to"
@@ -109,8 +107,6 @@ open class Streamwish : ExtractorApi() {
 
 class Streamhihi : Streamwish() { override var name = "Streamhihi"; override var mainUrl = "https://streamhihi.com" }
 class Javsw : Streamwish() { override var mainUrl = "https://javsw.me"; override var name = "Javsw" }
-
-// --- VIDHIDE PRO / HGLINK / RYDERJET MERKEZİ ---
 open class VidHidePro : ExtractorApi() {
     override var name = "VidHidePro"
     override var mainUrl = "https://vidhidepro.com"
@@ -169,12 +165,8 @@ class Dhtpre : VidHidePro() { override var name = "EarnVids"; override var mainU
 class Peytonepre : VidHidePro() { override var name = "EarnVids"; override var mainUrl = "https://peytonepre.com" }
 class Movearnpre : VidHidePro() { override var name = "EarnVids"; override var mainUrl = "https://movearnpre.com" }
 class Dintezuvio : VidHidePro() { override var name = "EarnVids"; override var mainUrl = "https://dintezuvio.com" }
-
-// Logdaki hatalar için eklenenler
 class HgLink : VidHidePro() { override var name = "HGLink"; override var mainUrl = "https://hglink.to" }
 class RyderJet : VidHidePro() { override var name = "RyderJet"; override var mainUrl = "https://ryderjet.com" }
-
-// --- DİĞERLERİ ---
 class Turboplayers : StreamTape() { override var mainUrl = "https://turboplayers.xyz"; override var name = "Streamtape" }
 
 class LulusStream : ExtractorApi() {

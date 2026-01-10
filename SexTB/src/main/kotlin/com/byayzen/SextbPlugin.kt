@@ -11,21 +11,15 @@ class SextbPlugin: Plugin() {
     override fun load(context: Context) {
         // Ana API Kaydı
         registerMainAPI(Sextb())
-
-        // --- StreamTape Varyantları ---
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(StreamTapeNet())
         registerExtractorAPI(StreamTapeXyz())
         registerExtractorAPI(Turboplayers())
-
-        // --- DoodStream Varyantları ---
         registerExtractorAPI(DoodStream())
         registerExtractorAPI(DoodDoply())
         registerExtractorAPI(DoodVideo())
         registerExtractorAPI(Ds2Play())
         registerExtractorAPI(d000d())
-
-        // --- VidHidePro / FileLions / EarnVids Varyantları ---
         registerExtractorAPI(VidHidePro())
         registerExtractorAPI(VidHidePro1())
         registerExtractorAPI(VidHidePro2())
@@ -41,16 +35,12 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(Peytonepre())
         registerExtractorAPI(Movearnpre())
         registerExtractorAPI(Dintezuvio())
-
-        // --- Streamwish / FileMoon / MixDrop Varyantları ---
         registerExtractorAPI(Streamwish())
         registerExtractorAPI(Streamhihi())
         registerExtractorAPI(Javsw())
         registerExtractorAPI(swhoi())
         registerExtractorAPI(Javmoon())
         registerExtractorAPI(MixDropis())
-
-        // --- Diğer Özel Extractorlar ---
         registerExtractorAPI(Javclan())
         registerExtractorAPI(Maxstream())
         registerExtractorAPI(Javggvideo())
