@@ -51,7 +51,6 @@ class Sextb : MainAPI() {
         "${mainUrl}/genre/facials" to "Facials",
         "${mainUrl}/genre/featured-actress" to "Featured Actress"
     )
-    )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         val url = if (page <= 1) {
