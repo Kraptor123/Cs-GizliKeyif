@@ -42,10 +42,14 @@ open class Player4Me : ExtractorApi() {
             this.referer = "${mainUrl}/"
             this.headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0")
         })
-
-
     }
 }
+
+class Vip4me : Player4Me() {
+    override var mainUrl = "https://vip.player4me.vip"
+    override var name = "Player4Me"
+}
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Yanit(
     val hls: String

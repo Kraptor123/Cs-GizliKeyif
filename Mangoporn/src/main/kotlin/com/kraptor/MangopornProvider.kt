@@ -18,6 +18,7 @@ class MangopornProvider: Plugin() {
         registerExtractorAPI(DoodPmExtractor())
         registerExtractorAPI(Vidguardto())
         registerExtractorAPI(MixDropAG())
+        registerExtractorAPI(MixDropMy())
         registerExtractorAPI(LuluStream())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(Player4Me())
@@ -25,6 +26,9 @@ class MangopornProvider: Plugin() {
         registerExtractorAPI(LuluVdo())
         registerExtractorAPI(LuluPvp())
         registerExtractorAPI(LuluVid())
+        registerExtractorAPI(LuluVdoo())
+        registerExtractorAPI(Vip4me())
+        registerExtractorAPI(VidNest())
 
 
 
