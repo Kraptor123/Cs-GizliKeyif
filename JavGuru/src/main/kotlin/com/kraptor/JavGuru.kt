@@ -26,18 +26,31 @@ class JavGuru : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        mainUrl to "Ana Sayfa",
-        "$mainUrl/most-watched-rank" to "En Çok İzlenenler",
-        "$mainUrl/category/jav-uncensored" to "Sansürsüz",
-        "$mainUrl/category/amateur" to "Amatör",
-        "$mainUrl/category/idol" to "İdol",
-        "$mainUrl/category/english-subbed" to "İngilizce Altyazılı",
-        "$mainUrl/tag/married-woman" to "Evli",
-        "$mainUrl/tag/mature-woman" to "Olgun",
-        "$mainUrl/tag/big-tits" to "Büyük Memeler",
-        "$mainUrl/tag/stepmother" to "Üvey Anne",
-        "$mainUrl/tag/incest" to "Ensest",
-        "$mainUrl/tag/bukkake" to "Bukkake"
+        mainUrl to "Home",
+        "$mainUrl/most-watched-rank" to "Most Watched",
+        "$mainUrl/category/jav-uncensored" to "Uncensored",
+        "$mainUrl/category/amateur" to "Amateur",
+        "$mainUrl/category/idol" to "Idol",
+        "$mainUrl/category/english-subbed" to "English Subbed",
+        "$mainUrl/tag/married-woman" to "Married",
+        "$mainUrl/tag/mature-woman" to "Mature",
+        "$mainUrl/tag/big-tits" to "Big Tits",
+        "$mainUrl/tag/stepmother" to "Stepmother",
+        "$mainUrl/tag/incest" to "Incest",
+        "$mainUrl/tag/bukkake" to "Bukkake",
+        "$mainUrl/tag/slut" to "Slut",
+        "$mainUrl/tag/cowgirl" to "Cowgirl",
+        "$mainUrl/tag/nasty" to "Nasty",
+        "$mainUrl/tag/hardcore" to "Hardcore",
+        "$mainUrl/tag/abuse" to "Abuse",
+        "$mainUrl/tag/gal" to "Gal",
+        "$mainUrl/tag/black-actor" to "Black",
+        "$mainUrl/tag/pantyhose" to "Pantyhose",
+        "$mainUrl/tag/prostitutes" to "Prostitutes",
+        "$mainUrl/tag/bride" to "Bride",
+        "$mainUrl/tag/maid" to "Maid",
+        "$mainUrl/tag/gangbang" to "Gangbang",
+        "$mainUrl/tag/underwear" to "Underwear"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {

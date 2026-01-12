@@ -7,5 +7,5 @@ cloudstream {
     description = "Watch high quality hentai videos streamed online in 720p and 1080p - HentaiWorld. Find your favorite hentai videos. Watch the best hentai videos on HentaiWorld."
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://www.google.com/s2/favicons?sz=64&domain=yandex.com.tr"
+    iconUrl = "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://hentaiworld.tv/&size=128"
 }
