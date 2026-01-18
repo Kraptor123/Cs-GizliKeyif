@@ -177,6 +177,7 @@ class Mangoporn : MainAPI() {
 
         return true
     }
+}
 private val igrencKelimeler = listOf(
     "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
     "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play", "trans",
