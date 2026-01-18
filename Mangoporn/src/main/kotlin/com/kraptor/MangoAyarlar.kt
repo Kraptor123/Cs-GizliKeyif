@@ -23,8 +23,7 @@ import org.json.JSONObject
 import java.util.Collections
 
 object MangoAyarlar {
-    // --- Renkler ve Sabitler ---
-    private const val PREFS_PREFIX = "Mangoporn_" // Önek Mangoporn olarak değiştirildi
+    private const val PREFS_PREFIX = "Mangoporn_"
     const val ALL_CATEGORIES_ORDER_KEY = "${PREFS_PREFIX}ALL_order"
     const val CUSTOM_CATEGORIES_KEY = "${PREFS_PREFIX}CUSTOM_categories"
     const val DELETED_CATEGORIES_KEY = "${PREFS_PREFIX}DELETED_categories"
@@ -38,7 +37,6 @@ object MangoAyarlar {
     private const val COLOR_DARK_GRAY = "#424242"
 
     private val defaultCategories = listOf(
-        // Genel Kategoriler
         "genres/porn-movies" to "Latest Release",
         "genres/porn-movies/random" to "Random Contents",
         "genre/18-teens" to "18+ Teens",
@@ -89,8 +87,6 @@ object MangoAyarlar {
         "genre/swingers" to "Swingers",
         "genre/threesomes" to "Threesomes",
         "genre/wives" to "Wives",
-
-        // Stüdyolar (Güncellenmiş ve Tam Liste)
         "xxx/studios/21-sextury-video" to "21 Sextury",
         "xxx/studios/3rd-degree" to "3RD Degree",
         "xxx/studios/adam-eve" to "Adam & Eve",
@@ -108,7 +104,7 @@ object MangoAyarlar {
         "xxx/studios/elegant-angel" to "Elegant Angel",
         "xxx/studios/evil-angel" to "Evil Angel",
         "xxx/studios/evasive-angles" to "Evasive Angles",
-        "xxx/studios/fun-movies" to "Fun Movies Studio", // Eski stüdyo korunmuş
+        "xxx/studios/fun-movies" to "Fun Movies Studio",
         "xxx/studios/ggg" to "GGG",
         "xxx/studios/girlfriends-films" to "Girlfriends Films",
         "xxx/studios/hustler" to "Hustler",
@@ -130,10 +126,8 @@ object MangoAyarlar {
         "xxx/studios/wicked-pictures" to "Wicked Pictures",
         "xxx/studios/white-ghetto" to "White Ghetto",
         "xxx/studios/zero-tolerance" to "Zero Tolerance"
-    ) + (1980..2025).map { "year/$it" to "$it" } // Yıllar listenin sonuna eklendi
-        .sortedBy { it.second.lowercase() } // Tüm liste küçük harfe duyarsız olarak alfabetik sıralandı
-
-    // --- DEĞİŞİKLİK 2: Varsayılan Olarak Açık Olacak Kategoriler ---
+    ) + (1980..2025).map { "year/$it" to "$it" }
+        .sortedBy { it.second.lowercase() }
     private val defaultEnabledNames = setOf(
         "Latest Release", "Rastgele İçerik", "German", "Russian", "French"
     )
@@ -279,8 +273,6 @@ object MangoAyarlar {
         setKey(key, jsonArray.toString())
     }
 
-    // --- Arayüz Yöneticisi ---
-    // Bu kısım tamamen aynı kalıyor, çünkü generic olarak çalışıyor.
     private class SettingsManager(val context: AppCompatActivity, val onSave: () -> Unit) {
         private val ID_BTN_CATEGORIES = 1001
         private val ID_BTN_LAYOUT = 1002
@@ -511,8 +503,6 @@ object MangoAyarlar {
                 addState(intArrayOf(), shape)
             }
         }
-
-        // --- ADAPTER ---
         private inner class CategoryAdapter(
             private val ctx: Context,
             private val onCheckedChange: (String, Boolean) -> Unit

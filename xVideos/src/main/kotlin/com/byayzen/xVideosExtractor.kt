@@ -20,7 +20,7 @@ open class xVideosExtractor : ExtractorApi() {
     ) {
         val document = app.get(url).text
 
-        // m3u8 URL'sini bul
+
         val hlsRegex = Regex("""html5player\.setVideoHLS\(['"]([^'"]+)['"]""")
         val hlsUrl = hlsRegex.find(document)?.groupValues?.get(1)
 

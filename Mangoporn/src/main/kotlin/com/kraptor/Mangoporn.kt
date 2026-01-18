@@ -9,26 +9,30 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 
 
 class Mangoporn : MainAPI() {
-    override var mainUrl              = "https://mangoporn.net"
-    override var name                 = "Mangoporn"
-    override val hasMainPage          = true
-    override var lang                 = "en"
-    override val hasDownloadSupport   = true
-    override val supportedTypes       = setOf(TvType.NSFW)
-    override val vpnStatus            = VPNStatus.MightBeNeeded
+    override var mainUrl = "https://mangoporn.net"
+    override var name = "Mangoporn"
+    override val hasMainPage = true
+    override var lang = "en"
+    override val hasDownloadSupport = true
+    override val supportedTypes = setOf(TvType.NSFW)
+    override val vpnStatus = VPNStatus.MightBeNeeded
 
     private val MAX_PAGE = 3586
-    override val mainPage get() = mainPageOf(
-        *(try {
-            MangoAyarlar.getOrderedAndEnabledCategories().toTypedArray()
-        } catch (e: Exception) {
-            Log.e("Mangoporn", "Kategoriler yüklenemedi, yedek liste kullanılıyor: ${e.message}")
-            arrayOf(
-                "genres/porn-movies" to "Latest Release",
-                "genres/porn-movies/random" to "Rastgele İçerik"
-            )
-        })
-    )
+    override val mainPage
+        get() = mainPageOf(
+            *(try {
+                MangoAyarlar.getOrderedAndEnabledCategories().toTypedArray()
+            } catch (e: Exception) {
+                Log.e(
+                    "Mangoporn",
+                    "Kategoriler yüklenemedi, yedek liste kullanılıyor: ${e.message}"
+                )
+                arrayOf(
+                    "genres/porn-movies" to "Latest Release",
+                    "genres/porn-movies/random" to "Rastgele İçerik"
+                )
+            })
+        )
 
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -56,19 +60,19 @@ class Mangoporn : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
-        val title     = this.select("div h3").text()
+        val title = this.select("div h3").text()
         if (title.contains(kirliKelimeRegex)) {
             return null
         }
-        val href      = fixUrl(this.select("div h3 a").attr("href"))
+        val href = fixUrl(this.select("div h3 a").attr("href"))
         val posterUrl = this.select("div.poster > img").attr("data-wpfc-original-src")
         return if (!posterUrl.contains(".jpg")) {
-            val poster=this.select("div.poster > img").attr("src")
+            val poster = this.select("div.poster > img").attr("src")
             newMovieSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = poster
             }
         } else {
-            val poster=posterUrl
+            val poster = posterUrl
             newMovieSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = poster
             }
@@ -109,15 +113,19 @@ class Mangoporn : MainAPI() {
 
         return searchResponse
     }
+
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
         val title = document.selectFirst("div.data > h1")?.text().toString()
-        val poster = document.selectFirst("div.poster > img")?.attr("data-wpfc-original-src")?.trim().toString()
+        val poster =
+            document.selectFirst("div.poster > img")?.attr("data-wpfc-original-src")?.trim()
+                .toString()
         val year = document.selectFirst("span.textco a[rel=tag]")?.text()?.trim()?.toIntOrNull()
         val duration = document.selectFirst("span.duration")?.text()?.let {
             val hours = Regex("""(\d+)\s*hrs""").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            val minutes = Regex("""(\d+)\s*mins""").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            val minutes =
+                Regex("""(\d+)\s*mins""").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             (hours * 60) + minutes
         }
         val description = document.selectFirst("div.wp-content > p")?.text()
@@ -150,16 +158,25 @@ class Mangoporn : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val document = app.get(data).document
-        document.select("div#pettabs > ul a").map {
-            val link=it.attr("href")
-            loadExtractor(link,subtitleCallback, callback)
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val response = app.get(data)
+        val document = response.document
+
+        val tabs = document.select("div#pettabs > ul a")
+
+        tabs.map { it.attr("href") }.amap { link ->
+            if (link.isNotEmpty()) {
+                loadExtractor(link, subtitleCallback, callback)
+            }
         }
+
         return true
     }
-}
-
 private val igrencKelimeler = listOf(
     "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
     "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play", "trans",

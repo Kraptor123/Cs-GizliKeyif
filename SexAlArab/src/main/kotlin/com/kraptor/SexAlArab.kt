@@ -42,9 +42,6 @@ class SexAlArab(context: Context) : MainAPI() {
         "${mainUrl}/category/سكس-نيك-مراهقات/"  to "سكس مراهقات",
         "${mainUrl}/category/سكس-مترجم/"  to "سكس مترجم",
         "${mainUrl}/category/سكس-مدبلج/"  to "سكس مدبلج",
-//        "${mainUrl}/category/نودز/"  to "نودز",
-//        "${mainUrl}/category/سكس/"  to "سكس",
-//        "${mainUrl}/category/سكس-عربي/"  to "سكس عربي",
 
     )
 
@@ -108,7 +105,6 @@ class SexAlArab(context: Context) : MainAPI() {
         }
     }
 
-    // WebView oluşturup video URL'sini çıkar
     @SuppressLint("SetJavaScriptEnabled")
     suspend fun createWebViewAndExtractVideo(
         context: Context,
@@ -127,31 +123,25 @@ class SexAlArab(context: Context) : MainAPI() {
                     super.onPageFinished(view, url)
                     extractVideoWithDelay(view, { result ->
                         onResult(result)
-                        // İş bitince temizle
                         Handler(Looper.getMainLooper()).post {
-//                            Log.d("kraptor_SexAlArab", "WebView temizlendi")
                             cleanupWebView(this@apply)
                         }
                     }, 0)
                 }
             }
 
-            // HTML'i yükle
             loadDataWithBaseURL("https://sexalarab.com/", html, "text/html", "UTF-8", null)
         }
 
         return@withContext wv
     }
 
-    // Video URL'sini gecikmeyle çıkar
     private fun extractVideoWithDelay(webView: WebView?, onResult: (String?) -> Unit, attempt: Int) {
         if (webView == null || attempt > 20) {
-//            Log.d("kraptor_SexAlArab", "Timeout reached or WebView is null")
             onResult(null)
             return
         }
 
-//        Log.d("kraptor_SexAlArab", "Attempt $attempt - Extracting video URLs...")
 
         val extractScript = """
     (function() {
@@ -244,7 +234,6 @@ class SexAlArab(context: Context) : MainAPI() {
 """.trimIndent()
 
         webView.evaluateJavascript(extractScript) { resultJson ->
-//            Log.d("kraptor_SexAlArab", "Raw result: '$resultJson'")
 
             val cleanResult = resultJson?.let { raw ->
                 if (raw == "null" || raw == "\"null\"") null
@@ -256,18 +245,13 @@ class SexAlArab(context: Context) : MainAPI() {
 
             if (cleanResult.isNullOrEmpty() || cleanResult == "null") {
                 if (attempt < 20) {
-                    // İlk 5 denemede 500ms, sonra 2 saniye bekle
                     val delay = if (attempt < 5) 500L else 2000L
-//                    Log.d("kraptor_SexAlArab", "Not ready, retrying in ${delay}ms...")
                     Handler(Looper.getMainLooper()).postDelayed({
                         extractVideoWithDelay(webView, onResult, attempt + 1)
                     }, delay)
-                } else {
-//                    Log.d("kraptor_SexAlArab", "Max attempts reached")
                     onResult(null)
                 }
             } else {
-//                Log.d("kraptor_SexAlArab", "SUCCESS: $cleanResult")
                 onResult(cleanResult)
             }
         }
@@ -280,10 +264,8 @@ class SexAlArab(context: Context) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-//        Log.d("kraptor_SexAlArab", "data » $data")
         val pageHtml = app.get(data).text
 
-//        Log.d("kraptor_SexAlArab", "WebView ile kt_player video URL'si çıkarılıyor...")
 
         val videoResultJson = suspendCoroutine { continuation ->
             runBlocking {
@@ -293,20 +275,16 @@ class SexAlArab(context: Context) : MainAPI() {
             }
         }
 
-//        Log.d("kraptor_SexAlArab", "Video JSON Result = $videoResultJson")
 
         videoResultJson?.let { jsonResult ->
             try {
-                // JSON parse et
                 val videoList = parseJson<List<VideoQuality>>(jsonResult)
 
                 videoList?.forEach { video ->
                     if (video.url.startsWith("http")) {
-//                        Log.d("kraptor_SexAlArab", "Adding: ${video.quality} - ${video.url}")
 
                         val videoUrl = app.get(video.url, referer = "${mainUrl}/", allowRedirects = true).url
 
-//                        Log.d("kraptor_SexAlArab", "videoUrl = $videoUrl")
 
                         callback.invoke(
                             newExtractorLink(
@@ -323,7 +301,6 @@ class SexAlArab(context: Context) : MainAPI() {
                 return videoList.isNotEmpty()
 
             } catch (e: Exception) {
-//                Log.e("kraptor_SexAlArab", "Parse error: ${e.message}")
                 return false
             }
         }
@@ -332,7 +309,6 @@ class SexAlArab(context: Context) : MainAPI() {
     }
 }
 
-// Data class ekle
 data class VideoQuality(
     val url: String,
     val quality: String

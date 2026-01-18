@@ -34,7 +34,7 @@ class HentaizmMangaPlugin : Plugin() {
             .logger(DebugLogger())
             .memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.20) // önceki %25 yerine %20 (daha güvenli)
+                    .maxSizePercent(context, 0.20)
                     .build()
             }
             .diskCache {
@@ -43,7 +43,6 @@ class HentaizmMangaPlugin : Plugin() {
                     .maxSizeBytes(512L * 1024 * 1024)
                     .build()
             }
-            // Burayı makul bir sınıra çekiyoruz — ekran yüksekliğinin 2-3 katı yeterli
             .maxBitmapSize(coil3.size.Size(screenWidth, screenHeight * 2))
             .bitmapFactoryMaxParallelism(2)
             .bitmapFactoryExifOrientationStrategy(coil3.decode.ExifOrientationStrategy.RESPECT_PERFORMANCE)

@@ -1,6 +1,5 @@
 package com.kraptor
 
-//import android.util.Log
 import com.kraptor.decodeM3u8MouflonFilesFixed
 import com.lagradost.api.Log
 import kotlinx.coroutines.*
@@ -13,9 +12,7 @@ import java.net.URLEncoder
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Live Stream destekli Socket-based HTTP Proxy Server
- */
+
 class SimpleProxyServer(
     private val port: Int,
     private val cacheDir: File,
@@ -90,7 +87,6 @@ class SimpleProxyServer(
             val uri = parts[1]
             Log.d(TAG, "Request: $uri")
 
-            // Read headers
             val headers = mutableMapOf<String, String>()
             while (true) {
                 val line = input.readLine()
@@ -141,7 +137,6 @@ class SimpleProxyServer(
         try {
             Log.d(TAG, "Fetching live playlist from: ${streamInfo.variantUrl}")
 
-            // Fetch fresh playlist
             val variantText = runBlocking {
                 fetchFunction(streamInfo.variantUrl, mapOf("Referer" to streamInfo.referer))
             }
@@ -153,7 +148,6 @@ class SimpleProxyServer(
 
             Log.d(TAG, "Fetched playlist, length: ${variantText.length}")
 
-            // Decode on-the-fly
             val decoded = decodeM3u8MouflonFilesFixed(variantText, { url, hdrs ->
                 runBlocking {
                     fetchFunction(url, hdrs ?: mapOf("Referer" to streamInfo.referer))
@@ -162,7 +156,6 @@ class SimpleProxyServer(
 
             Log.d(TAG, "Decoded playlist, length: ${decoded.length}")
 
-            // Rewrite URLs to proxy
             val rewritten = rewritePlaylist(decoded, streamInfo.baseUrl, streamInfo.psch, streamInfo.pkey)
 
             Log.d(TAG, "Returning live playlist with ${rewritten.lines().count { !it.startsWith("#") }} segments")
@@ -195,7 +188,6 @@ class SimpleProxyServer(
                 .url(url)
                 .header("User-Agent", requestHeaders["user-agent"] ?: "Mozilla/5.0")
 
-            // Forward important headers
             requestHeaders["range"]?.let { requestBuilder.header("Range", it) }
             requestHeaders["referer"]?.let { requestBuilder.header("Referer", it) }
 
@@ -216,7 +208,6 @@ class SimpleProxyServer(
                     append("Content-Length: ${body.size}\r\n")
                     append("Access-Control-Allow-Origin: *\r\n")
 
-                    // Forward important headers
                     response.header("Content-Range")?.let { append("Content-Range: $it\r\n") }
                     response.header("Accept-Ranges")?.let { append("Accept-Ranges: $it\r\n") }
 
@@ -262,17 +253,14 @@ class SimpleProxyServer(
             if (trimmed.isEmpty() || trimmed.startsWith("#")) {
                 line
             } else {
-                // Make absolute URL
                 val absolute = try {
                     java.net.URI(baseUrl).resolve(trimmed).toString()
                 } catch (e: Exception) {
                     trimmed
                 }
 
-                // Add psch/pkey if needed
                 val withParams = addParams(absolute, psch, pkey)
 
-                // Proxy it
                 "http://127.0.0.1:$port/proxy?url=${URLEncoder.encode(withParams, "UTF-8")}"
             }
         }

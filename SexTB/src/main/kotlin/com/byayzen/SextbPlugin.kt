@@ -9,7 +9,6 @@ import com.lagradost.cloudstream3.extractors.*
 @CloudstreamPlugin
 class SextbPlugin: Plugin() {
     override fun load(context: Context) {
-        // Ana API Kaydı
         registerMainAPI(Sextb())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(StreamTapeNet())
