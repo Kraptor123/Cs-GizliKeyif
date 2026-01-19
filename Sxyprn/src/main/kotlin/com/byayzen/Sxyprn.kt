@@ -26,7 +26,7 @@ class Sxyprn : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}" to "Main Menu",
+        mainUrl to "Main Menu",
         "${mainUrl}/Hardcore.html?sm=latest" to "Latest",
         "${mainUrl}/Hardcore.html?sm=trending" to "Trending",
         "${mainUrl}/Hardcore.html?sm=views" to "Views",
@@ -56,7 +56,6 @@ class Sxyprn : MainAPI() {
         )
     }
 
-    // Hata veren kısım burasıydı. Tip zorlaması yaparak SearchResponseList döndürüyoruz.
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val pageValue = (page - 1) * 30
         val formattedQuery = query.trim().replace(" ", "-")
@@ -140,8 +139,6 @@ class Sxyprn : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val url = fixUrl(data)
-        Log.d("SxyPrn", "🚀 ÇİFTE TARAMA MODU: $url")
-
         var videoFound = false
 
         val targetRegex = """https?://.*(?:/cdn8/|\.vid).*""".toRegex()
@@ -152,79 +149,52 @@ class Sxyprn : MainAPI() {
             useOkhttp = true
         )
 
-        try {
+        val capturedResponse = app.get(url, interceptor = resolver)
+        val capturedUrl = capturedResponse.url
 
-            val capturedResponse = app.get(url, interceptor = resolver)
-            val capturedUrl = capturedResponse.url
+        val finalUrl = if (capturedUrl.contains("trafficdeposit.com")) {
+            capturedUrl
+        } else {
+            val redirectResp = app.get(
+                capturedUrl,
+                headers = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Referer" to url
+                ),
+                allowRedirects = false
+            )
+            redirectResp.headers["Location"] ?: redirectResp.headers["location"] ?: capturedUrl
+        }
 
-            val finalUrl = if (capturedUrl.contains("trafficdeposit.com")) {
-                capturedUrl
-            } else {
-                try {
-                    val redirectResp = app.get(
-                        capturedUrl,
-                        headers = mapOf(
-                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                            "Referer" to url
-                        ),
-                        allowRedirects = false
-                    )
-                    redirectResp.headers["Location"] ?: redirectResp.headers["location"] ?: capturedUrl
-                } catch (e: Exception) {
-                    capturedUrl
-                }
-            }
-
-            Log.d("SxyPrn", "✅ ANA VİDEO EKLENDİ: $finalUrl")
-
+        if (finalUrl.contains(".vid") || finalUrl.contains("/cdn8/")) {
             callback.invoke(
                 newExtractorLink(
-                    name = "SxyPrn (Direct)",
+                    name = "SxyPrn",
                     source = name,
                     url = finalUrl,
                     type = ExtractorLinkType.VIDEO
                 ) {
                     this.referer = url
                     this.quality = Qualities.P1080.value
-                    this.headers = mapOf(
-                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                        "Sec-GPC" to "1",
-                        "Connection" to "keep-alive",
-                        "Upgrade-Insecure-Requests" to "1",
-                        "Sec-Fetch-Dest" to "document",
-                        "Sec-Fetch-Mode" to "navigate",
-                        "Sec-Fetch-Site" to "none",
-                        "Sec-Fetch-User" to "?1"
-                    )
                 }
             )
             videoFound = true
-
-        } catch (e: Exception) {
         }
 
-        try {
-            val doc = app.get(url).document
-            val mainContainer = doc.selectFirst("div.post_text")
+        val doc = app.get(url).document
+        val mainContainer = doc.selectFirst("div.post_text")
 
-            if (mainContainer != null) {
-                val externalLinks = mainContainer.select("a.extlink_icon.extlink")
-                    .mapNotNull { it.attr("href") }
-                    .distinctBy {
-                        try { java.net.URI(it).host.replace("www.", "") } catch (e: Exception) { it }
-                    }
-
-                Log.d("SxyPrn", "📦 BULUNAN HARİCİ LİNK SAYISI: ${externalLinks.size}")
-
-                externalLinks.forEach { link ->
-                    Log.d("SxyPrn", ">> Harici Link İşleniyor: $link")
-                    loadExtractor(link, url, subtitleCallback, callback)
-                    videoFound = true
+        if (mainContainer != null) {
+            val externalLinks = mainContainer.select("a.extlink_icon.extlink")
+                .mapNotNull { it.attr("href") }
+                .distinctBy {
+                    URI(it).host.replace("www.", "")
                 }
+
+            externalLinks.forEach { link ->
+                loadExtractor(link, url, subtitleCallback, callback)
+                videoFound = true
             }
-        } catch (e: Exception) {
-            Log.e("SxyPrn", "Harici link tarama hatası: ${e.message}")
         }
 
         return videoFound

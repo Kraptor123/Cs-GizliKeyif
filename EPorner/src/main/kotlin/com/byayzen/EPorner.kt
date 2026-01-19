@@ -30,45 +30,33 @@ class EPorner : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) request.data else "${request.data.removeSuffix("/")}/$page/"
-        val home =
-            app.get(url).document.select("div#vidresults div.mb").mapNotNull { it.toSearchResult() }
+        val home = app.get(url).document.select("div#vidresults div.mb").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(HomePageList(request.name, home, true), true)
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        return app.get(
-            "$mainUrl/search/${
-                query.replace(
-                    " ",
-                    "-"
-                )
-            }/"
-        ).document.select("div#vidresults div.mb").mapNotNull { it.toSearchResult() }
-    }
-
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = if (page <= 1) "$mainUrl/search/${
-            query.replace(
-                " ",
-                "-"
-            )
-        }/" else "$mainUrl/search/${query.replace(" ", "-")}/$page/"
-        val results =
-            app.get(url).document.select("div#vidresults div.mb").mapNotNull { it.toSearchResult() }
+        val formattedQuery = query.replace(" ", "-")
+        val url = if (page <= 1) "$mainUrl/search/$formattedQuery/" else "$mainUrl/search/$formattedQuery/$page/"
+        val results = app.get(url).document.select("div#vidresults div.mb").mapNotNull { it.toSearchResult() }
         return newSearchResponseList(results, true)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
         val titleElement = this.selectFirst("p.mbtit a") ?: return null
         val img = this.selectFirst("div.mbimg img")
-        val poster =
-            fixUrlNull(img?.attr("data-src")?.takeIf { it.isNotEmpty() && !it.startsWith("data:") }
-                ?: img?.attr("src"))
+
+        val poster = fixUrlNull(
+            img?.attr("data-src")?.takeIf { it.isNotEmpty() && !it.startsWith("data:") }
+                ?: img?.attr("src")
+        )
+
         return newMovieSearchResponse(
             titleElement.text(),
             fixUrl(titleElement.attr("href")),
             TvType.NSFW
-        ) { this.posterUrl = poster }
+        ) {
+            this.posterUrl = poster
+        }
     }
 
 
@@ -124,66 +112,42 @@ class EPorner : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data, headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/143.0")).document
-        var foundAny = false
+        val url = fixUrl(data)
+        var videoFound = false
 
+        val resolver = WebViewResolver(
+            interceptUrl = """https?://www\.eporner\.com/xhr/video/.*""".toRegex(),
+            userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            useOkhttp = true
+        )
 
-        document.select("div#downloaddiv a").forEach { element ->
-            val link = element.attr("href")
+        try {
+            val capturedUrl = app.get(url, interceptor = resolver).url
+            if (capturedUrl.contains("/xhr/video/")) {
+                val responseText = app.get(capturedUrl).text
 
-            // Sadece mp4 ve /dload/ içeren linkleri al
-            if (link.contains("/dload/") && link.contains(".mp4")) {
-                val text = element.text()
-                val absoluteUrl = fixUrlNull(link) ?: return@forEach
-
-                val qualityLabel = Regex("""(\d{3,4}p)""").find(text)?.groupValues?.get(1) ?: "Unknown"
-
-                Log.d("EpornerResolver", "Link Bulundu: $qualityLabel -> $absoluteUrl")
-
-                foundAny = true
-                callback.invoke(
-                    newExtractorLink(
-                        name = "$name MP4",
-                        source = name,
-                        url = absoluteUrl,
-                        type = ExtractorLinkType.VIDEO
-                    ) {
-                        this.referer = data
-                        this.quality = getQualityFromName(qualityLabel)
+                """"(\d{3,4}p)[^"]*"\s*:\s*\{\s*"labelShort"\s*:\s*"[^"]*"\s*,\s*"src"\s*:\s*"([^"]+)"""".toRegex()
+                    .findAll(responseText).forEach { match ->
+                        val videoUrl = match.groupValues[2]
+                        if (!videoUrl.contains("/dload/")) {
+                            callback.invoke(
+                                newExtractorLink(
+                                    name = "$name",
+                                    source = name,
+                                    url = videoUrl,
+                                    type = ExtractorLinkType.VIDEO
+                                ) {
+                                    this.referer = "https://www.eporner.com/"
+                                    this.quality = getQualityFromName(match.groupValues[1])
+                                }
+                            )
+                            videoFound = true
+                        }
                     }
-                )
             }
+        } catch (e: Exception) {
         }
 
-        if (!foundAny) {
-            try {
-                val jsonLdScript = document.select("script[type=application/ld+json]").firstOrNull()?.data()
-                if (jsonLdScript != null) {
-                    val contentUrlMatch = Regex(""""contentUrl"\s*:\s*"([^"]+)"""").find(jsonLdScript)
-                    val mainVideoUrl = contentUrlMatch?.groupValues?.get(1)
-
-                    if (mainVideoUrl != null) {
-                        Log.d("EpornerResolver", "JSON-LD Linki kullanılıyor: $mainVideoUrl")
-                        callback.invoke(
-                            newExtractorLink(
-                                name = "$name (JSON-LD)",
-                                source = name,
-                                url = mainVideoUrl,
-                                type = ExtractorLinkType.VIDEO
-                            ) {
-                                this.referer = data
-                                this.quality = Qualities.P1080.value
-                            }
-                        )
-                        foundAny = true
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("EpornerResolver", "JSON-LD parse hatası: ${e.message}")
-            }
-        }
-
-        return foundAny
+        return videoFound
     }
     }
-

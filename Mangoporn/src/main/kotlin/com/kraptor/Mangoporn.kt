@@ -17,16 +17,12 @@ class Mangoporn : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    private val MAX_PAGE = 3586
+    private val MAX_PAGE = 3621
     override val mainPage
         get() = mainPageOf(
             *(try {
                 MangoAyarlar.getOrderedAndEnabledCategories().toTypedArray()
             } catch (e: Exception) {
-                Log.e(
-                    "Mangoporn",
-                    "Kategoriler yüklenemedi, yedek liste kullanılıyor: ${e.message}"
-                )
                 arrayOf(
                     "genres/porn-movies" to "Latest Release",
                     "genres/porn-movies/random" to "Rastgele İçerik"
@@ -58,36 +54,34 @@ class Mangoporn : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
+        val tumKelimeler = igrencKelimeler + Anamenudekiboklar
+        val desen = "\\b(?:${tumKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val title = this.select("div h3").text()
-        if (title.contains(kirliKelimeRegex)) {
-            return null
-        }
+
+        if (title.contains(kirliKelimeRegex)) return null
+
         val href = fixUrl(this.select("div h3 a").attr("href"))
-        val posterUrl = this.select("div.poster > img").attr("data-wpfc-original-src")
-        return if (!posterUrl.contains(".jpg")) {
-            val poster = this.select("div.poster > img").attr("src")
-            newMovieSearchResponse(title, href, TvType.NSFW) {
-                this.posterUrl = poster
-            }
-        } else {
-            val poster = posterUrl
-            newMovieSearchResponse(title, href, TvType.NSFW) {
-                this.posterUrl = poster
-            }
+        val img = this.select("div.poster > img")
+        val posterUrl = img.attr("data-wpfc-original-src").ifEmpty { img.attr("src") }
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
         }
     }
 
     private fun Element.toSearchingResult(): SearchResponse? {
-        val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
+        val tumKelimeler = igrencKelimeler + Anamenudekiboklar
+        val desen = "\\b(?:${tumKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val title = this.select("div.details a").text()
-        if (title.contains(kirliKelimeRegex)) {
-            return null
-        }
+
+        if (title.contains(kirliKelimeRegex)) return null
+
         val href = fixUrl(this.select("div.image a").attr("href"))
-        val posterUrl = this.select("div.image img").attr("src")
+        val img = this.select("div.image img")
+        val posterUrl = img.attr("data-wpfc-original-src").ifEmpty { img.attr("src") }
+
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
@@ -187,3 +181,5 @@ private val igrencKelimeler = listOf(
     "Henny", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
     "Situationship", "Pegging", "Femdom", "futa", "tranny", "crossdress", "Bisexual"
 )
+
+private val Anamenudekiboklar = listOf("TS", "Trans", "TGirl", "gay", "pegging", "bi", "femboy")
