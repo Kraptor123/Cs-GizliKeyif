@@ -28,7 +28,19 @@ allprojects {
 
 fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
 
-fun Project.android(configuration: BaseExtension.() -> Unit) = extensions.getByName<BaseExtension>("android").configuration()
+fun Project.android(configuration: BaseExtension.() -> Unit) {
+    extensions.getByName<BaseExtension>("android").apply {
+        (extensions.findByName("java") as? JavaPluginExtension)?.apply {
+            // Use Java 17 toolchain even if a higher JDK runs the build.
+            // We still use Java 8 for now which higher JDKs have deprecated.
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(17))
+            }
+        }
+
+        configuration()
+    }
+}
 
 subprojects {
     apply(plugin = "com.android.library")
@@ -60,7 +72,8 @@ subprojects {
                 freeCompilerArgs.addAll(
                     "-Xno-call-assertions",
                     "-Xno-param-assertions",
-                    "-Xno-receiver-assertions"
+                    "-Xno-receiver-assertions",
+                    "-Xannotation-default-target=param-property"
                 )
             }
         }
@@ -77,15 +90,16 @@ subprojects {
         // https://github.com/recloudstream/cloudstream/blob/master/app/build.gradle.kts
         implementation(kotlin("stdlib")) // Adds Standard Kotlin Features
         implementation("com.github.Blatzar:NiceHttp:0.4.13") // HTTP Lib
-        implementation("org.jsoup:jsoup:1.21.2") // HTML Parser
+        implementation("org.jsoup:jsoup:1.22.1") // HTML Parser
         implementation("com.google.code.gson:gson:2.13.2")
         // IMPORTANT: Do not bump Jackson above 2.13.1, as newer versions will
         // break compatibility on older Android devices.
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1")// JSON Parser
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.5")    // JSON Parser
+        implementation("com.fasterxml.jackson.core:jackson-databind:2.13.5")
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")      // Kotlin için asenkron işlemler
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
-        implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4.2")
         implementation("io.karn:khttp-android:0.1.2")
+        implementation("androidx.appcompat:appcompat:1.7.1")
         implementation("com.faendir.rhino:rhino-android:1.6.0")
     }
 }
