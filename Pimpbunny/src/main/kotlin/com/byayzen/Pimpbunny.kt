@@ -2,7 +2,6 @@
 
 package com.byayzen
 
-import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -15,12 +14,13 @@ class Pimpbunny : MainAPI() {
     override var name = "Pimpbunny"
     override val hasMainPage = true
     override var lang = "en"
-    override val hasQuickSearch = false
+    override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/" to "Main Menu",
+        "${mainUrl}/" to "Featured Videos",
+        "${mainUrl}/onlyfans-models/?models_per_page=30&sort_by=added_date" to "Newest Models",
         "${mainUrl}/categories/4k/" to "4K",
         "${mainUrl}/categories/anal/" to "Anal",
         "${mainUrl}/categories/bbc/" to "BBC",
@@ -46,31 +46,51 @@ class Pimpbunny : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val response = app.get(
-            url = request.data,
+        val url = if (page <= 1) {
+            request.data
+        } else {
+            if (request.data.contains("onlyfans-models")) {
+                val base = request.data.substringBefore("?")
+                val query = request.data.substringAfter("?")
+                "${base}${page}/?${query}"
+            } else {
+                "${request.data.removeSuffix("/")}/$page/"
+            }
+        }
+
+        val document = app.get(
+            url = url,
             interceptor = CloudflareKiller(),
             headers = mapOf("Referer" to "$mainUrl/")
-        )
-        val document = response.document
+        ).document
 
-        val home = document.select(".ui-card-root__0dWeQJ, div.col").mapNotNull {
-            it.toMainPageResult(isSearch = false)
+        val selector = when (request.name) {
+            "Newest Models" -> "#vt_list_models_with_advertising_custom_models_list_items"
+            "Featured Videos" -> "#pb_index_featured_videos_list_featured_videos_items"
+            else -> ""
+        }.let { if (it.isNotEmpty()) "$it .col, $it .ui-card-root__0dWeQJ" else ".col, .ui-card-root__0dWeQJ" }
+
+        val isModel = request.name == "Newest Models"
+        val home = document.select(selector).mapNotNull {
+            it.toSearchResult(isModel)
         }.distinctBy { it.url }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(request.name, home, hasNext = home.isNotEmpty())
     }
 
-    private fun Element.toMainPageResult(isSearch: Boolean): SearchResponse? {
-        val titleElement = this.selectFirst(".ui-card-title__igirYJ")
-        val title = titleElement?.text()?.trim() ?: return null
-
-        val anchor = this.selectFirst("a.ui-card-link__KxRw6l")
+    private fun Element.toSearchResult(isModel: Boolean = true): SearchResponse? {
+        val anchor = this.selectFirst("a.ui-card-link__KxRw6l, a")
         val href = fixUrlNull(anchor?.attr("href")) ?: return null
 
-        val img = this.selectFirst("img.ui-card-thumbnail__8dZcLX")
-        val posterUrl = fixUrlNull(img?.attr("data-webp") ?: img?.attr("src"))
+        if (!href.contains("pimpbunny.com")) return null
 
-        return if (isSearch) {
+        val title = this.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim() ?: return null
+        val img = this.selectFirst("img.ui-card-thumbnail__8dZcLX, img")
+        val posterUrl = fixUrlNull(
+            img?.attr("data-original") ?: img?.attr("data-webp") ?: img?.attr("data-src") ?: img?.attr("src")
+        )
+
+        return if (isModel || href.contains("/onlyfans-models/")) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
             }
@@ -81,105 +101,55 @@ class Pimpbunny : MainAPI() {
         }
     }
 
-    private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst(".text-truncate, .ui-card-title__igirYJ")?.text()?.trim()
-            ?: return null
-        val href =
-            fixUrlNull(this.selectFirst("a.ui-card-link__KxRw6l")?.attr("href")) ?: return null
-
-        val img = this.selectFirst("img.ui-card-thumbnail__8dZcLX")
-
-        val posterUrl = fixUrlNull(
-            img?.attr("data-original")?.ifEmpty { null }
-                ?: img?.attr("data-src")?.ifEmpty { null }
-                ?: img?.attr("src")?.ifEmpty { null }
-        )
-
-        return newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-            this.posterUrl = posterUrl
-        }
-    }
-
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val searchUrl =
-            if (page > 1) "${mainUrl}/search/${query}/page/$page/" else "${mainUrl}/search/${query}/"
-
-        val document = app.get(
+        val itemsPerPage = 30
+        val timestamp = System.currentTimeMillis()
+        val searchUrl = "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_models_models_list_search_result&from_models=$page&sort_by=title&items_per_page=$itemsPerPage&models_per_page=$itemsPerPage&_=$timestamp"
+        val response = app.get(
             url = searchUrl,
             interceptor = CloudflareKiller(),
-            headers = mapOf("Referer" to "$mainUrl/")
-        ).document
-
-        val results = document.select(".ui-card-root__0dWeQJ, .ui-card-model__HSYU48").mapNotNull {
+            headers = mapOf(
+                "Referer" to "$mainUrl/search/$query/",
+                "X-Requested-With" to "XMLHttpRequest"
+            )
+        )
+        val document = response.document
+        val results = document.select(".ui-card-root__0dWeQJ, .col").mapNotNull {
             it.toSearchResult()
         }.distinctBy { it.url }
 
         return newSearchResponseList(results, hasNext = results.isNotEmpty())
     }
 
+
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val response = app.get(
-            url,
-            headers = mapOf("Referer" to "$mainUrl/")
-        )
-        val document = response.document
+        val document = app.get(url, interceptor = CloudflareKiller(), headers = mapOf("Referer" to "$mainUrl/")).document
 
-        val title =
-            document.selectFirst("h1.ui-heading-h1__0HdXaM, h1.ui-text-root__ZkCuFK")?.text()
-                ?.trim()
-                ?: document.selectFirst("div.pages-view-video-video-title__9lYVyi")?.text()?.trim()
+        val title = document.selectFirst("h1.ui-heading-h1__0HdXaM, h1.ui-text-root__ZkCuFK, div.pages-view-video-video-title__9lYVyi")?.text()?.trim() ?: return null
+        val description = document.selectFirst("div.blocks-model-view-creator-description__MQ09nz, .ui-text-muted__v_mC_E, div.ui-text-md__xx4iLH")?.text()?.trim()
+        val tags = document.select("ul.includes-list-categories-wrapper__NTP3e_ li a, ul.pages-view-video-tags__EjO14g li a").map { it.text().trim() }
 
-        if (title == null) return null
+        val actors = document.select("div.blocks-model-view-title__7xX3ZF h1, ul.pages-view-video-models__OeBRr0 li").map {
+            val name = it.select("div.pages-view-video-model-title__jPOPZM a").text().trim().ifEmpty { it.text().trim() }
+            val image = fixUrlNull(it.select("img").let { img -> img.attr("data-original").ifEmpty { img.attr("src") } })
+            Actor(name, image)
+        }
 
-        val description =
-            document.selectFirst("div.blocks-model-view-creator-description__MQ09nz, .ui-text-muted__v_mC_E")
-                ?.text()?.trim()
-                ?: document.selectFirst("div.ui-text-md__xx4iLH")?.text()?.trim()
+        val mainPoster = document.selectFirst("div.blocks-model-view-thumbnail__z5_Ral img, div.pages-view-video-player-wrapper__8D_N_ img")?.let {
+            fixUrlNull(it.attr("data-original").ifEmpty { it.attr("src") })
+        } ?: actors.firstOrNull()?.image
 
-        val tags =
-            document.select("ul.includes-list-categories-wrapper__NTP3e_ li a, ul.pages-view-video-tags__EjO14g li a")
-                .map {
-                    it.text().trim()
-                }
-
-        val actors =
-            document.select("div.blocks-model-view-title__7xX3ZF h1, ul.pages-view-video-models__OeBRr0 li")
-                .map {
-                    val name = it.select("div.pages-view-video-model-title__jPOPZM a").text().trim()
-                        .ifEmpty { it.text().trim() }
-                    val image = fixUrlNull(
-                        it.select("img").attr("data-original")
-                            .ifEmpty { it.select("img").attr("src") })
-                    Actor(name, image)
-                }
-
-        val mainPosterElement =
-            document.selectFirst("div.blocks-model-view-thumbnail__z5_Ral img, div.pages-view-video-player-wrapper__8D_N_ img")
-        val mainPoster = fixUrlNull(
-            mainPosterElement?.attr("data-original")?.ifEmpty { null }
-                ?: mainPosterElement?.attr("src")?.ifEmpty { null }
-                ?: actors.firstOrNull()?.image
-        )
-
-        val isModelPage = url.contains("/onlyfans-models/") || url.contains("/categories/")
         val videoCards = document.select(".ui-card-root__0dWeQJ, .ui-card-video__Iv9u1W")
-
-        return if (isModelPage && videoCards.isNotEmpty()) {
+        return if ((url.contains("/onlyfans-models/") || url.contains("/categories/")) && videoCards.isNotEmpty()) {
             val episodes = videoCards.mapNotNull {
-                val epTitle = it.selectFirst(".ui-card-title__igirYJ")?.text()?.trim()
-                    ?: return@mapNotNull null
-                val epHref = fixUrlNull(it.selectFirst("a.ui-card-link__KxRw6l")?.attr("href"))
-                    ?: return@mapNotNull null
-                val epImg = it.selectFirst("img")
+                val epHref = fixUrlNull(it.selectFirst("a.ui-card-link__KxRw6l, a")?.attr("href")) ?: return@mapNotNull null
+                if (!epHref.contains("pimpbunny.com")) return@mapNotNull null
 
                 newEpisode(epHref) {
-                    this.name = epTitle
-                    this.posterUrl = fixUrlNull(
-                        epImg?.attr("data-original")?.ifEmpty { null }
-                            ?: epImg?.attr("src")?.ifEmpty { null }
-                    )
+                    name = it.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim()
+                    posterUrl = fixUrlNull(it.selectFirst("img")?.let { img -> img.attr("data-original").ifEmpty { img.attr("src") } })
                 }
             }.distinctBy { it.data }
 
