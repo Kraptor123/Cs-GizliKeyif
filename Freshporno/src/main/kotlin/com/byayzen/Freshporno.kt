@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.utils.*
 import java.net.URLEncoder
 
 class Freshporno : MainAPI() {
-    override var mainUrl = "https://freshporno.net"
+    override var mainUrl = "https://www.youporn.com"
     override var name = "Freshporno"
     override val hasMainPage = true
     override var lang = "en"
