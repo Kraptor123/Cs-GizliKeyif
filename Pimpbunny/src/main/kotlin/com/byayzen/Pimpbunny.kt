@@ -142,27 +142,43 @@ class Pimpbunny : MainAPI() {
         } ?: actors.firstOrNull()?.image
 
         val videoCards = document.select(".ui-card-root__0dWeQJ, .ui-card-video__Iv9u1W")
+
         return if ((url.contains("/onlyfans-models/") || url.contains("/categories/")) && videoCards.isNotEmpty()) {
-            val episodes = videoCards.mapNotNull {
-                val epHref = fixUrlNull(it.selectFirst("a.ui-card-link__KxRw6l, a")?.attr("href")) ?: return@mapNotNull null
-                if (!epHref.contains("pimpbunny.com")) return@mapNotNull null
+            val episodes = mutableListOf<Episode>()
 
-                newEpisode(epHref) {
-                    name = it.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim()
-                    posterUrl = fixUrlNull(it.selectFirst("img")?.let { img -> img.attr("data-original").ifEmpty { img.attr("src") } })
+            val lastPage = document.select("ul.includes-pagination-list__0cyzaJ li a").mapNotNull {
+                it.text().trim().toIntOrNull()
+            }.maxOrNull() ?: 1
+
+            for (i in 1..lastPage) {
+                val pageUrl = if (i == 1) url else "${url.removeSuffix("/")}/$i/"
+
+                val pageDoc = if (i == 1) document else app.get(pageUrl, interceptor = CloudflareKiller(), headers = mapOf("Referer" to "$mainUrl/")).document
+
+                val pagedCards = pageDoc.select(".ui-card-root__0dWeQJ, .ui-card-video__Iv9u1W")
+                pagedCards.forEach {
+                    val epHref = fixUrlNull(it.selectFirst("a.ui-card-link__KxRw6l, a")?.attr("href"))
+                    if (epHref != null && epHref.contains("pimpbunny.com")) {
+                        episodes.add(newEpisode(epHref) {
+                            name = it.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim()
+                            posterUrl = fixUrlNull(it.selectFirst("img")?.let { img -> img.attr("data-original").ifEmpty { img.attr("src") } })
+                        })
+                    }
                 }
-            }.distinctBy { it.data }
+            }
 
-            newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
+            newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes.distinctBy { it.data }) {
                 this.posterUrl = mainPoster
                 this.plot = description
                 this.tags = tags
+                addActors(actors)
             }
         } else {
             newMovieLoadResponse(title, url, TvType.NSFW, url) {
                 this.posterUrl = mainPoster
                 this.plot = description
                 this.tags = tags
+                addActors(actors)
             }
         }
     }
