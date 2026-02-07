@@ -5,7 +5,6 @@ package com.byayzen
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 
 class Fyptt : MainAPI() {
     override var mainUrl = "https://fyptt.to"
@@ -16,28 +15,29 @@ class Fyptt : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/tiktok-nudes/"   to "Nudes",
-        "${mainUrl}/tiktok-porn/"    to "TikTok",
-        "${mainUrl}/tiktok-boobs/"   to "Boobs",
+        "${mainUrl}/tiktok-nudes/" to "Nudes",
+        "${mainUrl}/tiktok-porn/" to "TikTok",
+        "${mainUrl}/tiktok-boobs/" to "Boobs",
         "${mainUrl}/instagram-porn/" to "Instagram",
-        "${mainUrl}/tiktok-sex/"     to "Sex",
-        "${mainUrl}/nsfw-tiktok/"    to "NSFW",
-        "${mainUrl}/tiktok-xxx/"     to "XXX",
-        "${mainUrl}/tiktok-ass/"     to "Ass",
-        "${mainUrl}/tiktok-pussy/"   to "Pussy",
-        "${mainUrl}/tiktok-live/"    to "Live",
-        "${mainUrl}/sexy-tiktok/"    to "Sexy",
-        "${mainUrl}/tiktok-thots/"   to "Thots"
+        "${mainUrl}/tiktok-sex/" to "Sex",
+        "${mainUrl}/nsfw-tiktok/" to "NSFW",
+        "${mainUrl}/tiktok-xxx/" to "XXX",
+        "${mainUrl}/tiktok-ass/" to "Ass",
+        "${mainUrl}/tiktok-pussy/" to "Pussy",
+        "${mainUrl}/tiktok-live/" to "Live",
+        "${mainUrl}/sexy-tiktok/" to "Sexy",
+        "${mainUrl}/tiktok-thots/" to "Thots"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val base = request.data.trimEnd('/')
         val url = if (page > 1) "$base/page/$page/" else base
+        val response = app.get(url)
 
-        val document = app.get(url).document
-        val home = document.select("div.fl-post-column").mapNotNull { it.toMainPageResult() }
-
-        val hasNext = document.selectFirst(".next.page-numbers, a.next, .pagination .next") != null
+        val home =
+            response.document.select("div.fl-post-column").mapNotNull { it.toMainPageResult() }
+        val hasNext =
+            response.document.selectFirst(".next.page-numbers, a.next, .pagination .next") != null
         return newHomePageResponse(request.name, home, hasNext = hasNext)
     }
 
@@ -46,52 +46,64 @@ class Fyptt : MainAPI() {
         val title = anchor.attr("title").ifBlank { anchor.text() }.ifBlank { return null }
         val href = fixUrlNull(anchor.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
+        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val q = query.trim()
         val url = if (page > 1) "${mainUrl}/page/$page/?s=$q" else "${mainUrl}/?s=$q"
-        val document = app.get(url).document
-
-        val results = document.select("div.fl-post-column").mapNotNull { it.toMainPageResult() }
-        val hasNext = document.selectFirst(".next.page-numbers, a.next, .pagination .next") != null
-
+        val response = app.get(url)
+        val results =
+            response.document.select("div.fl-post-column").mapNotNull { it.toMainPageResult() }
+        val hasNext =
+            response.document.selectFirst(".next.page-numbers, a.next, .pagination .next") != null
         return newSearchResponseList(results, hasNext = hasNext)
     }
 
-
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
-    override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+    private var cerez: String? = null
+    private val useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0"
 
-        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description =
-            document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-        val tags = document.select("div.fl-html .entry-category a")
-            .map { it.text().trim() }
-        val recommendations =
-            document.select("div.fl-post-column").mapNotNull { it.toRecommendationResult() }
-
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = description
-            this.tags = tags
-            this.recommendations = recommendations
+    private fun cookieal(referans: String? = null): Map<String, String> {
+        return mutableMapOf(
+            "User-Agent" to useragent,
+            "Cookie" to (cerez ?: "")
+        ).apply {
+            referans?.let { put("Referer", it) }
         }
     }
 
-    private fun Element.toRecommendationResult(): SearchResponse? {
-        val title = this.selectFirst("a img")?.attr("alt") ?: return null
-        val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+    private fun cerezitemizle(adres: String, donencerezler: Map<String, String>) {
+        val yol = "/" + adres.substringAfter("fyptt.to/").substringBeforeLast("/") + "/"
+        cerez = buildString {
+            append("domain=fyptt.to; path=$yol; ")
+            donencerezler.filter { it.key != "domain" && it.key != "path" }
+                .forEach { append("${it.key}=${it.value}; ") }
+        }.removeSuffix("; ")
+    }
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+    override suspend fun load(url: String): LoadResponse? {
+        val response = app.get(url, headers = cookieal())
+        cerezitemizle(url, response.cookies)
+
+        val document = response.document
+        val title = document.select("h1").firstOrNull()?.text()?.trim() ?: return null
+
+        val recommendations = document.select("div.fl-post-column").mapNotNull { element ->
+            val recTitle = element.select("a img").firstOrNull()?.attr("alt") ?: return@mapNotNull null
+            val recHref = fixUrlNull(element.select("a").firstOrNull()?.attr("href")) ?: return@mapNotNull null
+            newMovieSearchResponse(recTitle, recHref, TvType.NSFW) {
+                this.posterUrl = fixUrlNull(element.select("img").firstOrNull()?.attr("src"))
+            }
+        }
+
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = fixUrlNull(document.select("meta[property=og:image]").firstOrNull()?.attr("content"))
+            this.plot = document.select("meta[property=og:description]").firstOrNull()?.attr("content")?.trim()
+            this.tags = document.select("div.fl-html .entry-category a").map { it.text().trim() }
+            this.recommendations = recommendations
+        }
     }
 
     override suspend fun loadLinks(
@@ -100,28 +112,24 @@ class Fyptt : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val headers = mapOf("Referer" to "$mainUrl/", "User-Agent" to "Mozilla/5.0")
-        val doc = app.get(data, headers = headers).document
+        suspend fun linkbul(adres: String, secici: String, ref: String? = null): String? {
+            return app.get(adres, headers = cookieal(ref)).document
+                .select(secici).firstOrNull()?.attr("src")
+        }
 
-        var url = doc.selectFirst("video source[type='video/mp4']")?.attr("src")
-            ?: doc.selectFirst("video")?.attr("src")
-            ?: doc.selectFirst("iframe[src*='fypttstr']")?.attr("src")?.let {
-                it.substringAfter("fileid=").substringBefore("&").takeIf { id -> id.isNotBlank() }?.let { id ->
-                    "https://stream.fyptt.to/$id.mp4"
-                }
-            }
-
-        if (url.isNullOrBlank()) return false
+        val anaurl = data
+        val iframeadresi = linkbul(anaurl, "iframe[src*='fyptt']") ?: return false
+        val videolinki = linkbul(iframeadresi, "video-js source, video source, video, source", anaurl) ?: return false
 
         newExtractorLink(
-            source = "AZNude",
-            name = "AZNude",
-            url = url,
+            source = name,
+            name = name,
+            url = videolinki,
         ) {
-            this.quality = Qualities.Unknown.value
-            this.referer = "$mainUrl/"
-            this.headers = headers
-        }?.let { callback(it) } ?: return false
+            this.referer = anaurl
+            this.headers = mapOf("Cookie" to (cerez ?: ""))
+            this.type = ExtractorLinkType.VIDEO
+        }.let { callback(it) }
 
         return true
     }
