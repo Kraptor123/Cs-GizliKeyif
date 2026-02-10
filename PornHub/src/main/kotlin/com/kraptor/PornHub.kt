@@ -143,10 +143,12 @@ class PornHub : MainAPI() {
         val title     = this.selectFirst("img")?.attr("alt") ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-        val trailer   = this.selectFirst("img")?.attr("data-mediabook")
 
-        return newMovieSearchResponse(title, "${href}kraptor${trailer?.substringAfter("//")}", TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
     }
+
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val document = app.get("${mainUrl}/video/search?search=$query&page=$page").document
@@ -159,33 +161,49 @@ class PornHub : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val split    = url.split("kraptor")
-        val url      = split[0]
-        val trailer  = "https://${split[1]}"
-        val document = app.get(url, referer = url, cookies = cookies).document
 
-        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description     = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-        val tags            = document.select("div.tagsWrapper a").map { it.text() }
-        val duration        = document.selectFirst("var.duration")?.text()?.split(":")?.first()?.trim()?.toIntOrNull()
-        val recommendations = document.select("ul#relatedVideosListing li").mapNotNull { it.toMainPageResult() }
-        val actors          = document.select("a.pstar-list-btn").map {
+        val parts = url.split("kraptor")
+        val videoUrl = if (parts.isNotEmpty()) parts[0] else url
+        val trailerUrl = if (parts.size >= 2) "https://${parts[1]}" else null
+
+        val document = app.get(videoUrl, referer = videoUrl, cookies = cookies).document
+
+        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        val tags = document.select("div.tagsWrapper a").map { it.text() }
+        val duration = document.selectFirst("var.duration")?.text()?.split(":")?.first()?.trim()?.toIntOrNull()
+        val recommendations = document.select("ul#relatedVideosListing li.pcVideoListItem").mapNotNull { element ->
+            val linkElement = element.selectFirst("a.thumbnailTitle") ?: element.selectFirst("a[href*='view_video.php']")
+            val href = linkElement?.attr("href") ?: return@mapNotNull null
+            val title = linkElement.text().trim()
+
+            val imgElement = element.selectFirst("img")
+
+            val poster = imgElement?.let { img ->
+                img.attr("data-mediumthumb").takeIf { it.isNotBlank() }
+                    ?: img.attr("src").takeIf { it.isNotBlank() }
+            }
+
+            newMovieSearchResponse(title, fixUrl(href), TvType.NSFW) {
+                this.posterUrl = fixUrlNull(poster)
+            }
+        }
+        val actors = document.select("a.pstar-list-btn").map {
             Actor(it.text(),
-            it.selectFirst("img.avatar")?.attr("src")
-        ) }
-
-
-        Log.d("kraptor_PHub","trailer =$trailer")
-
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = poster
-            this.plot            = description
-            this.tags            = tags
-            this.duration        = duration
+                it.selectFirst("img.avatar")?.attr("src")
+            )
+        }
+        return newMovieLoadResponse(title, videoUrl, TvType.NSFW, videoUrl) {
+            this.posterUrl = poster
+            this.plot = description
+            this.tags = tags
+            this.duration = duration
             this.recommendations = recommendations
             addActors(actors)
-            addTrailer(trailer, "${mainUrl}/", true)
+            if (trailerUrl != null) {
+                addTrailer(trailerUrl, "${mainUrl}/", true)
+            }
         }
     }
 
