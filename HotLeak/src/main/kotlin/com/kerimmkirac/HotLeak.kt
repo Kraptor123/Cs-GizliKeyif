@@ -7,6 +7,8 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 class HotLeak : MainAPI() {
     override var mainUrl = "https://hotleak.vip"
@@ -60,6 +62,8 @@ class HotLeak : MainAPI() {
         }
     }
 
+
+
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
         val title = document.selectFirst("div.actor-name > h1")?.text()?.trim() ?: return null
@@ -74,34 +78,46 @@ class HotLeak : MainAPI() {
         val userSlug = url.substringAfterLast("/")
 
         val cookies = mapOf(
-            
             "qzqz0" to "1"
         )
         val headers = mapOf(
             "x-requested-with" to "XMLHttpRequest",
             "referer" to "$mainUrl/$userSlug/video"
         )
-
         val episodes = mutableListOf<Episode>()
-        for (page in 1..3) {
-            val videoListUrl = "$mainUrl/$userSlug?page=$page&type=videos&order=0"
-            val response = app.get(videoListUrl, headers = headers, cookies = cookies)
-                .parsedSafe<List<Map<String, Any>>>() ?: continue
+        coroutineScope {
+            val pageRequests = (1..50).map { page ->
+                async {
+                    val videoListUrl = "$mainUrl/$userSlug?page=$page&type=videos&order=0"
+                    app.get(videoListUrl, headers = headers, cookies = cookies)
+                        .parsedSafe<List<Map<String, Any>>>()
+                }
+            }
 
-            for (video in response) {
-                val id = video["id"]?.toString() ?: continue
-                val originUrl = video["stream_url_play"]?.toString() ?: continue
-                val thumb = video["thumbnail"]?.toString()
+            for (deferred in pageRequests) {
+                val response = deferred.await()
+                if (response.isNullOrEmpty()) {
+                    break
+                }
 
-                episodes.add(
-                    newEpisode(
-                        url = "$userSlug|$originUrl",
-                        {
-                            name = "ID: $id"
-                            posterUrl = thumb
-                        }
+                response.forEach { video ->
+                    val id = video["id"]?.toString() ?: return@forEach
+                    val streamUrl = video["stream_url_play"]?.toString() ?: return@forEach
+                    val thumb = video["thumbnail"]?.toString()
+                    val desc = video["description"]?.toString() ?: ""
+                    val pubDate = video["published_date"]?.toString() ?: ""
+
+                    episodes.add(
+                        newEpisode(
+                            url = "$userSlug|$streamUrl",
+                            {
+                                this.name = "ID: $id"
+                                this.posterUrl = thumb
+                                this.description = "Published: $pubDate\nDescription: $desc"
+                            }
+                        )
                     )
-                )
+                }
             }
         }
 
@@ -123,13 +139,15 @@ class HotLeak : MainAPI() {
         }
     }
 
+
+
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("kraptor_hotleak", "data = $data")
         val (userSlug, originUrl) = data.split("|")
         val video = originUrl
             .drop(16)
@@ -137,17 +155,14 @@ class HotLeak : MainAPI() {
             .reversed()
 
         val urlCoz = base64Decode(video)
-
-        Log.d("kraptor_hotleak", "urlCoz = $urlCoz")
-
         val username = userSlug.substringAfterLast("/")
 
         callback.invoke(
             newExtractorLink(
                 name   = "HotLeak $username",
                 source = "HotLeak $username",
-                url    =  urlCoz,
-                type   =  ExtractorLinkType.M3U8
+                url    = urlCoz,
+                type   = ExtractorLinkType.M3U8
             ) {
                 this.referer = "$mainUrl/"
                 this.quality = Qualities.Unknown.value
