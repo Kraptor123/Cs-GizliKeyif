@@ -111,92 +111,34 @@ class HdAbla : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("HdAbla", "data » $data")
-        val document = app.get(data).document
+        val iframeUrl = app.get(data).document.selectFirst("div.screen iframe")?.attr("src") ?: return false
+        val scriptBody = app.get(fixUrl(iframeUrl), referer = data).text
 
-        val iframeElement = document.selectFirst("div.screen.fluid-width-video-wrapper iframe")
-        if (iframeElement != null) {
-            val iframeSrc = iframeElement.attr("src")
-            if (iframeSrc.isNotEmpty()) {
-                val fullIframeUrl = fixUrl(iframeSrc)
-                Log.d("HdAbla", "iframe url » $fullIframeUrl")
+        """(?:file|source)\s*:\s*["']([^"']+)["']|["'](http[^"']*\.(?:m3u8|mp4)[^"']*)["']""".toRegex()
+            .findAll(scriptBody).forEach { match ->
+                val videoUrl = (match.groupValues[1].takeIf { it.isNotBlank() } ?: match.groupValues[2]).replace("\\/", "/")
+                val isMp4 = videoUrl.contains(".mp4")
+                val host = videoUrl.substringAfter("//").substringBefore("/")
 
-                val iframeDoc = app.get(fullIframeUrl, referer = mainUrl).document
-                val scriptTags = iframeDoc.select("script")
-
-
-                val videoPatterns = listOf(
-                    """file\s*:\s*['"]([^'"]+)['"]""".toRegex(),
-                    """["']([^"']*\.m3u8[^"']*)["']""".toRegex(),
-                    """["']([^"']*\.mp4[^"']*)["']""".toRegex(),
-                    """src:\s*["']([^"']+)["']""".toRegex(),
-                    """source:\s*["']([^"']+)["']""".toRegex()
-                )
-
-                val foundUrls = mutableSetOf<String>()
-
-                scriptTags.forEach { script ->
-                    val scriptContent = script.html()
-
-                    videoPatterns.forEach { pattern ->
-                        pattern.findAll(scriptContent).forEach { match ->
-                            val videoUrl = match.groupValues[1]
-
-
-                            if (videoUrl.startsWith("http") &&
-                                (videoUrl.contains(".m3u8") || videoUrl.contains(".mp4")) &&
-                                !foundUrls.contains(videoUrl)) {
-
-                                foundUrls.add(videoUrl)
-                                Log.d("HdAbla", "video url » $videoUrl")
-
-
-                                val headers = if (videoUrl.contains(".mp4")) {
-                                    mapOf(
-                                        "Host" to "sv4.memriosa.cloud",
-                                        "Connection" to "keep-alive",
-                                        "sec-ch-ua-platform" to "\"Windows\"",
-                                        "Accept-Encoding" to "identity;q=1, *;q=0",
-                                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-                                        "sec-ch-ua" to "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"Brave\";v=\"138\"",
-                                        "sec-ch-ua-mobile" to "?0",
-                                        "Accept" to "*/*",
-                                        "Sec-GPC" to "1",
-                                        "Accept-Language" to "tr-TR,tr;q=0.8",
-                                        "Sec-Fetch-Site" to "cross-site",
-                                        "Sec-Fetch-Mode" to "no-cors",
-                                        "Sec-Fetch-Dest" to "video",
-                                        "Sec-Fetch-Storage-Access" to "none",
-                                        "Referer" to "https://wai.moonfast.site/"
-                                    )
-                                } else {
-                                    mapOf("Referer" to mainUrl)
-                                }
-
-                                callback.invoke(
-
-                                        newExtractorLink(
-                                            name = name,
-                                            source = name,
-                                            url = videoUrl,
-
-
-                                            type = if (videoUrl.contains(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
-
-                                        ){
-                                            this.headers = headers
-                                            this.referer = if (videoUrl.contains(".mp4")) "https://wai.moonfast.site/" else mainUrl
-                                            this.quality = Qualities.P720.value
-                                        }
-                                    )
-
-                            }
-                        }
+                callback.invoke(
+                    newExtractorLink(
+                        source = name,
+                        name = name,
+                        url = videoUrl,
+                        type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                    ) {
+                        this.quality = getQualityFromUrl(videoUrl)
+                        this.referer = if (isMp4) "https://wai.moonfast.site/" else iframeUrl
+                        this.headers = mapOf(
+                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+                            "Referer" to (this.referer ?: ""),
+                            "Host" to host,
+                            "Accept" to "*/*",
+                            "Connection" to "keep-alive"
+                        )
                     }
-                }
+                )
             }
-        }
-
         return true
     }
 
@@ -205,8 +147,7 @@ class HdAbla : MainAPI() {
             url.contains("1080") -> Qualities.P1080.value
             url.contains("720") -> Qualities.P720.value
             url.contains("480") -> Qualities.P480.value
-            url.contains("360") -> Qualities.P360.value
-            else -> Qualities.Unknown.value
+            else -> Qualities.P720.value
         }
     }
-}
+    }
