@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.*
 
 class Chatrubate : MainAPI() {
     override var mainUrl = "https://chaturbate.com"
-    override var name = "Chatrubate"
+    override var name = "Chaturbate"
     override val hasMainPage = true
     override var lang = "en"
     override val hasDownloadSupport = true
@@ -18,10 +18,19 @@ class Chatrubate : MainAPI() {
 
     override val mainPage = mainPageOf(
         "/api/ts/roomlist/room-list/?limit=90" to "Featured",
-//        "/api/ts/roomlist/room-list/?genders=m&limit=90" to "Male",
         "/api/ts/roomlist/room-list/?genders=f&limit=90" to "Female",
         "/api/ts/roomlist/room-list/?genders=c&limit=90" to "Couples",
-//        "/api/ts/roomlist/room-list/?genders=t&limit=90" to "Trans",
+        "/api/ts/roomlist/room-list/?regions=NA&limit=90" to "North America",
+        "/api/ts/roomlist/room-list/?regions=SA&limit=90" to "South America",
+        "/api/ts/roomlist/room-list/?regions=AS&limit=90" to "Asia",
+        "/api/ts/roomlist/room-list/?regions=ER&limit=90" to "Europe/Russia",
+        "/api/ts/roomlist/room-list/?hashtags=fuckmachine&limit=90" to "Fuck Machine",
+        "/api/ts/roomlist/room-list/?hashtags=ebony&limit=90" to "Ebony",
+        "/api/ts/roomlist/room-list/?hashtags=milf&limit=90" to "MILF",
+        "/api/ts/roomlist/room-list/?hashtags=teen&limit=90" to "Teen",
+        "/api/ts/roomlist/room-list/?hashtags=latina&limit=90" to "Latina",
+        "/api/ts/roomlist/room-list/?hashtags=asian&limit=90" to "Asian",
+        "/api/ts/roomlist/room-list/?hashtags=squirt&limit=90" to "Squirt"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
