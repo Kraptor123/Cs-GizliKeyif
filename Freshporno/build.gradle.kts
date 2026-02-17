@@ -1,11 +1,11 @@
 // ! Bu araç @ByAyzen tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 2
+version = 3
 
 cloudstream {
     authors     = listOf("ByAyzen")
     language    = "en"
     description = "Daily updated porn tube, with exclusive porn videos."
-    status  = 1 // will be 3 if unspecified
+    status  = 0 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
     iconUrl = "https://freshporno.net/favicon.ico"
 }
