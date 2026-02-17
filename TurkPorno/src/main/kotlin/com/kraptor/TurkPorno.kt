@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class TurkPorno : MainAPI() {
-    override var mainUrl              = "https://turkporno1.cam"
+    override var mainUrl              = "https://turkporno2.cam"
     override var name                 = "TurkPorno"
     override val hasMainPage          = true
     override var lang                 = "tr"
