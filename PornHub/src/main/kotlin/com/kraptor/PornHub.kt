@@ -146,6 +146,10 @@ class PornHub : MainAPI() {
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
+            this.posterHeaders = mapOf(
+                "Referer" to "https://www.pornhub.com/",
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0"
+            )
         }
     }
 
