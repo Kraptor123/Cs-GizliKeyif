@@ -20,9 +20,9 @@ class CamWh : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/latest-updates/?mode=async&function=get_block&block_id=list_videos_latest_videos_list&sort_by=post_date&from=1" to "Latest Videos",
-        "$mainUrl/top-rated/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=rating&from=1" to "Top Rated Videos",
-        "$mainUrl/most-popular/?mode=async&function=get_block&block_id=list_videos_common_videos_list&sort_by=video_viewed&from=1" to "Most Viewed Videos"
+        "$mainUrl/latest-updates/" to "Latest Videos",
+        "$mainUrl/top-rated/" to "Top Rated Videos",
+        "$mainUrl/most-popular/" to "Most Viewed Videos"
         
     )
 
@@ -37,69 +37,81 @@ class CamWh : MainAPI() {
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val anchor = this.selectFirst("a") ?: return null
-        val title = anchor.attr("title")?.trim() ?: return null
+        val title = anchor.attr("title").trim()
         val href = fixUrlNull(anchor.attr("href")) ?: return null
-        val poster = fixUrlNull(this.selectFirst("img")?.attr("data-original"))
-        
+
+        val imgElement = this.selectFirst("img")
+        val poster = fixUrlNull(imgElement?.attr("data-original").takeIf { !it.isNullOrBlank() })
+
+
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = poster
-            
         }
     }
 
 
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val document = app.get("${mainUrl}/search/${query}/?from_videos=$page").document
+        val searchUrl = "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_videos_videos_list_search_result&q=$query&category_ids=&sort_by=&from_videos=$page&from_albums=1"
+
+        val document = app.get(searchUrl).document
 
         val aramaCevap = document.select("div.item").mapNotNull { it.toSearchResult() }
-        return newSearchResponseList(aramaCevap, hasNext = true)
+        return newSearchResponseList(aramaCevap, hasNext = aramaCevap.isNotEmpty())
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
         val anchor = this.selectFirst("a") ?: return null
-        val title = anchor.attr("title")?.trim() ?: return null
+        val title = anchor.attr("title").trim()
         val href = fixUrlNull(anchor.attr("href")) ?: return null
-        val poster = fixUrlNull(this.selectFirst("img")?.attr("data-original"))
-        
+
+        val imgElement = this.selectFirst("img")
+        val poster = fixUrlNull(
+            imgElement?.attr("data-original").takeIf { !it.isNullOrBlank() }
+        )
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = poster
-            
         }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-    val document = app.get(url).document
-    
-    val json = document.selectFirst("script[type=application/ld+json]")?.data() ?: return null
-    val jsonObj = JSONObject(json)
-    
-    val title = jsonObj.optString("name") ?: return null
-    val description = jsonObj.optString("description")
-    val poster = fixUrlNull(jsonObj.optString("thumbnailUrl"))
-    val contentUrl = jsonObj.optString("contentUrl") 
-    val recommendations = document.select("div.list-videos div.item").mapNotNull { it.toRecommendationResult() }
-    
-    return newMovieLoadResponse(title, url, TvType.NSFW, contentUrl) { 
-        this.posterUrl = poster
-        this.plot = description
-        this.recommendations = recommendations
-    }
-}
+        val document = app.get(url).document
 
-private fun Element.toRecommendationResult(): SearchResponse? {
-    val title = this.selectFirst("a img")?.attr("alt") ?: return null
-    val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-    val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-webp"))
-    
-    return newMovieSearchResponse(title, href, TvType.NSFW) { 
-        this.posterUrl = posterUrl 
+        val title = document.selectFirst("div.headline h1")?.text()?.trim() ?: return null
+        val poster = document.selectFirst("div.fp-poster img")?.attr("src")
+        val description = document.selectFirst("div.item:contains(Description:) em")?.text()
+
+        val actor = document.select("div.item:contains(Tags:) a").map { it.text() }
+        val tags = document.select("div.item:contains(Categories:) a").map { it.text() }
+
+        val recommendations = document.select("div.list-videos div.item").mapNotNull {
+            it.toRecommendationResult()
+        }
+
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = poster
+            this.plot = description
+            this.tags = tags
+            this.recommendations = recommendations
+            this.addActors(actor)
+        }
     }
-}
+
+    private fun Element.toRecommendationResult(): SearchResponse? {
+        val anchor = this.selectFirst("a") ?: return null
+        val title = anchor.attr("title").trim()
+        val href = fixUrlNull(anchor.attr("href")) ?: return null
+        val img = anchor.selectFirst("img")
+        val poster = fixUrlNull(img?.attr("data-webp") ?: img?.attr("src"))
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = poster
+        }
+    }
 
 override suspend fun loadLinks(
     data: String, 
