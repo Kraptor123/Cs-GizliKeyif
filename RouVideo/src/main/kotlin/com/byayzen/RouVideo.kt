@@ -2,9 +2,12 @@
 
 package com.byayzen
 
+import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 
 class RouVideo : MainAPI() {
     override var mainUrl = "https://rou.video"
@@ -126,25 +129,28 @@ class RouVideo : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val videoId = data.split("/").lastOrNull() ?: return false
-        val apiUrl = "$mainUrl/api/v/$videoId"
+        //This websites encoding system was not that easy so i'm using webview, i can check it again in future.
+        val webViewResponse = app.get(data, interceptor = WebViewResolver(
+            Regex(""".*index\.m3u8.*""")
+        ))
 
-        val res = app.get(apiUrl).text
-        val m3u8Url =
-            Regex("""\"videoUrl\"\s*:\s*\"(.*?)\"""").find(res)?.groupValues?.get(1) ?: return false
+        val finalUrl = webViewResponse.url
+        Log.d("ROU_DEBUG", "YAKALANAN_FINAL_LINK: $finalUrl")
 
-        callback.invoke(
-            newExtractorLink(
-                name,
-                name,
-                m3u8Url,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = "$mainUrl/"
-                this.quality = Qualities.Unknown.value
-            }
-        )
+        if (finalUrl.contains("m3u8")) {
+            callback.invoke(
+                newExtractorLink(
+                    "RouVideo",
+                    "RouVideo",
+                    finalUrl,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "https://rou.video/"
+                }
+            )
+            return true
+        }
 
-        return true
+        return false
     }
 }
