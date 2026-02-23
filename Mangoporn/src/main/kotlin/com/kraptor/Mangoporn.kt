@@ -6,6 +6,9 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import kotlin.random.Random
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 
 
 class Mangoporn : MainAPI() {
@@ -17,15 +20,13 @@ class Mangoporn : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    private val MAX_PAGE = 3621
+    private val MAX_PAGE = 3676
     override val mainPage
         get() = mainPageOf(
             *(try {
                 MangoAyarlar.getOrderedAndEnabledCategories().toTypedArray()
             } catch (e: Exception) {
                 arrayOf(
-                    "genres/porn-movies" to "Latest Release",
-                    "genres/porn-movies/random" to "Rastgele İçerik"
                 )
             })
         )
@@ -34,7 +35,7 @@ class Mangoporn : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (request.data.endsWith("/random")) {
             val randomPageNumber = Random.nextInt(1, MAX_PAGE + 1)
-            "$mainUrl/genres/porn-movies/page/$randomPageNumber"
+            "$mainUrl/movies/page/$randomPageNumber"
         } else {
             fixUrl("${request.data}/page/$page")
         }
@@ -157,29 +158,86 @@ class Mangoporn : MainAPI() {
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    ): Boolean = coroutineScope {
         val response = app.get(data)
         val document = response.document
-
         val tabs = document.select("div#pettabs > ul a")
+        val jobs = tabs.map { it.attr("href") }.filter { it.isNotEmpty() }.map { link ->
+            launch {
+                val fullUrl = fixUrl(link)
 
-        tabs.map { it.attr("href") }.amap { link ->
-            if (link.isNotEmpty()) {
-                loadExtractor(link, subtitleCallback, callback)
+                loadExtractor(fullUrl, subtitleCallback) { extractorLink ->
+                    callback.invoke(extractorLink)
+                }
             }
         }
 
-        return true
+        jobs.joinAll()
+        Log.d("Test", "All jobs finished")
+        true
     }
-}
-private val igrencKelimeler = listOf(
-    "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
-    "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play", "trans",
-    "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
-    "G.O.A.T.", "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
-    "Clocked", "Shade", "Daddy", "Zaddy", "Chosen family", "Closet case", "Out and proud",
-    "Henny", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
-    "Situationship", "Pegging", "Femdom", "futa", "tranny", "crossdress", "Bisexual"
-)
 
-private val Anamenudekiboklar = listOf("TS", "Trans", "TGirl", "gay", "pegging", "bi", "femboy")
+    private val igrencKelimeler = listOf(
+        "gay",
+        "homosexual",
+        "queer",
+        "homo",
+        "androphile",
+        "femboy",
+        "feminine boy",
+        "effeminate",
+        "trap",
+        "scat",
+        "coprophilia",
+        "coprophagia",
+        "fecal",
+        "poo",
+        "shit",
+        "crap",
+        "bm play",
+        "trans",
+        "Trade",
+        "Vers",
+        "Twink",
+        "Otter",
+        "Bear",
+        "Femme",
+        "Masc",
+        "No fats, no fems",
+        "Serving",
+        "Gagged",
+        "G.O.A.T.",
+        "Receipts",
+        "Kiki",
+        "Kai Kai",
+        "Werk",
+        "Realness",
+        "Hunty",
+        "Snatched",
+        "Beat",
+        "Clocked",
+        "Shade",
+        "Daddy",
+        "Zaddy",
+        "Chosen family",
+        "Closet case",
+        "Out and proud",
+        "Henny",
+        "Queening out",
+        "Slay",
+        "Camp",
+        "Fishy",
+        "Cruising",
+        "Bathhouse",
+        "Power bottom",
+        "Situationship",
+        "Pegging",
+        "Femdom",
+        "futa",
+        "tranny",
+        "crossdress",
+        "Bisexual"
+    )
+
+    private val Anamenudekiboklar = listOf("TS", "Trans", "TGirl", "gay", "pegging", "bi", "femboy")
+}
