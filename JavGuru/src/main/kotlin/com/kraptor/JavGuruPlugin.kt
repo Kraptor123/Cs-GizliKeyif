@@ -11,14 +11,12 @@ import com.lagradost.cloudstream3.plugins.BasePlugin
 class JavGuruPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(JavGuru())
-        registerExtractorAPI(StreamTape())
         registerExtractorAPI(DoodStream())
         registerExtractorAPI(DoodDoply())
         registerExtractorAPI(DoodVideo())
         registerExtractorAPI(d000d())
         registerExtractorAPI(VidhideVIP())
         registerExtractorAPI(Voe())
-        registerExtractorAPI(StreamTape())
         registerExtractorAPI(javclan())
         registerExtractorAPI(Javggvideo())
         registerExtractorAPI(EmturbovidExtractor())
@@ -32,5 +30,12 @@ class JavGuruPlugin: BasePlugin() {
         registerExtractorAPI(Streamwish())
         registerExtractorAPI(Vidhidepro())
         registerExtractorAPI(Streamhihi())
+        registerExtractorAPI(Stape())
+        registerExtractorAPI(StreamTAPE())
+        registerExtractorAPI(StreamTapeNet())
+        registerExtractorAPI(StreamTapeXyz())
+        registerExtractorAPI(ShaveTape())
+        registerExtractorAPI(Watchadsontape())
+        registerExtractorAPI(Lancewhoisdifficult())
     }
 }

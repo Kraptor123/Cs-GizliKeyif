@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.MixDrop
+import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -275,4 +276,97 @@ class Javmoon : Filesim() {
 
 class d000d : DoodStream() {
     override var mainUrl = "https://d000d.com"
+}
+
+
+open class StreamTAPE : ExtractorApi() {
+    override val name = "Streamtape"
+    override val mainUrl = "https://streamtape.com"
+    override val requiresReferer = true
+
+    private val stapeHeaders = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Upgrade-Insecure-Requests" to "1",
+        "Sec-Fetch-Dest" to "iframe",
+        "Sec-Fetch-Mode" to "navigate",
+        "Sec-Fetch-Site" to "cross-site",
+        "Sec-GPC" to "1",
+    )
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val html = app.get(
+            url,
+            headers = stapeHeaders + mapOf("Referer" to (referer ?: "https://jav.guru/"))
+        ).text
+
+        val divUrl = Regex("""<div id="ideoolink"[^>]*>([^<]+)</div>""")
+            .find(html)?.groupValues?.get(1)?.trim() ?: return
+        val realToken = Regex("""token=([a-zA-Z0-9]+)['"]""")
+            .findAll(html).lastOrNull()?.groupValues?.get(1) ?: return
+
+        val getVideoUrl = "https:/${divUrl.replace(Regex("token=[a-zA-Z0-9]+"), "token=$realToken")}&stream=1"
+
+        val finalUrl = app.get(
+            getVideoUrl,
+            headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+                "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                "Referer" to "$mainUrl/",
+                "Origin" to mainUrl,
+            ),
+            allowRedirects = false
+        ).headers["location"] ?: run {
+            Log.d("kraptor_$name", "HATA: Redirect location alınamadı")
+            return
+        }
+
+        Log.d("kraptor_$name", "Final URL: $finalUrl")
+
+        callback.invoke(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = finalUrl,
+            ) {
+                this.referer = "$mainUrl/"
+                this.quality = Qualities.Unknown.value
+            }
+        )
+    }
+}
+
+
+class Watchadsontape : StreamTAPE() {
+    override var mainUrl = "https://watchadsontape.com"
+}
+class Stape : StreamTAPE() {
+    override var mainUrl = "https://stape.fun"
+}
+
+class StreamTapeNet : StreamTAPE() {
+    override var mainUrl = "https://streamtape.net"
+}
+
+class StreamTapeXyz : StreamTAPE() {
+    override var mainUrl = "https://streamtape.xyz"
+}
+
+class ShaveTape : StreamTAPE() {
+    override var mainUrl = "https://shavetape.cash"
+}
+
+
+
+
+
+
+class Lancewhoisdifficult: Voe() {
+    override var mainUrl = "https://lancewhosedifficult.com"
 }

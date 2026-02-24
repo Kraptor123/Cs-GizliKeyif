@@ -120,8 +120,9 @@ class JavGuru : MainAPI() {
 
         val poster = fixUrlNull(document.selectFirst("div.large-screenshot img")?.attr("src"))
 
-        val description = document.select("div.wp-content p:not(:has(img))").joinToString(" ") { it.text() }
-            .ifBlank { "Japonları Seviyoruz..." }
+        val description =
+            document.select("div.wp-content p:not(:has(img))").joinToString(" ") { it.text() }
+                .ifBlank { "Japonları Seviyoruz..." }
 
         val yearText = document.selectFirst("div.infometa li:contains(Release Date)")?.ownText()
             ?.substringBefore("-")?.toIntOrNull()
@@ -167,61 +168,100 @@ class JavGuru : MainAPI() {
         val res = app.get(data, headers = mainHeaders)
         val document = res.text
 
-        val regex = Regex(pattern = "\"iframe_url\":\"([^\"]*)\"", options = setOf(RegexOption.IGNORE_CASE))
-        val iframeEslesmeler = regex.findAll(document)
+        val buttonNames = mutableListOf<String>()
+        val doc = Jsoup.parse(document)
+        for (btn in doc.select("a.wp-btn-iframe__shortcode[data-localize]")) {
+            buttonNames.add(btn.text().trim())
+        }
 
-        iframeEslesmeler.forEach { eslesme ->
-            val iframesifreli = eslesme.groupValues[1]
-            val iframeCoz = base64Decode(iframesifreli)
+        val iframeRegex = Regex("\"iframe_url\":\"([^\"]*)\"", RegexOption.IGNORE_CASE)
+        val iframeMatches = iframeRegex.findAll(document).toList()
 
-            val iframeRes = app.get(iframeCoz, mainHeaders)
-            val iframeAl = iframeRes.text
+        val processedUrls = mutableSetOf<String>()
 
-            val frameBaseRegex = Regex("var frameBase = '([^']*)'")
-            val rTypeRegex = Regex("var rType = '([^']*)'")
-            val tokenRegex = Regex("data-token=\"([^\"]*)\"")
+        for ((index, match) in iframeMatches.withIndex()) {
+            try {
+                val sourceName =
+                    if (index < buttonNames.size) buttonNames[index] else "Source ${index + 1}"
 
-            val frameBase = frameBaseRegex.find(iframeAl)?.groupValues?.get(1)
-            val rType = rTypeRegex.find(iframeAl)?.groupValues?.get(1)
-            val token = tokenRegex.find(iframeAl)?.groupValues?.get(1)
+                val encodedUrl = match.groupValues[1]
+                val decodedUrl = base64Decode(encodedUrl)
 
-            if (frameBase != null && rType != null && token != null) {
-                val terstoken = token.reversed()
-                val urlOlustur = "$frameBase?$rType" + "r=$terstoken"
-                try {
-                    val sonUrlRes = app.get(urlOlustur, mainHeaders)
-                    val sonUrlAl = sonUrlRes.text
-                    val scriptAl = Jsoup.parse(sonUrlAl).selectFirst("script:containsData(eval)")?.data()
-                    if (scriptAl != null) {
-                        val jsUnpacker = getAndUnpack(scriptAl)
-                        val hlsRegex = Regex("[\"'](https?://[^\"']+\\.m3u8[^\"']*)[\"']")
+                val iframeRes = app.get(decodedUrl, mainHeaders)
+                val iframeHtml = iframeRes.text
 
-                        hlsRegex.findAll(jsUnpacker).forEach { hls ->
-                            val videoLink = hls.groupValues[1]
-                            callback.invoke(
-                                newExtractorLink(
-                                    source = "JavGuru",
-                                    name = "JavGuru",
-                                    url = videoLink,
-                                    type = ExtractorLinkType.M3U8,
-                                ) {
-                                    this.referer = "$frameBase/"
-                                }
-                            )
-                        }
-                    } else {
-                        val sonIframeRegex = Regex("iframe src=\"([^\"]*)\"")
-                        val sonLink = sonIframeRegex.find(sonUrlAl)?.groupValues?.get(1)
+                val cfgBase =
+                    Regex("base:\\s*['\"]([^'\"]+)['\"]").find(iframeHtml)?.groupValues?.get(1)
+                val cfgRtype =
+                    Regex("rtype:\\s*['\"]([^'\"]+)['\"]").find(iframeHtml)?.groupValues?.get(1)
+                val cfgCid =
+                    Regex("cid:\\s*['\"]([^'\"]+)['\"]").find(iframeHtml)?.groupValues?.get(1)
+                val cfgKeysRaw =
+                    Regex("keys:\\s*\\[([^\\]]+)\\]").find(iframeHtml)?.groupValues?.get(1)
 
-                        if (sonLink != null) {
-                            loadExtractor(sonLink, data, subtitleCallback, callback)
-                        }
-                    }
-                } catch (e: Exception) {
+                if (cfgBase == null || cfgRtype == null || cfgCid == null || cfgKeysRaw == null) continue
+
+                val keysList = Regex("['\"]([^'\"]+)['\"]").findAll(cfgKeysRaw)
+                    .map { it.groupValues[1] }.toList()
+
+                val iframeDoc = Jsoup.parse(iframeHtml)
+                val targetDiv = iframeDoc.getElementById(cfgCid) ?: continue
+
+                val tokenParts = keysList.mapNotNull { key ->
+                    targetDiv.attr(key).takeIf { it.isNotEmpty() }
                 }
+
+                if (tokenParts.isEmpty()) continue
+
+                val combined = tokenParts.joinToString("")
+                val reversed = combined.reversed()
+                val cleanBase = cfgBase.trimEnd('/')
+                val finalUrl = "$cleanBase/?${cfgRtype}r=$reversed"
+
+                val redirectRes = app.get(finalUrl, mainHeaders, allowRedirects = false)
+                val location = redirectRes.headers["location"]
+                    ?: redirectRes.headers["Location"]
+                    ?: redirectRes.headers["LOCATION"]
+
+                if (location != null) {
+                    Log.d("kraptor_$name", "[$sourceName] Embed URL: $location")
+
+                    if (location.contains("/searcho/")) {
+                        loadExtractor(location, data, subtitleCallback, callback)
+                        continue
+                    }
+
+                    val playerRes = app.get(location, mainHeaders)
+                    val playerHtml = playerRes.text
+
+                    val hlsRegex = Regex("[\"'](https?://[^\"']+\\.m3u8[^\"']*)[\"']")
+                    val hlsFound = hlsRegex.find(playerHtml)?.groupValues?.get(1)
+
+                    if (hlsFound != null && !processedUrls.contains(hlsFound)) {
+                        processedUrls.add(hlsFound)
+                        callback.invoke(
+                            newExtractorLink(
+                                source = "$name $sourceName",
+                                name = sourceName,
+                                url = hlsFound,
+                                type = ExtractorLinkType.M3U8
+                            ) {
+                                this.referer = "$cleanBase/"
+                            }
+                        )
+                    } else {
+                        loadExtractor(location, data, subtitleCallback, callback)
+                    }
+                } else {
+                    loadExtractor(finalUrl, data, subtitleCallback, callback)
+                }
+
+            } catch (e: Exception) {
+                Log.d("kraptor_$name", "[$index] Hata: ${e.message}")
+                continue
             }
         }
 
         return true
     }
-    }
+}

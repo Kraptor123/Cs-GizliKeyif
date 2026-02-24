@@ -72,31 +72,33 @@ class Motherless : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val document = if (page == 1){
-            app.get("${mainUrl}/term/videos/$query?range=0&size=0&sort=relevance").document
-        } else {
-            app.get("${mainUrl}/term/videos/$query?range=0&size=0&sort=relevance&page=$page").document
-        }
-        val videolar = fixUrlNull(document.selectFirst("div.content-footer a")?.attr("href")).toString()
-        Log.d("kraptor_$name", "videolar = $videolar")
-        val videoSayfa = app.get(videolar).document
+        val url = "$mainUrl/term/videos/$query?range=0&size=0&sort=relevance&page=$page"
+        Log.d("kraptor_$name", "Page: $page URL: $url")
 
-        val aramaCevap = videoSayfa.select("div.thumb-container.video").mapNotNull { it.toSearchResult() }
-        return newSearchResponseList(aramaCevap, hasNext = true)
+        val response = app.get(url).document
+        val aramaCevap = response.select("div.thumb-container.video").mapNotNull {
+            it.toSearchResult()
+        }
+
+        return newSearchResponseList(aramaCevap, hasNext = aramaCevap.isNotEmpty())
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
+        val title = this.selectFirst("a.caption.title.pop.plain")?.text() ?: return null
+
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
-        val title     = this.selectFirst("a.caption.title.pop.plain")?.text() ?: return null
         if (title.contains(kirliKelimeRegex)) {
             engellenen++
             return null
         }
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
+
+        val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img.static")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)

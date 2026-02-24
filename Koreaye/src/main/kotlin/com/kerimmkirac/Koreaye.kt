@@ -10,30 +10,30 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class Koreaye : MainAPI() {
-    override var mainUrl              = "https://koreaye.com"
-    override var name                 = "Koreaye"
-    override val hasMainPage          = true
-    override var lang                 = "tr"
-    override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.NSFW)
+    override var mainUrl = "https://koreaye.com"
+    override var name = "Koreaye"
+    override val hasMainPage = true
+    override var lang = "tr"
+    override val hasQuickSearch = false
+    override val supportedTypes = setOf(TvType.NSFW)
 
     private val posterCache = mutableMapOf<String, String>()
 
     override val mainPage = mainPageOf(
-        "${mainUrl}"      to "Tüm Videolar",
-        "${mainUrl}/kategori/uvey-anne-porno"  to "Üvey Anne",
-        "${mainUrl}/kategori/milf-porno"  to "Milf",
-        "${mainUrl}/kategori/buyuk-got-porno-izle"   to "Büyük Göt",
+        "${mainUrl}" to "Tüm Videolar",
+        "${mainUrl}/kategori/uvey-anne-porno" to "Üvey Anne",
+        "${mainUrl}/kategori/milf-porno" to "Milf",
+        "${mainUrl}/kategori/buyuk-got-porno-izle" to "Büyük Göt",
         "${mainUrl}/kategori/buyuk-memeli-porno-izle" to "Büyük Meme",
         "${mainUrl}/kategori/hizmetci-porno" to "Hizmetçi",
-        "${mainUrl}/kategori/asyali-porno"   to "Asyalı",
-        "${mainUrl}/kategori/taytli-porno-izle"  to "Tayt",
-        "${mainUrl}/kategori/jartiyerli-porno-izle"  to "Jartiyer"
+        "${mainUrl}/kategori/asyali-porno" to "Asyalı",
+        "${mainUrl}/kategori/taytli-porno-izle" to "Tayt",
+        "${mainUrl}/kategori/jartiyerli-porno-izle" to "Jartiyer"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}/page/$page/").document
-        val home     = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
+        val home = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(request.name, home)
     }
@@ -57,16 +57,16 @@ class Koreaye : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val results = mutableListOf<SearchResponse>()
-        
-        for (page in 1..3) { 
+
+        for (page in 1..3) {
             val document = app.get("${mainUrl}/page/$page/?s=${query}").document
             val pageResults = document.select("div.item-video").mapNotNull { it.toSearchResult() }
-            
-            if (pageResults.isEmpty()) break 
+
+            if (pageResults.isEmpty()) break
 
             results.addAll(pageResults)
         }
-        
+
         return results
     }
 
@@ -74,7 +74,7 @@ class Koreaye : MainAPI() {
         val anchor = selectFirst("a.clip-link") ?: return null
         val href = fixUrlNull(anchor.attr("href")) ?: return null
         val title = anchor.attr("title")?.trim() ?: return null
-        
+
         val posterUrl = fixUrlNull(
             selectFirst("source")?.attr("data-srcset")
                 ?: selectFirst("img")?.attr("src")
@@ -97,7 +97,8 @@ class Koreaye : MainAPI() {
         val description = doc.selectFirst("div.entry-content")?.text()?.trim()
         val tags = doc.select("div#extras a").map { it.text().trim() }
 
-        val poster = posterCache[url] ?: fixUrlNull(doc.selectFirst("img.wp-post-image")?.attr("src"))
+        val poster =
+            posterCache[url] ?: fixUrlNull(doc.selectFirst("img.wp-post-image")?.attr("src"))
 
         return newMovieLoadResponse(title, data, TvType.NSFW, data) {
             this.posterUrl = poster
@@ -107,47 +108,47 @@ class Koreaye : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("Koreaye", "data » ${data}")
-        
-        val url = data
-        Log.d("Koreaye", "extracted url » ${url}")
-        
-        val document = app.get(url).document
+        val sayfa = app.get(data).document
+        val iframeyolu = sayfa.selectFirst("iframe")?.attr("data-src") ?: return false
 
-        val iframe = document.selectFirst("iframe")?.attr("data-src") ?: return false
-        Log.d("Koreaye", "iframe » ${iframe}")
+        val iframecevap = app.get(
+            iframeyolu,
+            referer = mainUrl,
+            headers = mapOf(
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+            )
+        )
 
-        val iframeDocument = app.get(iframe, referer = mainUrl).document
-        
-        val scriptText = iframeDocument.select("script").joinToString("\n") { it.html() }
-        val fileRegex = """file:\s*["']([^"']+)["']""".toRegex()
-        val fileMatch = fileRegex.find(scriptText)
-        val m3u8Url = fileMatch?.groupValues?.get(1) ?: return false
-        
-        val fullM3u8Url = if (m3u8Url.startsWith("http")) {
-            m3u8Url
-        } else {
-            "${iframe.substringBefore("/player.php")}$m3u8Url"
-        }
-        
-        Log.d("Koreaye", "m3u8Url » ${fullM3u8Url}")
+        val iframemetni = iframecevap.text
+        val iframesonyolu = iframecevap.url
 
-        val playlistResponse = app.get(fullM3u8Url, referer = iframe)
-        val playlistContent = playlistResponse.text
-        
-        Log.d("Koreaye", "playlist content » ${playlistContent.take(200)}")
-        
+        val sifrelimetin = iframemetni.substringAfter("_d = \"").substringBefore("\"")
+        val m3u8icerik = android.util.Base64.decode(sifrelimetin, android.util.Base64.DEFAULT).toString(Charsets.UTF_8)
+
+        val ilksatir = m3u8icerik.lines().firstOrNull { it.startsWith("http") } ?: return false
+        val playlistid = Regex("/playlists/([^/]+)/").find(ilksatir)?.groupValues?.get(1) ?: return false
+
+        val alan = iframesonyolu.substringBefore("/player")
+        val m3u8yolu = "$alan/playlists/$playlistid/playlist.m3u8"
+
         callback.invoke(
             newExtractorLink(
-                name,
-                name,
-                fullM3u8Url,
-                type = if (fullM3u8Url.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-            ){
-                this.referer = iframe
+                source = name,
+                name = name,
+                url = m3u8yolu,
+                type = ExtractorLinkType.M3U8
+            ) {
+                this.referer = "https://cdnfast.sbs/"
+                this.headers = mapOf(
+                    "Origin" to "https://cdnfast.sbs",
+                    "Accept" to "*/*",
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
                 this.quality = Qualities.Unknown.value
             }
         )
+
         return true
     }
 }

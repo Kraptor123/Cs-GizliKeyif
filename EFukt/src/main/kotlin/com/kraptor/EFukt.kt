@@ -110,22 +110,33 @@ class EFukt : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val document = if (page == 1){
-            app.get("${mainUrl}/?s=${query}").document
+        val url = if (page <= 1) {
+            "$mainUrl/search/$query/?type=video"
         } else {
-            app.get("${mainUrl}/page/$page/?s=${query}").document
+            "$mainUrl/search/$query/$page/?type=video"
         }
 
-        val aramaCevap = document.select("div.result-item article").mapNotNull { it.toSearchResult() }
+        val document = app.get(url).document
+        val aramaCevap = document.select("div.tiles div.tile").mapNotNull { it.toSearchResult() }
+
         return newSearchResponseList(aramaCevap, hasNext = true)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title     = this.selectFirst("div.title a")?.text() ?: return null
-        val href      = fixUrlNull(this.selectFirst("div.title a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val titleelement = this.selectFirst("h3.title a")
+        val title = titleelement?.text() ?: return null
+        val href = fixUrlNull(titleelement.attr("href")) ?: return null
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        val style = this.selectFirst("a.thumb")?.attr("style")
+        val posterUrl = if (style?.contains("url(") == true) {
+            style.substringAfter("url('").substringBefore("')")
+        } else {
+            this.selectFirst("img")?.attr("src")
+        }
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = fixUrlNull(posterUrl)
+        }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
@@ -133,34 +144,30 @@ class EFukt : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
-        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description     = document.selectFirst("h2")?.text()?.trim()
-        val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
-        val tags            = document.select("h3 a").map { it.text() }
-        val rating          = document.selectFirst("span.dt_rating_vgs")?.text()?.trim()
-        val duration        = document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
-        val recommendations = document.select("div.srelacionados article").mapNotNull { it.toRecommendationResult() }
-        val actors          = document.select("div.meta:nth-child(4) > div:nth-child(3) > span:nth-child(2) a").map { Actor(it.text()) }
+        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val description = document.selectFirst("div.meta p.desc")?.text()?.trim()
+        val tags = document.select("div.details a").map { it.text() }
+
+        val recommendations = document.select("div.tiles div.tile").mapNotNull {
+            val recTitle = it.selectFirst("h3.title a")?.text() ?: return@mapNotNull null
+            val recHref = fixUrlNull(it.selectFirst("h3.title a")?.attr("href")) ?: return@mapNotNull null
+            val style = it.selectFirst("a.thumb")?.attr("style")
+            val recPoster = if (style?.contains("url(") == true) {
+                style.substringAfter("url('").substringBefore("')")
+            } else null
+
+            newMovieSearchResponse(recTitle, recHref, TvType.NSFW) {
+                this.posterUrl = fixUrlNull(recPoster)
+            }
+        }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = poster
-            this.plot            = description
-            this.year            = year
-            this.tags            = tags
-            this.score           = Score.from10(rating)
-            this.duration        = duration
+            this.posterUrl = poster
+            this.plot = description
+            this.tags = tags
             this.recommendations = recommendations
-            addActors(actors)
         }
-    }
-
-    private fun Element.toRecommendationResult(): SearchResponse? {
-        val title     = this.selectFirst("a img")?.attr("alt") ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
