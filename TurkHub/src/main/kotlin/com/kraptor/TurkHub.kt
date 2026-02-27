@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class TurkHub : MainAPI() {
-    override var mainUrl              = "https://altyzhub2.com.tr"
+    override var mainUrl              = "https://altyzhub3.site"
     override var name                 = "TurkHub"
     override val hasMainPage          = true
     override var lang                 = "tr"
