@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import org.jsoup.Jsoup
 
 class Javseen : MainAPI() {
     override var mainUrl = "https://javseen.tv"
@@ -174,10 +175,19 @@ class Javseen : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val parseData = mapper.readValue<List<String>>(data)
-
-        parseData.forEach { server ->
-            loadExtractor(server, subtitleCallback, callback)
+        try {
+            parseJson<List<String>>(data).forEach { url ->
+                Log.d("LoadLinks", "JSON URL: $url")
+                loadExtractor(url, subtitleCallback, callback)
+            }
+        } catch (e: Exception) {
+            Jsoup.parse(data).select(".button_choice_server").forEach { element ->
+                element.attr("data-embed").takeIf { it.isNotEmpty() }?.let { encoded ->
+                    val decoded = String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT))
+                    Log.d("LoadLinks", "HTML Decoded: $decoded")
+                    loadExtractor(decoded, subtitleCallback, callback)
+                }
+            }
         }
 
         return true

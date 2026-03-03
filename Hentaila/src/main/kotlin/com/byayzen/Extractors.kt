@@ -71,6 +71,11 @@ class Dintezuvio : VidHidePro() {
     override var mainUrl = "https://dintezuvio.com"
 }
 
+class MyCloudZ : VidHidePro() {
+    override var name = "EarnVids"
+    override var mainUrl = "https://mycloudz.cc"
+}
+
 open class VidHidePro : ExtractorApi() {
     override val name = "VidHidePro"
     override val mainUrl = "https://vidhidepro.com"

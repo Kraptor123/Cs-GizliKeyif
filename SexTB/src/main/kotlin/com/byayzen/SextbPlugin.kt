@@ -46,5 +46,6 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(LulusStream())
         registerExtractorAPI(HgLink())
         registerExtractorAPI(RyderJet())
+        registerExtractorAPI(MyCloudZ())
     }
 }

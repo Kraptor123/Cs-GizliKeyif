@@ -21,6 +21,7 @@ class HentailaPlugin: Plugin() {
         registerExtractorAPI(VidHidePro5())
         registerExtractorAPI(VidHidePro6())
         registerExtractorAPI(VidHidePro7())
+        registerExtractorAPI(MyCloudZ())
         registerExtractorAPI(Dhcplay())
         registerExtractorAPI(Smoothpre())
         registerExtractorAPI(Dhtpre())

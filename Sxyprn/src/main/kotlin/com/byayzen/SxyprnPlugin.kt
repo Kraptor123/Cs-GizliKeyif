@@ -13,10 +13,6 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.StreamTapeNet
 import com.lagradost.cloudstream3.extractors.StreamTapeXyz
 import com.lagradost.cloudstream3.extractors.Streamup
-import com.lagradost.cloudstream3.extractors.Vidguardto
-import com.lagradost.cloudstream3.extractors.Vidguardto1
-import com.lagradost.cloudstream3.extractors.Vidguardto2
-import com.lagradost.cloudstream3.extractors.Vidguardto3
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.Voe1
 
@@ -40,10 +36,6 @@ class SxyprnPlugin: Plugin() {
         registerExtractorAPI(BigwarpArt())
         registerExtractorAPI(Voe())
         registerExtractorAPI(Voe1())
-        registerExtractorAPI(Vidguardto())
-        registerExtractorAPI(Vidguardto1())
-        registerExtractorAPI(Vidguardto2())
-        registerExtractorAPI(Vidguardto3())
         registerExtractorAPI(VeevToExtractor())
     }
 }

@@ -167,6 +167,8 @@ class Movearnpre : VidHidePro() { override var name = "EarnVids"; override var m
 class Dintezuvio : VidHidePro() { override var name = "EarnVids"; override var mainUrl = "https://dintezuvio.com" }
 class HgLink : VidHidePro() { override var name = "HGLink"; override var mainUrl = "https://hglink.to" }
 class RyderJet : VidHidePro() { override var name = "RyderJet"; override var mainUrl = "https://ryderjet.com" }
+
+class MyCloudZ : VidHidePro() { override var mainUrl = "https://mycloudz.cc"; override var name = "MyCloudZ" }
 class Turboplayers : StreamTape() { override var mainUrl = "https://turboplayers.xyz"; override var name = "Streamtape" }
 
 class LulusStream : ExtractorApi() {
