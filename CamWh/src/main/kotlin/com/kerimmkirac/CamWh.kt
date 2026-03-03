@@ -10,20 +10,21 @@ import org.json.JSONObject
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.network.WebViewResolver
 
 class CamWh : MainAPI() {
-    override var mainUrl              = "https://camwh.com"
-    override var name                 = "CamWh"
-    override val hasMainPage          = true
-    override var lang                 = "en"
-    override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.NSFW)
+    override var mainUrl = "https://camwh.com"
+    override var name = "CamWh"
+    override val hasMainPage = true
+    override var lang = "en"
+    override val hasQuickSearch = false
+    override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
         "$mainUrl/latest-updates/" to "Latest Videos",
         "$mainUrl/top-rated/" to "Top Rated Videos",
         "$mainUrl/most-popular/" to "Most Viewed Videos"
-        
+
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -51,9 +52,9 @@ class CamWh : MainAPI() {
     }
 
 
-
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val searchUrl = "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_videos_videos_list_search_result&q=$query&category_ids=&sort_by=&from_videos=$page&from_albums=1"
+        val searchUrl =
+            "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_videos_videos_list_search_result&q=$query&category_ids=&sort_by=&from_videos=$page&from_albums=1"
 
         val document = app.get(searchUrl).document
 
@@ -79,6 +80,7 @@ class CamWh : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
+
         val document = app.get(url).document
 
         val title = document.selectFirst("div.headline h1")?.text()?.trim() ?: return null
@@ -113,46 +115,60 @@ class CamWh : MainAPI() {
         }
     }
 
-override suspend fun loadLinks(
-    data: String, 
-    isCasting: Boolean, 
-    subtitleCallback: (SubtitleFile) -> Unit, 
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-   
-    
-    try {
-        
-        val response = app.get(data, allowRedirects = false)
-        
-        val finalUrl = if (response.code in 300..399) {
-            
-            response.headers["Location"] ?: response.headers["location"] ?: data
-        } else {
-            
-            data
-        }
-        
-        
-        
-       
-        callback.invoke(
-            newExtractorLink(
-                this.name,
-                this.name,
-                finalUrl,
-                
-               type = if (finalUrl.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-            ){
-                this.quality = Qualities.Unknown.value
-                this.referer = ""
+    override suspend fun loadLinks(
+        data: String,
+        iscasting: Boolean,
+        subtitlecallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val webview = WebViewResolver(
+            interceptUrl = Regex(".*/get_file/.*"),
+            userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+            useOkhttp = false
+        )
+
+        var yakalanandosyaurl = ""
+
+        webview.resolveUsingWebView(
+            url = data,
+            referer = "$mainUrl/",
+            requestCallBack = { request ->
+                val adres = request.url.toString()
+
+                if (adres.contains("/get_file/")) {
+                    yakalanandosyaurl = adres
+                    true
+                } else {
+                    false
+                }
             }
         )
-        
+
+        if (yakalanandosyaurl.isNotEmpty()) {
+            val response = app.get(
+                yakalanandosyaurl,
+                headers = mapOf(
+                    "Referer" to data,
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0"
+                ),
+                allowRedirects = false
+            )
+
+            val yonlendirmeurl = response.headers["Location"] ?: yakalanandosyaurl
+
+            callback.invoke(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    yonlendirmeurl,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+
         return true
-        
-    } catch (e: Exception) {
-        
-        return false
     }
-}}
+}
