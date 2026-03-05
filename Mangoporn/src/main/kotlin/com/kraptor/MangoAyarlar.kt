@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
@@ -121,12 +120,19 @@ object MangoAyarlar {
         "xxx/studios/united-house-brands" to "United House Brands",
         "xxx/studios/wicked-pictures" to "Wicked Pictures",
         "xxx/studios/white-ghetto" to "White Ghetto",
-        "xxx/studios/zero-tolerance" to "Zero Tolerance"
+        "xxx/studios/zero-tolerance" to "Zero Tolerance",
+        "trending/" to "Trending",
+        "ratings" to "Rating",
+        "xxxmovies/genre/indian" to "Indian",
+        "xxxxmovies/studios/asia-bootleg" to "Asia Bootleg",
+        "xxxmovies/genre/bathroom" to "Bathroom",
+        "xxxmovies/genre/tattoos" to "Tattoos"
     ) + (1980..2025).map { "year/$it" to "$it" }.sortedBy { it.second.lowercase() }
 
     private val defaultEnabledNames = setOf(
         "Latest Release", "Random Contents", "German", "Russian", "French"
     )
+
     fun dpToPx(c: Context, dp: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), c.resources.displayMetrics).toInt()
 
     fun getOrderedAndEnabledCategories(): List<Pair<String, String>> {
@@ -162,7 +168,6 @@ object MangoAyarlar {
                 val newItems = defaultList.filter { it !in validSavedList }
                 validSavedList + newItems
             } catch (e: Exception) {
-                Log.d("MangoSettings", "Error: ${e.message}")
                 defaultList
             }
         } else {
@@ -309,12 +314,14 @@ object MangoAyarlar {
             override fun getItemCount() = items.size
             override fun onBindViewHolder(holder: ViewHolder, position: Int) {
                 val name = items[position]
+
+                holder.cb.setOnCheckedChangeListener(null)
+
                 holder.cb.text = name
                 holder.cb.isChecked = isCategoryEnabled(name)
 
                 holder.cb.setOnCheckedChangeListener { _, isChecked ->
                     setCategoryEnabled(name, isChecked)
-                    Log.d("MangoSettings", "Toggle: $name -> $isChecked")
                 }
 
                 holder.up.setOnClickListener { move(holder.adapterPosition, holder.adapterPosition - 1) }
@@ -322,7 +329,7 @@ object MangoAyarlar {
             }
 
             private fun move(from: Int, to: Int) {
-                if (to !in items.indices) return
+                if (from < 0 || to !in items.indices) return
                 val item = items.removeAt(from)
                 items.add(to, item)
                 notifyItemMoved(from, to)

@@ -239,5 +239,5 @@ class Mangoporn : MainAPI() {
         "Bisexual"
     )
 
-    private val Anamenudekiboklar = listOf("TS", "Trans", "TGirl", "gay", "pegging", "bi", "femboy")
+    private val Anamenudekiboklar = listOf("TS", "Trans", "TGirl", "gay", "pegging", "bi", "femboy", "T-Boy", "Bisexual", "Transsexual", "Trans")
 }
