@@ -141,14 +141,17 @@ class EPawg(context: Context) : MainAPI() {
         val posterUrl = Regex(
             pattern = "preview_url: '([^']*)',",
             options = setOf(RegexOption.IGNORE_CASE)
-        ).find(textDoc)?.groupValues[1].toString()
+        ).find(textDoc)?.groupValues?.getOrNull(1).toString()
         val poster = fixUrlNull(posterUrl)
         val description = document.selectFirst("div.info > div:nth-child(2) > em:nth-child(1)")?.text()?.trim()
         val tags = document.select("div.info > div:nth-child(3) a").map { it.text() }
         val score = document.selectFirst("span.scale")?.attr("data-rating")?.trim()
-        val recommendations = document.select("div.item").mapNotNull { it.toRecommendationResult() }
-        val actors = document.select("div.info > div:nth-child(5) a").map { Actor(it.text()) }
 
+        val recommendations = document.select("div#list_videos_related_videos_items div.item").mapNotNull {
+            it.toRecommendationResult()
+        }
+
+        val actors = document.select("div.info > div:nth-child(5) a").map { Actor(it.text()) }
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
@@ -160,14 +163,19 @@ class EPawg(context: Context) : MainAPI() {
     }
 
     private fun Element.toRecommendationResult(): SearchResponse? {
-        val title = this.selectFirst("a")?.attr("title") ?: return null
+        val title = this.selectFirst("strong.title")?.text()?.trim() ?: return null
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        val img = this.selectFirst("img")
+        val posterUrl = fixUrlNull(
+            if (img?.hasAttr("data-original") == true) img.attr("data-original")
+            else img?.attr("src")
+        )
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
     }
-
-    // WebView temizleme fonksiyonu
     private fun cleanupWebView(wv: WebView) {
         try {
             wv.stopLoading()
@@ -180,7 +188,6 @@ class EPawg(context: Context) : MainAPI() {
         } catch (ignored: Throwable) {}
     }
 
-    // WebView oluşturup video URL'sini çıkar
     @SuppressLint("SetJavaScriptEnabled")
     suspend fun createWebViewAndExtractVideo(
         context: Context,
@@ -199,7 +206,6 @@ class EPawg(context: Context) : MainAPI() {
                     super.onPageFinished(view, url)
                     extractVideoWithDelay(view, { result ->
                         onResult(result)
-                        // İş bitince temizle
                         Handler(Looper.getMainLooper()).post {
                             Log.d("kraptor_EPawg", "WebView temizlendi")
                             cleanupWebView(this@apply)
@@ -208,14 +214,12 @@ class EPawg(context: Context) : MainAPI() {
                 }
             }
 
-            // HTML'i yükle
             loadDataWithBaseURL("https://epawg.com/", html, "text/html", "UTF-8", null)
         }
 
         return@withContext wv
     }
 
-    // Video URL'sini gecikmeyle çıkar
     private fun extractVideoWithDelay(webView: WebView?, onResult: (String?) -> Unit, attempt: Int) {
         if (webView == null || attempt > 3) {
             Log.d("kraptor_EPawg", "Timeout reached or WebView is null")
