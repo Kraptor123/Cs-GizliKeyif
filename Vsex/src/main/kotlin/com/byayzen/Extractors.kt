@@ -1,5 +1,6 @@
-package com.kraptor
+package com.byayzen
 
+import android.annotation.SuppressLint
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
