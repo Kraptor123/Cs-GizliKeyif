@@ -3,6 +3,7 @@ package com.kraptor
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -18,28 +19,28 @@ class xHamster : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-//        "${mainUrl}/newest/"  to "En Yeniler",
-//        "${mainUrl}/most-viewed/weekly/"  to "Haftalık En Çok Görüntülenenler",
-//        "${mainUrl}/most-viewed/monthly/" to "Aylık En Çok Görüntülenenler",
-//        "${mainUrl}/most-viewed/"  to "Tüm Zamanların En Çok İzlenenleri",
-        "${mainUrl}/4k/"                       to "4K",
+        "${mainUrl}/newest/"                  to "Newest",
+        "${mainUrl}/most-viewed/weekly/"      to "Weekly Most Viewed",
+        "${mainUrl}/most-viewed/monthly/"     to "Monthly Most Viewed",
+        "${mainUrl}/most-viewed/"             to "All Time Most Viewed",
+        "${mainUrl}/4k/"                      to "4K",
         "${mainUrl}/hd/2?quality=1080p"       to "1080p",
-        "${mainUrl}/categories/teen"          to "Genç",
-        "${mainUrl}/categories/mom"           to "Üvey Anne",
+        "${mainUrl}/categories/teen"          to "Teen",
+        "${mainUrl}/categories/mom"           to "Mom",
         "${mainUrl}/categories/milf"          to "Milf",
-        "${mainUrl}/categories/mature"        to "Olgun",
-        "${mainUrl}/categories/big-ass"       to "Büyük Göt",
+        "${mainUrl}/categories/mature"        to "Mature",
+        "${mainUrl}/categories/big-ass"       to "Big Ass",
         "${mainUrl}/categories/anal"          to "Anal",
-        "${mainUrl}/categories/hardcore"      to "Sert",
-        "${mainUrl}/categories/homemade"      to "Ev Yapımı",
-        "${mainUrl}/categories/amateur"       to "Amatör Çekim",
-        "${mainUrl}/categories/complilation"  to "Derlemeler",
-        "${mainUrl}/categories/lesbian"       to "Lezbiyen",
-        "${mainUrl}/categories/russian"       to "Rus",
-        "${mainUrl}/categories/european"      to "Avrupalı",
-        "${mainUrl}/categories/latina"        to "Latin",
-        "${mainUrl}/categories/asian"         to "Asyalı",
-        "${mainUrl}/categories/jav"           to "Japon",
+        "${mainUrl}/categories/hardcore"      to "Hardcore",
+        "${mainUrl}/categories/homemade"      to "Homemade",
+        "${mainUrl}/categories/amateur"       to "Amateur",
+        "${mainUrl}/categories/complilation"  to "Compilation",
+        "${mainUrl}/categories/lesbian"       to "Lesbian",
+        "${mainUrl}/categories/russian"       to "Russian",
+        "${mainUrl}/categories/european"      to "European",
+        "${mainUrl}/categories/latina"        to "Latina",
+        "${mainUrl}/categories/asian"         to "Asian",
+        "${mainUrl}/categories/jav"           to "JAV",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -59,7 +60,6 @@ class xHamster : MainAPI() {
 }
 
 
-    
 
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -87,16 +87,34 @@ class xHamster : MainAPI() {
             document.selectFirst("div.xp-preload-image")?.attr("style")?.substringAfter("https:")
                 ?.substringBefore("\');")
         )
-        val tags =
-            document.select(" nav#video-tags-list-container ul.root-8199e.video-categories-tags.collapsed-8199e li.item-8199e a.video-tag")
-                .map { it.text() }
-        val recommendations = document.select("div.related-container div.thumb-list div.thumb-list__item")
-            .mapNotNull { it.toSearchResult() }
+        val description = document.selectFirst("div.controls-info div.ab-info p")?.text()?.trim()
+            ?.replace("\\s+".toRegex(), " ")
+
+        val actors = document.select("a.entity-author-container__name").map { aTag ->
+            val name = aTag.selectFirst("span")?.text()?.trim() ?: ""
+            val image = aTag.selectFirst("img")?.attr("src") ?: aTag.selectFirst("img")?.attr("data-src")
+            Actor(name, image)
+        }
+
+        val tags = document.select("div[data-role='video-tags-list'] a[href*='/categories/'], div[data-role='video-tags-list'] a[href*='/tags/']")
+            .map { it.text().trim() }
+
+        val recommendations = document.select("div[data-role='related-item']").mapNotNull {
+            val name = it.selectFirst("a.video-thumb-info__name")?.text() ?: return@mapNotNull null
+            val link = it.selectFirst("a[data-role='thumb-link']")?.attr("href") ?: return@mapNotNull null
+            val thumb = it.selectFirst("img")?.attr("src") ?: it.selectFirst("img")?.attr("data-src")
+
+            newMovieSearchResponse(name, link, TvType.NSFW) {
+                this.posterUrl = thumb
+            }
+        }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
+            this.plot = description
             this.tags = tags
             this.recommendations = recommendations
+            addActors(actors)
         }
     }
 
@@ -160,10 +178,6 @@ class xHamster : MainAPI() {
     return foundLinks
 }
 
-
-
-
-
 data class InitialsJson(
     val xplayerSettings: XPlayerSettings? = null
 )
@@ -195,13 +209,7 @@ private fun getInitialsJson(html: String): InitialsJson? {
         val regex = Regex("window\\.initials\\s*=\\s*(\\{.*?\\});", RegexOption.DOT_MATCHES_ALL)
         val match = regex.find(html) ?: return null
         val jsonString = match.groupValues[1]
-        
-        
-        
         val parsedJson = AppUtils.parseJson<InitialsJson>(jsonString)
-        
-        
-        
         parsedJson
     } catch (e: Exception) {
         Log.e("xHamster", "getInitialsJson failed: ${e.message}")
