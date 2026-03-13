@@ -68,22 +68,25 @@ class XRares : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
-        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description     = document.selectFirst("div.m-t-10 p")?.text()?.trim()
-        val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
-        val tags            = document.select("div.m-t-10 a").map { it.text() }
-        val vidId           = document.selectFirst("a[href*=related_videos][id]")?.attr("id")?.substringAfterLast("_") ?: ""
-        val postRecommend   = recommendation(vidId)
-        val recPost         = mapper.readValue<Recommend>(postRecommend)
-        val recDoc          = Jsoup.parse(recPost.videos ?:"")
-        val recommendations = recDoc.select("div.col-lg-3").mapNotNull { it.toRecommendationResult() }
+        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val description = document.selectFirst("div.m-t-10 p")?.text()?.trim()
+        val year = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
+        val tags = document.select("div.m-t-10 a").map { it.text() }
+
+        val vidId = document.selectFirst("a[href*=related_videos][id]")?.attr("id")?.substringAfterLast("_") ?: ""
+
+        val recommendations = runCatching {
+            val response = recommendation(vidId).takeIf { it.isNotBlank() } ?: return@runCatching emptyList()
+            val recPost = mapper.readValue<Recommend>(response)
+            Jsoup.parse(recPost.videos ?: "").select("div.col-lg-3").mapNotNull { it.toRecommendationResult() }
+        }.getOrElse { emptyList() }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = poster
-            this.plot            = description
-            this.year            = year
-            this.tags            = tags
+            this.posterUrl = poster
+            this.plot = description
+            this.year = year
+            this.tags = tags
             this.recommendations = recommendations
         }
     }

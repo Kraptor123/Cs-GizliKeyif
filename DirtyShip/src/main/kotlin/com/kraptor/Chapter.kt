@@ -200,7 +200,6 @@ class DirtyShipChapterFragment(
             layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
             adapter = FullscreenImageAdapter(pages)
         }
-        // add PagerSnapHelper for true swipe paging
         PagerSnapHelper().attachToRecyclerView(rv)
 
         layout.addView(rv)
@@ -324,7 +323,6 @@ class DirtyShipChapterFragment(
         }
 
         override fun onTouchEvent(event: MotionEvent): Boolean {
-            // only intercept for pan if zoomed
             parent.requestDisallowInterceptTouchEvent(currentScale > minScale)
             gestureDetector.onTouchEvent(event)
             when (event.actionMasked) {

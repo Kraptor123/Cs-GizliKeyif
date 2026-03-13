@@ -29,10 +29,8 @@ class DirtyShipPlugin : Plugin() {
             return
         }
 
-        // UI işlemlerini main thread'de yap
         Handler(Looper.getMainLooper()).post {
             try {
-                // Filtrelenmiş sayfa listesi (thumbnail'leri çıkar)
                 val filteredPages = pages.filter { !it.contains("100x140") }
 
                 if (filteredPages.isEmpty()) {
@@ -46,7 +44,6 @@ class DirtyShipPlugin : Plugin() {
 
                 val fragmentManager = currentActivity.supportFragmentManager
 
-                // Önceki fragment'ları temizle
                 val existingFragment = fragmentManager.findFragmentByTag("DirtyShipChapter")
                 if (existingFragment != null) {
                     fragmentManager.beginTransaction().remove(existingFragment).commit()

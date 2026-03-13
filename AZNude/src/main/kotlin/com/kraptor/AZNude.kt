@@ -112,7 +112,6 @@ class AZNude : MainAPI() {
             val searchWrapper: SearchWrapper = mapper.readValue(jsonString)
             val results = mutableListOf<SearchResponse>()
 
-            // Celebs'leri ekle (sadece /view/celeb/ içerenler)
             searchWrapper.data.celebs
                 .filter { it.url.contains("/view/celeb/") }
                 .forEach { celeb ->
@@ -154,8 +153,6 @@ class AZNude : MainAPI() {
                         }
                     )
                 }
-
-            // Videos'ları ekle (sadece /view/celeb/ içerenler)
             searchWrapper.data.videos
                 .filter { it.url.contains("/view/celeb/") }
                 .forEach { video ->
@@ -172,8 +169,6 @@ class AZNude : MainAPI() {
                         }
                     )
                 }
-
-            // Stories'leri ekle (sadece /view/celeb/ içerenler)
             searchWrapper.data.stories
                 .filter { it.url.contains("/view/celeb/") }
                 .forEach { story ->
@@ -284,8 +279,6 @@ class AZNude : MainAPI() {
                     sourceMatches.forEach { sourceMatch ->
                         val videoUrl = sourceMatch.groupValues[1]
                         val quality = sourceMatch.groupValues[2]
-
-                        // Quality değerini Qualities enum'una çevir
                         val qualityValue = when (quality.uppercase()) {
                             "LQ" -> Qualities.P240.value
                             "HQ" -> Qualities.P480.value

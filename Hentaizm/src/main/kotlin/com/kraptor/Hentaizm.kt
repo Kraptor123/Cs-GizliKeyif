@@ -140,24 +140,19 @@ class Hentaizm : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val cookies = SessionManager.login()
-//        Log.d("kraptor_${this.name}", "hesap » ${cookies}")
         val document = app.get(
             "${mainUrl}/anime-ara?t=tur&q=$page&tur=${request.data}",
             referer = "${mainUrl}/kategoriler-2",
             cookies = cookies
         ).document
         val home = document.select("div.moviefilm").mapNotNull { it.toMainPageResult() }
-//        Log.d("kraptor_${this.name}", "document » ${document}")
-//        Log.d("kraptor_${this.name}", "home » ${home}")
 
         return newHomePageResponse(request.name, home)
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val title = this.selectFirst("div.movief")?.text() ?: return null
-//        Log.d("kraptor_${name}", "title » ${title}")
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")?.replace("../..", "")) ?: return null
-//        Log.d("kraptor_${name}", "href » ${href}")
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
@@ -239,16 +234,13 @@ class Hentaizm : MainAPI() {
 
         anchors.forEachIndexed { index, element ->
             val url = if (index == 0) {
-                // İlk link: href kullan
                 fixUrlNull(element.attr("href").substringAfter("url="))
             } else {
-                // Diğerleri: onclick içinden URL çek
                 val onclick = element.attr("onclick")
                 val rawUrl = onclick.substringAfter("ajxget('").substringBefore("'").replace("../../","")
                 val fixRaw = fixUrlNull(rawUrl).toString()
                 val rawGet = app.get(fixRaw, referer = "${mainUrl}/", cookies = cookies
                 ).document
-//                Log.d("kraptor_$name", "rawGet » $rawGet")
                 val vidUrl = rawGet.selectFirst("a")?.attr("href")?.replace("../../","")
                if (vidUrl.toString().contains("ay.live")) {
                     vidUrl?.substringAfter("url=")

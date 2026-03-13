@@ -95,7 +95,7 @@ class Cumlouder : MainAPI() {
         val actors = document.select("a.pornstar-link").map { it.text().trim() }
         Log.d("ByAyzen_${this.name}", "Actors list: $actors")
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
             this.year = year

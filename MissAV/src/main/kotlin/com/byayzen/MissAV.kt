@@ -1,15 +1,11 @@
 // ! Bu araç @ByAyzen tarafından | @Cs-GizliKeyif için yazılmıştır.
 
-package com.kraptor
+package com.byayzen
 
-import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-
-import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.*
 
 class MissAV : MainAPI() {
     override var mainUrl = "https://missav.ws"

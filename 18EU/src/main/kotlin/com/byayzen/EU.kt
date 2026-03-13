@@ -119,7 +119,7 @@ class EU : MainAPI() {
             }
         } else if (watchBtn != null) {
             val fullUrl = fixUrl(watchBtn)
-            newMovieLoadResponse(title, url, TvType.Movie, fullUrl) {
+            newMovieLoadResponse(title, url, TvType.NSFW, fullUrl) {
                 this.posterUrl = poster
                 this.backgroundPosterUrl = banner
                 this.plot = description
@@ -128,7 +128,7 @@ class EU : MainAPI() {
         } else {
             val movieSlug = url.trimEnd('/').substringAfterLast("/")
             val constructedUrl = "$mainUrl/watch-$movieSlug?sv=1&ep=1"
-            newMovieLoadResponse(title, url, TvType.Movie, constructedUrl) {
+            newMovieLoadResponse(title, url, TvType.NSFW, constructedUrl) {
                 this.posterUrl = poster
                 this.backgroundPosterUrl = banner
                 this.plot = description

@@ -16,7 +16,6 @@ open class VideoHu : ExtractorApi() {
     companion object {
         private const val STATIC_SECRET = "xHb0ZvME5q8CBcoQi6AngerDu3FGO9fkUlwPmLVY_RTzj2hJIS4NasXWKy1td7p"
 
-        // RC4 decryption
         fun rc4(cipher: ByteArray, key: String): String {
             val S = ByteArray(256) { it.toByte() }
             val K = key.toByteArray(Charsets.UTF_8)
@@ -46,10 +45,8 @@ open class VideoHu : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         Log.d("kraptor_$name", "Fetching URL: $url")
-        // Download initial page or player
         val pageContent = app.get(url, referer = referer).text
 
-        // Determine player URL
         val playerUrl = if (url.contains("videa.hu/player")) {
             url
         } else {
@@ -58,11 +55,9 @@ open class VideoHu : ExtractorApi() {
                 ?.let { url.substringBefore("/videa.hu") + it } ?: url
         }
 
-        // Download player page
         val playerResp = app.get(playerUrl, referer = url)
         val playerHtml = playerResp.text
 
-        // Extract nonce
         val nonce = Regex("_xt\\s*=\\s*\\\"([^\\\"]+)\\\"")
             .find(playerHtml)?.groupValues?.get(1)
             ?: throw Error("Nonce not found")
@@ -74,7 +69,6 @@ open class VideoHu : ExtractorApi() {
             result += s[i - (idx - 31)]
         }
 
-        // Build query parameters
         val randomSeed = (1..8).map { ('A'..'Z') + ('a'..'z') + ('0'..'9') }
             .joinToString("") { it[randomSeedIndex()].toString() }
         val tParam = result.substring(0, 16)
@@ -84,20 +78,17 @@ open class VideoHu : ExtractorApi() {
             "_t" to tParam
         )
 
-        // Request XML info
         val xmlResp = app.get("https://videa.hu/player/xml", referer = playerUrl, params = query)
         val xmlBody = xmlResp.text
 
         val xmlString = if (xmlBody.trimStart().startsWith("<?xml")) {
             xmlBody
         } else {
-            // Encrypted: base64 -> rc4
             val b64 = Base64.decode(xmlBody, Base64.DEFAULT)
             val key = result.substring(16) + randomSeed + xmlResp.headers["x-videa-xs"]
             rc4(b64, key)
         }
 
-        // Parse XML
         val db = DocumentBuilderFactory.newInstance().newDocumentBuilder()
         val doc = db.parse(xmlString.byteInputStream())
         val video = doc.getElementsByTagName("video").item(0) as Element
@@ -120,7 +111,7 @@ open class VideoHu : ExtractorApi() {
                     source = name,
                     name = title,
                     url = fixUrl(videoUrl)
-            ) {
+                ) {
                     this.referer = url
                     this.quality = Qualities.Unknown.value
                     this.type = ExtractorLinkType.VIDEO
@@ -129,7 +120,6 @@ open class VideoHu : ExtractorApi() {
         }
     }
 
-    // Helpers
     private fun randomSeedIndex(): Int = (0 until 62).random()
     private fun updateUrl(url: String, params: Map<String, String?>): String =
         url + params.entries.joinToString("&", prefix = if (url.contains("?")) "&" else "?") { "${it.key}=${it.value}" }

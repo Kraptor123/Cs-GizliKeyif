@@ -37,10 +37,6 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * Full working fragment + adapter + zoom helper combined.
- * Uses Coil enqueue + target for safe ImageView updates and cancellation.
- */
 class CoomerChapterFragment(
     private val plugin: CoomerPlugin,
     private val manga: List<String>
@@ -81,7 +77,6 @@ class CoomerChapterFragment(
         }
 
         if (manga.isEmpty()) {
-//            Log.w("CoomerChapter", "Empty manga list")
             dismiss()
             return
         }
@@ -108,10 +103,6 @@ class CoomerChapterFragment(
     }
 }
 
-/**
- * ImageAdapter using Coil.enqueue + target. Handles thumbnail then full-res replacement,
- * uses requestId + imageView.tag to avoid stale updates, and LruCache for bitmaps.
- */
 class ImageAdapter(
     private val plugin: CoomerPlugin,
     private val imageUrls: List<String>,
@@ -123,7 +114,6 @@ class ImageAdapter(
     private val viewHolders = mutableMapOf<Int, ImageViewHolder>()
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Memory-aware cache (KB)
     private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
     private val cacheSize = maxMemory / 8
     private val imageCache = object : LruCache<String, Bitmap>(cacheSize) {
@@ -132,7 +122,6 @@ class ImageAdapter(
         }
     }
 
-    // Precomputed alternative URLs (thumbnails)
     private val altUrls = imageUrls.map { url ->
         url.substringAfter("/data").takeIf { it.isNotEmpty() }?.let {
             "https://img.coomer.st/thumbnail/data$it"
@@ -168,19 +157,16 @@ class ImageAdapter(
         }
 
         fun loadImage(targetPosition: Int) {
-            // Cancel any previous Coil request
             cancelLoad()
 
             if (targetPosition !in 0 until imageUrls.size) return
             val primaryUrl = imageUrls[targetPosition]
             val altUrl = if (targetPosition < altUrls.size) altUrls[targetPosition] else null
 
-            // Unique ID for this load; store on both holder and imageView tag
             val requestId = "$primaryUrl-$targetPosition-${System.currentTimeMillis()}"
             currentRequestId = requestId
             imageView.tag = requestId
 
-            // 1) If full-res cached -> show immediately and return
             imageCache.get(primaryUrl)?.let { bitmap ->
                 if (imageView.tag == requestId) {
                     imageView.setImageBitmap(bitmap)
@@ -189,7 +175,6 @@ class ImageAdapter(
                 return
             }
 
-            // 2) If thumbnail cached -> show it quickly (still start full-res)
             altUrl?.let { thumbUrl ->
                 imageCache.get(thumbUrl)?.let { thumbBitmap ->
                     if (imageView.tag == requestId) {
@@ -199,27 +184,22 @@ class ImageAdapter(
                 }
             }
 
-            // placeholder
             imageView.setImageResource(android.R.drawable.progress_indeterminate_horizontal)
 
-            // If thumbnail exists and not cached -> enqueue thumbnail request first; on success enqueue full
             if (!altUrl.isNullOrEmpty() && imageCache.get(altUrl) == null) {
                 enqueueImage(
                     url = altUrl,
                     requestId = requestId,
                     onSuccess = { drawable ->
-                        // cache and show thumb (only if still valid)
                         if (imageView.tag == requestId) {
                             val bmp = drawableToBitmap(drawable)
                             imageCache.put(altUrl, bmp)
                             imageView.setImageBitmap(bmp)
                             imageView.post { zoomHelper.resetBaseScale() }
                         }
-                        // after thumbnail shown/handled, start full-res (if not cached)
                         if (imageCache.get(primaryUrl) == null) {
                             enqueueFull(primaryUrl, requestId)
                         } else {
-                            // already cached while thumb was fetched
                             imageCache.get(primaryUrl)?.let { fullBmp ->
                                 if (imageView.tag == requestId) {
                                     imageView.setImageBitmap(fullBmp)
@@ -229,18 +209,15 @@ class ImageAdapter(
                         }
                     },
                     onError = {
-                        // thumb failed - still try full
                         enqueueFull(primaryUrl, requestId)
                     }
                 )
             } else {
-                // No thumb to fetch or thumb already cached -> start full directly (or enqueue)
                 enqueueFull(primaryUrl, requestId)
             }
         }
 
         private fun enqueueFull(url: String, requestId: String) {
-            // If full already cached, show and return
             imageCache.get(url)?.let { bmp ->
                 if (imageView.tag == requestId) {
                     imageView.setImageBitmap(bmp)
@@ -269,10 +246,6 @@ class ImageAdapter(
             )
         }
 
-        /**
-         * Enqueue a Coil request that sets drawable via target lambda.
-         * It stores disposable into currentDisposable and ensures stale updates are ignored using imageView.tag.
-         */
         private fun enqueueImage(
             url: String,
             requestId: String,
@@ -288,21 +261,17 @@ class ImageAdapter(
                     .scale(Scale.FILL)
                     .httpHeaders(headers)
                     .target { resultImage ->
-                        // resultImage: coil3.Image (ör. BitmapImage) — drawable'a çeviriyoruz
                         val drawable = when (resultImage) {
                             is BitmapImage -> BitmapDrawable(context.resources, resultImage.bitmap)
                             else -> resultImage.asDrawable(context.resources)
                         }
 
-                        // main thread içinde çalıştırıldığını varsayarak doğrudan çağırıyoruz
                         if (imageView.tag == requestId) {
                             try {
                                 onSuccess(drawable)
                             } catch (e: Throwable) {
-//                                Log.w("ImageAdapter", "onSuccess handler error: ${e.message}")
                             }
                         } else {
-                            // stale - ignore
                         }
                     }
                     .listener(
@@ -317,7 +286,6 @@ class ImageAdapter(
                 val disp = plugin.imageLoader.enqueue(request)
                 currentDisposable = disp
             } catch (e: Exception) {
-//                Log.w("ImageAdapter", "enqueueImage failed for $url: ${e.message}")
                 imageView.post { if (imageView.tag == requestId) onError() }
             }
         }
@@ -332,7 +300,6 @@ class ImageAdapter(
             currentDisposable = null
         }
 
-        // convert drawable to bitmap helper
         private fun drawableToBitmap(drawable: Drawable): Bitmap {
             if (drawable is BitmapDrawable) {
                 drawable.bitmap?.let { return it }
@@ -382,12 +349,10 @@ class ImageAdapter(
     override fun onViewRecycled(holder: ImageViewHolder) {
         super.onViewRecycled(holder)
         holder.cancelLoad()
-        // Remove by any stored index (bindingAdapterPosition may be NO_POSITION if recycled)
         val toRemove = viewHolders.entries.firstOrNull { it.value == holder }?.key
         if (toRemove != null) viewHolders.remove(toRemove)
     }
 
-    // Preload visible + adjacent images (uses fetchBitmap)
     fun preloadVisibleAndAdjacentImages(recyclerView: RecyclerView?) {
         if (recyclerView == null || recyclerView.layoutManager !is LinearLayoutManager) return
         val layoutManager = recyclerView.layoutManager as LinearLayoutManager
@@ -412,16 +377,13 @@ class ImageAdapter(
             val bitmap = fetchBitmap(url)
             if (position in 0 until imageUrls.size && imageUrls[position] == url) {
                 imageCache.put(url, bitmap)
-//                Log.d("ImageAdapter", "Preloaded image at position $position")
             } else {
                 try { bitmap.recycle() } catch (_: Throwable) {}
             }
         } catch (e: Exception) {
-//            Log.d("ImageAdapter", "Preload failed for $position: ${e.message}")
         }
     }
 
-    // Suspend helper to fetch bitmap (used for preload). Uses imageLoader.execute
     private suspend fun fetchBitmap(url: String): Bitmap {
         val headers = getNetworkHeaders()
         val request = ImageRequest.Builder(context)
@@ -438,7 +400,6 @@ class ImageAdapter(
                 is BitmapImage -> image.bitmap
                 else -> {
                     val drawable = image.asDrawable(context.resources)
-                    // convert drawable -> bitmap
                     if (drawable is BitmapDrawable) {
                         drawable.bitmap
                     } else {
@@ -471,14 +432,11 @@ class ImageAdapter(
     override fun getItemCount() = imageUrls.size
 }
 
-/**
- * ZoomHelper - tam işlevsel; orijinal mantığın aynısını korur.
- */
 @SuppressLint("ClickableViewAccessibility")
 class ZoomHelper(private val imageView: ImageView) {
     private val matrix = Matrix()
-    private var currentScale = 1f        // RELATIVE scale (1 = baseScale)
-    private var baseScale = 1f          // Scale that fits the image into the view
+    private var currentScale = 1f
+    private var baseScale = 1f
     private val minScale = 1f
     private val maxScale = 4f
     private val scaleGestureDetector: ScaleGestureDetector
@@ -670,9 +628,6 @@ class ZoomHelper(private val imageView: ImageView) {
     }
 }
 
-/**
- * Network headers used for image requests.
- */
 private fun getNetworkHeaders() = NetworkHeaders.Builder()
     .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
     .set("Referer", "https://coomer.su/")
