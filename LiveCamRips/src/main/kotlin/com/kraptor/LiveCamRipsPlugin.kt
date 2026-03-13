@@ -15,5 +15,8 @@ class LiveCamRipsPlugin: Plugin() {
         registerExtractorAPI(VidStack())
         registerExtractorAPI(LiveCamR())
         registerExtractorAPI(Videosh())
+        registerExtractorAPI(MyUpns())
+        registerExtractorAPI(MyEmbedSeek())
+        registerExtractorAPI(VipSeekPlayer())
     }
 }

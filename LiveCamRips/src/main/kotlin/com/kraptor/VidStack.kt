@@ -17,6 +17,24 @@ class Server1uns : VidStack() {
     override var requiresReferer = true
 }
 
+class MyUpns : VidStack() {
+    override var name = "UPNS"
+    override var mainUrl = "https://my.upns.online"
+    override var requiresReferer = true
+}
+
+class MyEmbedSeek : VidStack() {
+    override var name = "UPNS"
+    override var mainUrl = "https://my.embedseek.online"
+    override var requiresReferer = true
+}
+
+class VipSeekPlayer : VidStack() {
+    override var name = "UPNS"
+    override var mainUrl = "https://vip.seekplayer.vip"
+    override var requiresReferer = true
+}
+
 class Videosh : VidStack() {
     override var name = "Videosh"
     override var mainUrl = "https://videosh.upns.live"
