@@ -96,11 +96,9 @@ class RouVideo : MainAPI() {
         val description =
             document.selectFirst("meta[property='og:description']")?.attr("content")?.trim()
 
-        // Etiketler (Tags)
         val tags =
             document.select("div[data-slot='card-content'] a[href^='/t/']").map { it.text().trim() }
 
-        // Önerilen Videolar (Recommendations)
         val recommendations = document.select("div.group.relative.p-2").mapNotNull {
             it.toRecommendationResult()
         }
@@ -129,28 +127,50 @@ class RouVideo : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        //This websites encoding system was not that easy so i'm using webview, i can check it again in future.
-        val webViewResponse = app.get(data, interceptor = WebViewResolver(
-            Regex(""".*index\.m3u8.*""")
-        ))
+        val yanit = app.get(data).text
 
-        val finalUrl = webViewResponse.url
-        Log.d("ROU_DEBUG", "YAKALANAN_FINAL_LINK: $finalUrl")
+        val sonrakiVeri = Regex("""<script id="__NEXT_DATA__" type="application/json">(.*?)</script>""")
+            .find(yanit)?.groupValues?.get(1) ?: return false
 
-        if (finalUrl.contains("m3u8")) {
-            callback.invoke(
-                newExtractorLink(
-                    "RouVideo",
-                    "RouVideo",
-                    finalUrl,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    this.referer = "https://rou.video/"
-                }
-            )
-            return true
+        val json = parseJson<Map<String, Any>>(sonrakiVeri)
+        val ev = (((json["props"] as? Map<*, *>)
+            ?.get("pageProps") as? Map<*, *>)
+            ?.get("ev") as? Map<*, *>) ?: return false
+
+        val sifreliVeri = ev["d"] as? String ?: return false
+        val anahtar = (ev["k"] as? Number)?.toInt() ?: return false
+
+        Log.d("rou", "anahtar=$anahtar sifre=${sifreliVeri.take(16)}")
+
+        val cozulmus = try {
+            val ham = android.util.Base64.decode(sifreliVeri, android.util.Base64.DEFAULT)
+            val baytlar = ham.map { b ->
+                val v = (b.toInt() and 0xFF) - anahtar
+                (if (v < 0) v + 256 else v).toByte()
+            }.toByteArray()
+            String(baytlar, Charsets.ISO_8859_1)
+        } catch (e: Exception) {
+            Log.d("rou", "cozme hatasi: ${e.message}")
+            return false
         }
 
-        return false
+        val sonuc = parseJson<Map<String, Any>>(cozulmus)
+        val videoUrl = sonuc["videoUrl"] as? String ?: return false
+
+        Log.d("rou", "url=$videoUrl")
+
+        callback.invoke(
+            newExtractorLink(
+                source = "RouVideo",
+                name = "RouVideo",
+                url = videoUrl,
+                type = ExtractorLinkType.M3U8
+            ) {
+                this.referer = "https://rou.video/"
+                this.quality = Qualities.Unknown.value
+            }
+        )
+
+        return true
     }
 }
