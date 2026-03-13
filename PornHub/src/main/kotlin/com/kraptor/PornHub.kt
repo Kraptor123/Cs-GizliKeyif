@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import org.jsoup.Jsoup
 
 class PornHub : MainAPI() {
     override var mainUrl              = "https://www.pornhub.com"
@@ -170,7 +171,14 @@ class PornHub : MainAPI() {
         val trailerurl = if (parts.size >= 2) "https://${parts[1]}" else null
         val document = app.get(videourl, referer = videourl, cookies = cookies).document
         val baslik = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(document.selectFirst("img.videoElementPoster")?.attr("src"))
+
+        val noscriptTag = document.selectFirst("noscript:has(img.videoElementPoster)")
+        val poster = if (noscriptTag != null) {
+            Jsoup.parse(noscriptTag.html()).selectFirst("img")?.attr("src")
+        } else {
+            document.selectFirst("img.videoElementPoster")?.attr("src")
+        }
+
         val aciklama = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
         val etiketler = document.select("div.tagsWrapper a").map { it.text() }
         val sure = document.selectFirst("var.duration")?.text()?.split(":")?.first()?.trim()?.toIntOrNull()
@@ -190,7 +198,7 @@ class PornHub : MainAPI() {
 
             newMovieSearchResponse(recbaslik, fixUrl(href), TvType.NSFW) {
                 this.posterUrl = fixUrlNull(recposter)
-                this.posterHeaders = mapOf("Referer" to "https://www.pornhub.com/")
+                this.posterHeaders = mapOf("Referer" to "$mainUrl/")
             }
         }
 
@@ -199,14 +207,15 @@ class PornHub : MainAPI() {
         }
 
         return newMovieLoadResponse(baslik, videourl, TvType.NSFW, videourl) {
-            this.posterUrl = poster
+            this.posterUrl = fixUrlNull(poster)
+            this.posterHeaders = mapOf("Referer" to "$mainUrl/")
             this.plot = aciklama
             this.tags = etiketler
             this.duration = sure
             this.recommendations = recommendations
             addActors(aktorler)
             if (trailerurl != null) {
-                addTrailer(trailerurl, "${mainUrl}/", true)
+                addTrailer(trailerurl, "$mainUrl/", true)
             }
         }
     }
