@@ -1,25 +1,15 @@
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
 rootProject.name = "CloudstreamPlugins"
 
 // This file sets what projects are included. All new projects should get automatically included unless specified in "disabled" variable.
 
-val buildAll = providers.gradleProperty("buildAll").getOrElse("false").toBoolean()
-val startTasks = gradle.startParameter.taskNames.toString()
-
-val disabled = listOf("__Temel", "ExampleProvider")
+val disabled = listOf("__Temel", "__PlayerTest", "ExampleProvider")
 
 File(rootDir, ".").eachDir { dir ->
-    val buildFile = File(dir, "build.gradle.kts")
-    if (!disabled.contains(dir.name) && buildFile.exists()) {
-        val content = buildFile.readText()
-        val hasStatusZero = content.contains(Regex("""status\s*=\s*0"""))
-
-        val isRequested = startTasks.contains(":${dir.name}:") || startTasks.contains(":${dir.name} ")
-
-        if (buildAll || !hasStatusZero || isRequested) {
-            include(dir.name)
-        } else {
-            println("Skipping disabled extension: ${dir.name} (Use -PbuildAll=true to include)")
-        }
+    if (!disabled.contains(dir.name) && File(dir, "build.gradle.kts").exists()) {
+        include(dir.name)
     }
 }
 

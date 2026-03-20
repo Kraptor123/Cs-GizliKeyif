@@ -52,17 +52,19 @@ class MilfNut : MainAPI() {
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("header span")?.text() ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
+        val posterUrl = this.selectFirst("img")?.let { img ->
+            val src = img.attr("data-lazy-src").ifBlank { img.attr("src") }
+            fixUrlNull(src)
+        }
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
             this.posterHeaders = mapOf(
-                "Referer" to "${mainUrl}/",
+                "Referer" to "$mainUrl/",
                 "User-Agent" to USER_AGENT
             )
         }
     }
-
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val document = if (page == 1) {
             app.get("${mainUrl}/?s=${query}").document
