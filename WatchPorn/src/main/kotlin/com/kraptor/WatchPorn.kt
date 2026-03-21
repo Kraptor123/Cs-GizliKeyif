@@ -81,73 +81,77 @@ class WatchPorn(context: Context) : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}$page/").document
-        val home     = document.select("div.item").mapNotNull { it.toMainPageResult() }
+        val url = if (page <= 1) request.data else "${request.data}$page/"
+        val document = app.get(url).document
+        val home = document.select("div.thumb.item").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(request.name, home)
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("strong.title")?.text() ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-webp"))
-        val rating    = this.selectFirst("div.rating")?.text()?.replace("%","")
+        val title = this.selectFirst("span.thumb__title")?.text()?.trim() ?: return null
+        val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-webp") ?: this.selectFirst("img")?.attr("src"))
+        val rating = this.select("span.thumb__meta-item").lastOrNull()?.text()?.replace("%", "")?.trim()
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
+        return newMovieSearchResponse(title, "$href|$posterUrl", TvType.NSFW) {
             this.posterUrl = posterUrl
-            this.score     = Score.from100(rating)
+            this.score = Score.from100(rating)
         }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val document = app.get("${mainUrl}/search/?q=$query&mode=async&function=get_block&block_id=list_videos_videos_list_search_result&category_ids=&sort_by=&from_videos=$page&from_albums=$page").document
+        val url = "${mainUrl}/search/?q=$query&mode=async&function=get_block&block_id=list_videos_videos_list_search_result&category_ids=&sort_by=&from_videos=$page"
+        val document = app.get(url).document
 
-        val aramaCevap = document.select("div.list-videos div.item").mapNotNull { it.toMainPageResult() }
-        return newSearchResponseList(aramaCevap, hasNext = true)
+        val aramaCevap = document.select("div.thumb.item").mapNotNull { it.toMainPageResult() }
+        val hasNext = document.selectFirst("li.next") != null
+
+        return newSearchResponseList(aramaCevap, hasNext)
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
-    override suspend fun load(url: String): LoadResponse? {
-        val istek = app.get(url)
-        val document = istek.document
-        val cookies = istek.cookies.toString()
-        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description     = document.selectFirst("div.item:contains(Description:) em")?.text()?.trim()
-        val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
-        val tags            = document.select("div.item:contains(Tags:) a").map { it.text() }
-        val score          = document.selectFirst("span.dt_rating_vgs")?.text()?.trim()
-        val durationText = document.selectFirst("div.item:contains(Duration:) em")
-            ?.text()
-            ?.trim()
-        val parts = durationText?.split(":")?.map { it.toIntOrNull() }
+    override suspend fun load(data: String): LoadResponse? {
+        val (url, storedPoster) = data.split("|").let {
+            it[0] to it.getOrNull(1)
+        }
+
+        val response = app.get(url)
+        val document = response.document
+        val cookies = response.cookies.toString()
+
+        val title = document.selectFirst("h1.single__content-title")?.text()?.trim() ?: return null
+        val poster = storedPoster ?: document.selectFirst("meta[property=og:image]")?.attr("content")
+
+        val tags = document.select("div.single__info-row:contains(Tags:) a").map { it.text().trim() }
+        val actors = document.select("div.single__info-row:contains(Models:) a").map { Actor(it.text().trim()) }
+
+        val durationText = document.selectFirst("div.fp-time-duration")?.text()?.trim()
+        val parts = durationText?.split(":")?.mapNotNull { it.toIntOrNull() }
         val totalMinutes = when (parts?.size) {
-            3 -> parts[0]!! * 60 + parts[1]!!
-            2 -> parts[0]!!
-            1 -> parts[0]!!
+            3 -> (parts[0] * 60) + parts[1]
+            2 -> parts[0]
             else -> null
         }
 
-        val recommendations = document.select("div.list-videos div.item").mapNotNull { it.toMainPageResult() }
-        val actors          = document.select("div.item:contains(Models:) a").map { Actor(it.text()) }
-        val trailer         = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
+        val recommendations = document.select("div.related-videos div.thumb.item").mapNotNull {
+            it.toMainPageResult()
+        }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = poster
-            this.posterHeaders   = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
-                "Referer" to "${mainUrl}/",
-                "cookies" to cookies
-                )
-            this.plot            = description
-            this.year            = year
-            this.tags            = tags
-            this.score           = Score.from10(score)
-            this.duration        = totalMinutes
+            this.posterUrl = poster
+            this.posterHeaders = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                "Referer" to "$mainUrl/",
+                "Cookie" to cookies
+            )
+            this.tags = tags
+            this.duration = totalMinutes
             this.recommendations = recommendations
             addActors(actors)
-            addTrailer(trailer)
+
+            Log.d("Cloudstream", "Loaded Video: $title")
         }
     }
 
@@ -165,8 +169,6 @@ class WatchPorn(context: Context) : MainAPI() {
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-
-                        // JavaScript'in çalışması için bekle
                         Handler(Looper.getMainLooper()).postDelayed({
                             view?.evaluateJavascript("""
                             (function() {
@@ -236,7 +238,7 @@ class WatchPorn(context: Context) : MainAPI() {
                     }
                 }
 
-                loadDataWithBaseURL("https://watchporn.to/", html, "text/html", "UTF-8", null)
+                loadDataWithBaseURL(mainUrl, html, "text/html", "UTF-8", null)
             }
         }
     }

@@ -14,14 +14,14 @@ class Turkifsahub : MainAPI() {
     override var mainUrl = "https://turkifsahub.com"
     override var name = "Turkifsahub"
     override val hasMainPage = true
-    override var lang = "en"
+    override var lang = "tr"
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     private val AnaHeaderlar = mapOf(
-        "Origin" to "https://turkifsahub.com",
-        "Referer" to "https://turkifsahub.com/",
+        "Origin" to mainUrl,
+        "Referer" to mainUrl,
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
     )
 

@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import org.jsoup.Jsoup
 
 class TurkHub : MainAPI() {
     override var mainUrl              = "https://altyzhub6.site"
@@ -65,30 +66,24 @@ class TurkHub : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = if (page == 1){
-            app.get("${request.data}").document
-        } else {
-            app.get("${request.data}page/$page/").document
-        }
-        val home     = document.select("div.mag-box li").mapNotNull { it.toMainPageResult() }
+        val url = if (page == 1) request.data else "${request.data}page/$page/"
+        val document = app.get(url).document
+        val home = document.select("div.mag-box li").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(request.name, home)
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("h2")?.text() ?: return null
+        val title     = this.selectFirst("h2, h3.post-title")?.text()?.trim() ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, "$href|$posterUrl", TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val document = if (page == 1){
-            app.get("${mainUrl}/?s=${query}").document
-        } else {
-            app.get("${mainUrl}/page/$page/?s=${query}").document
-        }
+        val url = if (page == 1) "$mainUrl/?s=$query" else "$mainUrl/page/$page/?s=$query"
+        val document = app.get(url).document
 
         val aramaCevap = document.select("div.mag-box li").mapNotNull { it.toMainPageResult() }
         return newSearchResponseList(aramaCevap, hasNext = true)
@@ -96,17 +91,21 @@ class TurkHub : MainAPI() {
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
-    override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+    override suspend fun load(data: String): LoadResponse? {
+        val (url, storedPoster) = data.split("|").let {
+            it[0] to it.getOrNull(1)
+        }
 
-        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description     = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        val response = app.get(url).text
+        val document = Jsoup.parse(response)
+
+        val title           = document.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
+        val description     = document.selectFirst("div.entry-content p[style*=\"text-align: justify\"]")?.text()?.trim()
         val tags            = document.select("span.tagcloud a").map { it.text() }
         val recommendations = document.select("div.related-posts-list div.related-item").mapNotNull { it.toRecommendationResult() }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = poster
+            this.posterUrl       = storedPoster
             this.plot            = description
             this.tags            = tags
             this.recommendations = recommendations
@@ -114,11 +113,11 @@ class TurkHub : MainAPI() {
     }
 
     private fun Element.toRecommendationResult(): SearchResponse? {
-        val title     = this.selectFirst("a img")?.attr("alt") ?: return null
+        val title     = this.selectFirst("h3.post-title a")?.text()?.trim() ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("src"))
+        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, "$href|$posterUrl", TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
