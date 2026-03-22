@@ -1,9 +1,9 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 2
+version = 3
 
 cloudstream {
     authors     = listOf("ByAyzen")
-    language    = "en"
+    language    = "tr"
     description = "Türk İfşa Hub üzerinde en güncel ve ücretsiz VIP Türk İfşa videolarına ücretsiz ulaşın."
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
