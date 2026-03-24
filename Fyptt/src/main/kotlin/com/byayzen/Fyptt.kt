@@ -2,6 +2,7 @@
 
 package com.byayzen
 
+import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -63,7 +64,8 @@ class Fyptt : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     private var cerez: String? = null
-    private val useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0"
+    private val useragent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0"
 
     private fun cookieal(referans: String? = null): Map<String, String> {
         return mutableMapOf(
@@ -91,16 +93,22 @@ class Fyptt : MainAPI() {
         val title = document.select("h1").firstOrNull()?.text()?.trim() ?: return null
 
         val recommendations = document.select("div.fl-post-column").mapNotNull { element ->
-            val recTitle = element.select("a img").firstOrNull()?.attr("alt") ?: return@mapNotNull null
-            val recHref = fixUrlNull(element.select("a").firstOrNull()?.attr("href")) ?: return@mapNotNull null
+            val recTitle =
+                element.select("a img").firstOrNull()?.attr("alt") ?: return@mapNotNull null
+            val recHref = fixUrlNull(element.select("a").firstOrNull()?.attr("href"))
+                ?: return@mapNotNull null
             newMovieSearchResponse(recTitle, recHref, TvType.NSFW) {
                 this.posterUrl = fixUrlNull(element.select("img").firstOrNull()?.attr("src"))
             }
         }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = fixUrlNull(document.select("meta[property=og:image]").firstOrNull()?.attr("content"))
-            this.plot = document.select("meta[property=og:description]").firstOrNull()?.attr("content")?.trim()
+            this.posterUrl = fixUrlNull(
+                document.select("meta[property=og:image]").firstOrNull()?.attr("content")
+            )
+            this.plot =
+                document.select("meta[property=og:description]").firstOrNull()?.attr("content")
+                    ?.trim()
             this.tags = document.select("div.fl-html .entry-category a").map { it.text().trim() }
             this.recommendations = recommendations
         }
@@ -112,25 +120,29 @@ class Fyptt : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        suspend fun linkbul(adres: String, secici: String, ref: String? = null): String? {
-            return app.get(adres, headers = cookieal(ref)).document
-                .select(secici).firstOrNull()?.attr("src")
-        }
+        val istek = app.get(data, headers = mapOf("cookie" to (cerez ?: "")))
+        val iframeyol = istek.document.selectFirst("iframe[src*='str.php']")?.attr("src") ?: return false
+        val iframeurl = if (iframeyol.startsWith("http")) iframeyol else "$mainUrl/${iframeyol.removePrefix("/")}"
 
-        val anaurl = data
-        val iframeadresi = linkbul(anaurl, "iframe[src*='fyptt']") ?: return false
-        val videolinki = linkbul(iframeadresi, "video-js source, video source, video, source", anaurl) ?: return false
+        val sayfa = app.get(iframeurl, headers = mapOf("referer" to data))
+        val videoyol = sayfa.document.selectFirst("video")?.attr("src")?.takeIf { it.isNotBlank() }
+            ?: sayfa.document.selectFirst("video source, video-js source, source")?.attr("src")
+            ?: Regex("""file\s*:\s*["']([^"']+)["']""").find(sayfa.text)?.groupValues?.get(1)
+            ?: return false
 
-        newExtractorLink(
-            source = name,
-            name = name,
-            url = videolinki,
-        ) {
-            this.referer = anaurl
-            this.headers = mapOf("Cookie" to (cerez ?: ""))
-            this.type = ExtractorLinkType.VIDEO
-        }.let { callback(it) }
+        val sonurl = if (videoyol.startsWith("http")) videoyol else "$mainUrl/${videoyol.removePrefix("/")}"
 
+        callback(
+            newExtractorLink(
+                source = "Fyptt",
+                name = "Fyptt",
+                url = sonurl,
+                type = ExtractorLinkType.VIDEO
+            ) {
+                this.referer = iframeurl
+                this.headers = mapOf("user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0")
+            }
+        )
         return true
     }
 }

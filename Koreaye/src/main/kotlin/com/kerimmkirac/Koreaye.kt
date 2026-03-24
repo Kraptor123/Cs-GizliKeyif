@@ -20,22 +20,30 @@ class Koreaye : MainAPI() {
     private val posterCache = mutableMapOf<String, String>()
 
     override val mainPage = mainPageOf(
-        "${mainUrl}" to "Tüm Videolar",
-        "${mainUrl}/kategori/uvey-anne-porno" to "Üvey Anne",
-        "${mainUrl}/kategori/milf-porno" to "Milf",
-        "${mainUrl}/kategori/buyuk-got-porno-izle" to "Büyük Göt",
-        "${mainUrl}/kategori/buyuk-memeli-porno-izle" to "Büyük Meme",
-        "${mainUrl}/kategori/hizmetci-porno" to "Hizmetçi",
-        "${mainUrl}/kategori/asyali-porno" to "Asyalı",
-        "${mainUrl}/kategori/taytli-porno-izle" to "Tayt",
-        "${mainUrl}/kategori/jartiyerli-porno-izle" to "Jartiyer"
+        "$mainUrl/" to "Son Videolar",
+        "$mainUrl/kategori/turk/" to "Türk",
+        "$mainUrl/kategori/turkce-altyazili/" to "Türkçe Altyazılı",
+        "$mainUrl/kategori/amator/" to "Amatör",
+        "$mainUrl/kategori/uvey-anne/" to "Üvey Anne",
+        "$mainUrl/kategori/milf/" to "Milf",
+        "$mainUrl/kategori/olgun/" to "Olgun",
+        "$mainUrl/kategori/genç/" to "Genç",
+        "$mainUrl/kategori/ensest/" to "Ensest",
+        "$mainUrl/kategori/hizmetci/" to "Hizmetçi",
+        "$mainUrl/kategori/asyali/" to "Asyalı",
+        "$mainUrl/kategori/konulu/" to "Konulu",
+        "$mainUrl/kategori/anal/" to "Anal",
+        "$mainUrl/kategori/lezbiyen/" to "Lezbiyen",
+        "$mainUrl/kategori/hd/" to "HD"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}/page/$page/").document
         val home = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            listOf(HomePageList(request.name, home, isHorizontalImages = true)), true
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

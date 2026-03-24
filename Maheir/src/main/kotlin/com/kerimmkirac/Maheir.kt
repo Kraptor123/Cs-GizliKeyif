@@ -34,9 +34,10 @@ class Maheir : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}/page/$page").document
-        val home     = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
+        val home = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = true), hasNext = true
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
@@ -46,7 +47,7 @@ class Maheir : MainAPI() {
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
         return newMovieSearchResponse(title, "$href|$poster", TvType.NSFW) {
-            posterUrl = poster
+            this.posterUrl = poster
         }
     }
 

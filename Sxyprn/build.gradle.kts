@@ -1,8 +1,5 @@
 // ! Bu araç @ByAyzen tarafından | @Cs-SikliKeyif için yazılmıştır.
 version = 5
-dependencies {
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
-}
 
 cloudstream {
     authors     = listOf("ByAyzen")
