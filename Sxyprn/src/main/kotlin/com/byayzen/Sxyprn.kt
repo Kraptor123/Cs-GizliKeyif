@@ -2,7 +2,6 @@
 
 package com.byayzen
 
-import com.google.ai.client.generativeai.type.content
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.network.WebViewResolver
