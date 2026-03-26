@@ -3,7 +3,7 @@ version = 1
 
 cloudstream {
     authors     = listOf("ByAyzen")
-    language    = "br"
+    language    = "pt-BR"
     description = "Porno Carioca ✓ Videos e filmes pornô diariamente atualizados com cenas de porno grátis. O melhor site pornô com mulheres gostosas!"
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")

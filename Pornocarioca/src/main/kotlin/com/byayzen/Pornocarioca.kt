@@ -11,7 +11,7 @@ class Pornocarioca : MainAPI() {
     override var mainUrl = "https://www.pornocarioca.com"
     override var name = "Pornocarioca"
     override val hasMainPage = true
-    override var lang = "br"
+    override var lang = "pt-BR"
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
