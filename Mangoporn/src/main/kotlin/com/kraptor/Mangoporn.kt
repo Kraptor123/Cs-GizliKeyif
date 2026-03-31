@@ -68,6 +68,7 @@ class Mangoporn : MainAPI() {
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
+            this.posterHeaders = mapOf("Accept" to "image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5")
         }
     }
 
@@ -81,10 +82,13 @@ class Mangoporn : MainAPI() {
 
         val href = fixUrl(this.select("div.image a").attr("href"))
         val img = this.select("div.image img")
-        val posterUrl = img.attr("data-wpfc-original-src").ifEmpty { img.attr("src") }
+        val posterUrl = img.attr("data-wpfc-original-src")
+            .ifEmpty { img.attr("src") }
+            .ifEmpty { img.attr("data-src") }
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
+            this.posterHeaders = mapOf("Accept" to "image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5")
         }
     }
 
@@ -113,14 +117,15 @@ class Mangoporn : MainAPI() {
         val document = app.get(url).document
 
         val title = document.selectFirst("div.data > h1")?.text().toString()
-        val poster =
-            document.selectFirst("div.poster > img")?.attr("data-wpfc-original-src")?.trim()
-                .toString()
+        val poster = document.selectFirst("div.poster > img")?.attr("data-wpfc-original-src")
+            ?.ifEmpty { document.selectFirst("div.poster > img")?.attr("src") }
+            ?.trim()
+            .toString()
+
         val year = document.selectFirst("span.textco a[rel=tag]")?.text()?.trim()?.toIntOrNull()
         val duration = document.selectFirst("span.duration")?.text()?.let {
             val hours = Regex("""(\d+)\s*hrs""").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            val minutes =
-                Regex("""(\d+)\s*mins""").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            val minutes = Regex("""(\d+)\s*mins""").find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             (hours * 60) + minutes
         }
         val description = document.selectFirst("div.wp-content > p")?.text()
@@ -129,6 +134,8 @@ class Mangoporn : MainAPI() {
         val desen = "\\b(?:${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b"
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val tags = document.select("span.valors a[href*=/genre/]").map { it.text() }
+
+        val imageHeaders = mapOf("Accept" to "image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5")
 
         if (tags.any { it.contains(kirliKelimeRegex) }) {
             val blockedTitle = "Engellenmiş İçerik"
@@ -139,6 +146,7 @@ class Mangoporn : MainAPI() {
                 this.posterUrl = blockedPoster
                 this.plot = blockedDescription
                 this.tags = tags
+                this.posterHeaders = imageHeaders
                 addActors(actors)
             }
         } else {
@@ -148,6 +156,7 @@ class Mangoporn : MainAPI() {
                 this.year = year
                 this.duration = duration
                 this.tags = tags
+                this.posterHeaders = imageHeaders
                 addActors(actors)
             }
         }

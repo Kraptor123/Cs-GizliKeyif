@@ -20,7 +20,6 @@ class CollectionOfBestPorn : MainAPI() {
     override val mainPage = mainPageOf(
         "${mainUrl}/most-recent"      to "All Videos",
         "${mainUrl}/most-viewed/month"   to "Most Viewed Videos",
-        
         "${mainUrl}/category/big-ass"  to "Big Ass Videos",
         "${mainUrl}/category/big-tits" to "Big Tits Videos",
         "${mainUrl}/category/latin" to "Latin Videos",
@@ -28,33 +27,30 @@ class CollectionOfBestPorn : MainAPI() {
         "${mainUrl}/category/lingerie" to "Lingerie Videos",
         "${mainUrl}/category/milf" to "Milf Videos",
         "${mainUrl}/category/asian" to "Asian Videos",
-        
-        
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val document = app.get("${request.data}/page/$page").document
-    val home = document.select("div.video-item").mapNotNull { it.toMainPageResult() }
+        val document = app.get("${request.data}/page/$page").document
+        val home = document.select("div.video-item").mapNotNull { it.toMainPageResult() }
 
-    return newHomePageResponse(request.name, home)
-}
-
-private fun Element.toMainPageResult(): SearchResponse? {
-    val anchor = this.selectFirst("div.video-thumb a") ?: return null
-    val href = fixUrlNull(anchor.attr("href")) ?: return null
-
-    val img = anchor.selectFirst("img")
-    val posterUrl = fixUrlNull(img?.attr("src"))
-
-    val title = this.selectFirst("div.video-desc div.title span")?.text()
-        ?: img?.attr("alt") 
-        ?: return null
-
-    return newMovieSearchResponse(title, href, TvType.NSFW) {
-        this.posterUrl = posterUrl
+        return newHomePageResponse(request.name, home)
     }
-}
 
+    private fun Element.toMainPageResult(): SearchResponse? {
+        val anchor = this.selectFirst("div.video-thumb a") ?: return null
+        val url = fixUrlNull(anchor.attr("href")) ?: return null
+
+        val img = anchor.selectFirst("img")
+        val posterUrl = fixUrlNull(img?.attr("src"))
+
+        val title = this.selectFirst("div.video-desc div.title span")?.text()
+            ?: img?.attr("alt")
+            ?: return null
+
+        return newMovieSearchResponse(title, "$url|$posterUrl", TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
+    }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val document = app.get("${mainUrl}/search/${query}/page/$page").document
@@ -65,53 +61,56 @@ private fun Element.toMainPageResult(): SearchResponse? {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val anchor = this.selectFirst("div.video-thumb a") ?: return null
-    val href = fixUrlNull(anchor.attr("href")) ?: return null
+        val url = fixUrlNull(anchor.attr("href")) ?: return null
 
-    val img = anchor.selectFirst("img")
-    val posterUrl = fixUrlNull(img?.attr("src"))
+        val img = anchor.selectFirst("img")
+        val posterUrl = fixUrlNull(img?.attr("src"))
 
-    val title = this.selectFirst("div.video-desc div.title span")?.text()
-        ?: img?.attr("alt") 
-        ?: return null
+        val title = this.selectFirst("div.video-desc div.title span")?.text()
+            ?: img?.attr("alt")
+            ?: return null
 
-    return newMovieSearchResponse(title, href, TvType.NSFW) {
-        this.posterUrl = posterUrl
-    }
+        return newMovieSearchResponse(title, "$url|$posterUrl", TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
-    override suspend fun load(url: String): LoadResponse? {
-    val document = app.get(url).document
-    val title = document.selectFirst("h1.video-title")?.text()?.trim() ?: return null
-    val poster = fixUrlNull(
-    document.selectFirst("div.vjs-poster")?.attr("style")
-     ?.let { Regex("""url\((?:&quot;|")?(.*?)(?:&quot;|")?\)""").find(it)?.groupValues?.getOrNull(1) }
-    ?: document.selectFirst("div.video-thumb img")?.attr("src"))
-    val description = document.selectFirst("h1.video-title")?.text()?.trim() ?: return null
-    val tags = document.select("div.tags ul.item-list li").map { it.text() }
-    val recommendations = document.select("div.video-item").mapNotNull { it.toRecommendationResult() }
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-        this.posterUrl = poster
-        this.plot = description
-        this.tags = tags
-        this.recommendations = recommendations
+    override suspend fun load(data: String): LoadResponse? {
+        val (url, incomingPoster) = data.split("|").let {
+            it[0] to it.getOrNull(1)
+        }
+
+        val document = app.get(url).document
+        val title = document.selectFirst("h1.video-title")?.text()?.trim() ?: return null
+
+        val description = document.selectFirst("h1.video-title")?.text()?.trim()
+        val tags = document.select("div.tags ul.item-list li").map { it.text() }
+        val recommendations = document.select("div.video-item").mapNotNull { it.toRecommendationResult() }
+
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = incomingPoster
+            this.plot = description
+            this.tags = tags
+            this.recommendations = recommendations
+        }
     }
-}
 
     private fun Element.toRecommendationResult(): SearchResponse? {
-     val anchor = this.selectFirst("div.video-thumb a") ?: return null
-    val href = fixUrlNull(anchor.attr("href")) ?: return null
+        val anchor = this.selectFirst("div.video-thumb a") ?: return null
+        val url = fixUrlNull(anchor.attr("href")) ?: return null
 
-    val img = anchor.selectFirst("img")
-    val posterUrl = fixUrlNull(img?.attr("src"))
+        val img = anchor.selectFirst("img")
+        val posterUrl = fixUrlNull(img?.attr("src"))
 
-    val title = this.selectFirst("div.video-desc div.title span")?.text()
-    ?: img?.attr("alt") 
-    ?: return null
-    return newMovieSearchResponse(title, href, TvType.NSFW) {
-        this.posterUrl = posterUrl
-    }
+        val title = this.selectFirst("div.video-desc div.title span")?.text()
+            ?: img?.attr("alt")
+            ?: return null
+
+        return newMovieSearchResponse(title, "$url|$posterUrl", TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun loadLinks(
