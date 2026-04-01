@@ -30,29 +30,33 @@ class Erome : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val response = app.get(request.data, headers = headers)
-        val elements = response.document.select("div#albums > div")
+        val url = if (page <= 1) {
+            request.data
+        } else {
+            "${request.data}?page=$page"
+        }
+
+        val response = app.get(url, headers = headers)
+        val elements = response.document.select("div.album")
 
         val home = elements.mapNotNull { element ->
-            val videoCount = element.selectFirst("span.album-videos")?.text()?.toIntOrNull() ?: 0
+            val videoCount =
+                element.selectFirst("span.album-videos")?.text()?.filter { it.isDigit() }
+                    ?.toIntOrNull() ?: 0
             if (videoCount == 0) return@mapNotNull null
             element.toMainPageResult()
         }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(request.name, home, hasNext = home.isNotEmpty())
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val href = fixUrlNull(selectFirst("a")?.attr("href")) ?: return null
-
-        val title = selectFirst("div.flbaslik")?.text()?.trim()
-            ?: selectFirst(".album-title")?.text()?.trim()
-            ?: selectFirst("img")?.attr("alt")?.trim()
-
-        if (title.isNullOrEmpty()) return null
+        val titleElement = selectFirst("a.album-title") ?: return null
+        val title = titleElement.text().trim()
+        val href = fixUrlNull(titleElement.attr("href")) ?: return null
 
         val posterUrl = fixUrlNull(
-            selectFirst("img")?.attr("data-src") ?: selectFirst("img")?.attr("src")
+            selectFirst("img.album-thumbnail.active")?.attr("src")
         )
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
@@ -67,8 +71,12 @@ class Erome : MainAPI() {
             val numeric = rawCount.replace(Regex("[^0-9KMkm]"), "")
             val videoCount = when {
                 numeric.isBlank() -> 0
-                numeric.contains(Regex("[Kk]")) -> (numeric.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0) * 1000
-                numeric.contains(Regex("[Mm]")) -> (numeric.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0) * 1_000_000
+                numeric.contains(Regex("[Kk]")) -> (numeric.replace(Regex("[^0-9]"), "")
+                    .toIntOrNull() ?: 0) * 1000
+
+                numeric.contains(Regex("[Mm]")) -> (numeric.replace(Regex("[^0-9]"), "")
+                    .toIntOrNull() ?: 0) * 1_000_000
+
                 else -> numeric.toIntOrNull() ?: 0
             }
             if (videoCount == 0) return@mapNotNull null
@@ -85,20 +93,27 @@ class Erome : MainAPI() {
         val document = app.get(url).document
 
         val title = document.selectFirst("h1")?.text()?.trim().orEmpty()
-        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content")).orEmpty()
+        val poster =
+            fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content")).orEmpty()
 
         val tags = document.select("p.mt-10 a")
             .map { it.text().trim().replace(Regex("^#+\\s*"), "") }
             .toMutableList()
             .apply { if (!contains("+18")) add("+18") }
 
-        val recommendations = document.select("div#albums div.col-lg-2").mapNotNull { it.toRecommendationResult() }
-        val actors = document.selectFirst("a#user_name")?.text()?.trim()?.let { listOf(Actor(it)) } ?: emptyList()
+        val recommendations =
+            document.select("div#albums div.album").mapNotNull { it.toRecommendationResult() }
+        val actors = document.selectFirst("a#user_name")?.text()?.trim()?.let { listOf(Actor(it)) }
+            ?: emptyList()
 
         val episodes = document.select("div.video video").mapIndexedNotNull { idx, videoTag ->
-            val src = videoTag.selectFirst("> source[src]")?.attr("src")?.trim() ?: return@mapIndexedNotNull null
-            val label = videoTag.selectFirst("> source[label]")?.attr("label").orEmpty()
-            val name = if (label.isNotBlank()) label else inferQualityFromUrl(src) ?: "Bölüm ${idx + 1}"
+            val sourceTag = videoTag.selectFirst("source") ?: return@mapIndexedNotNull null
+            val src = sourceTag.attr("src").trim()
+            if (src.isBlank()) return@mapIndexedNotNull null
+
+            val label = sourceTag.attr("label").orEmpty()
+            val name =
+                if (label.isNotBlank()) label else inferQualityFromUrl(src) ?: "Bölüm ${idx + 1}"
 
             newEpisode(src) {
                 this.name = name
@@ -123,18 +138,24 @@ class Erome : MainAPI() {
         }
     }
 
+    private fun Element.toRecommendationResult(): SearchResponse? {
+        val titleElement = selectFirst("a.album-title") ?: return null
+        val title = titleElement.text().trim()
+        val href = fixUrlNull(titleElement.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(
+            selectFirst("a.album-link img.active")?.attr("src")
+        )
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
+    }
+
     private fun inferQualityFromUrl(url: String): String? {
         return Regex("_(\\d{3,4}p)\\.(mp4|m3u8)$", RegexOption.IGNORE_CASE)
             .find(url)?.groupValues?.getOrNull(1)?.uppercase()
     }
 
-    private fun Element.toRecommendationResult(): SearchResponse? {
-        val title = selectFirst("div.album-infos a.album-title")?.text()?.trim() ?: return null
-        val href = fixUrlNull(selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(selectFirst("a img")?.attr("data-src"))
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
-    }
 
     override suspend fun loadLinks(
         data: String,
@@ -142,49 +163,45 @@ class Erome : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        if (data.endsWith(".mp4", true) || data.endsWith(".m3u8", true)) {
-            val type = if (data.endsWith(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-            val playHeaders = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Referer" to data
-            )
+        val playHeaders = mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer" to mainUrl
+        )
+        if (data.contains(".mp4") || data.contains(".m3u8")) {
+            val type =
+                if (data.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
             callback(
-                newExtractorLink(name, "$name | Direct", data, type) {
+                newExtractorLink(
+                    name,
+                    name,
+                    data,
+                    type = ExtractorLinkType.VIDEO,
+                )
+                {
                     this.headers = playHeaders
                 }
             )
             return true
         }
-
         val document = app.get(data, headers = headers).document
         val videoContainers = document.select("div.video video")
 
         if (videoContainers.isEmpty()) return false
 
-        val playHeaders = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Referer" to data
-        )
+        videoContainers.forEach { videoTag ->
+            val source = videoTag.selectFirst("source") ?: return@forEach
+            val url = source.attr("src").takeIf { it.isNotBlank() } ?: return@forEach
 
-        videoContainers.forEachIndexed { _, videoTag ->
-            val source = videoTag.select("> source[src]").firstOrNull {
-                val type = it.attr("type").lowercase()
-                val src = it.attr("src").lowercase()
-                type.contains("video/mp4") || type.contains("mpegurl") || src.endsWith(".mp4") || src.endsWith(".m3u8")
-            } ?: return@forEachIndexed
-
-            val url = source.attr("src")
             val quality = source.attr("label").ifEmpty { inferQualityFromUrl(url) ?: "HD" }
-            val type = if (url.endsWith(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+            val type =
+                if (url.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
 
             callback(
                 newExtractorLink(name, "$name | $quality", url, type) {
-                    this.referer = data
                     this.headers = playHeaders
                 }
             )
         }
-
         return true
     }
 }
