@@ -115,36 +115,39 @@ class Koreaye : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val sayfa = app.get(data).document
-        val iframeyolu = sayfa.selectFirst("iframe")?.attr("data-src") ?: return false
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val response = app.get(data).document
+        val iframeUrl = response.selectFirst("iframe")?.attr("data-src") ?: return false
 
-        val iframecevap = app.get(
-            iframeyolu,
+        val iframeResponse = app.get(
+            iframeUrl,
             referer = mainUrl,
             headers = mapOf(
                 "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
-            )
+                "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7")
         )
+        val iframeText = iframeResponse.text
+        val currentIframeUrl = iframeResponse.url
 
-        val iframemetni = iframecevap.text
-        val iframesonyolu = iframecevap.url
+        val encodedData = iframeText.substringAfter("_d = \"").substringBefore("\"")
+        val decodedM3u8 = android.util.Base64.decode(encodedData, android.util.Base64.DEFAULT).toString(Charsets.UTF_8)
 
-        val sifrelimetin = iframemetni.substringAfter("_d = \"").substringBefore("\"")
-        val m3u8icerik = android.util.Base64.decode(sifrelimetin, android.util.Base64.DEFAULT).toString(Charsets.UTF_8)
+        val firstUrlLine = decodedM3u8.lines().firstOrNull { it.startsWith("http") } ?: return false
+        val playlistId = Regex("/playlists/([^/]+)/").find(firstUrlLine)?.groupValues?.get(1) ?: return false
 
-        val ilksatir = m3u8icerik.lines().firstOrNull { it.startsWith("http") } ?: return false
-        val playlistid = Regex("/playlists/([^/]+)/").find(ilksatir)?.groupValues?.get(1) ?: return false
-
-        val alan = iframesonyolu.substringBefore("/player")
-        val m3u8yolu = "$alan/playlists/$playlistid/playlist.m3u8"
+        val host = currentIframeUrl.substringBefore("/player")
+        val finalM3u8Url = "$host/playlists/$playlistId/playlist.m3u8"
 
         callback.invoke(
             newExtractorLink(
                 source = name,
                 name = name,
-                url = m3u8yolu,
+                url = finalM3u8Url,
                 type = ExtractorLinkType.M3U8
             ) {
                 this.referer = "https://cdnfast.sbs/"
