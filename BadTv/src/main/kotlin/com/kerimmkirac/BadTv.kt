@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import java.net.URI
 
 class BadTv : MainAPI() {
     override var mainUrl              = "https://www.badtv.net"
@@ -116,76 +117,57 @@ class BadTv : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val (url, _) = data.split("|").let {
-            it[0] to it.getOrNull(1)
-        }
-        
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val url = data.split("|")[0]
         val document = app.get(url).document
-        
 
         val iframeSrc = document.selectFirst("div.screen iframe")?.attr("src") ?: return false
-        Log.d("Badtv", "iframe : $iframeSrc")
-        
-        
-        val vid = when {
-        
-        iframeSrc.contains(".html") -> {
-            Regex("/([^/]+)\\.html").find(iframeSrc)?.groupValues?.get(1)
-        }
-        
-        iframeSrc.contains("vid=") -> {
-            Regex("vid=([^&]+)").find(iframeSrc)?.groupValues?.get(1)
-        }
-        else -> null
-    } ?: return false
-        Log.d("Badtv", "vid: $vid")
-        
-        
+        val iframeUri = URI(iframeSrc)
+        val iframeHost = "${iframeUri.scheme}://${iframeUri.host}"
+
+        val hash = Regex("/pb/([^/]+)\\.html").find(iframeSrc)?.groupValues?.get(1)
+            ?: Regex("vid=([^&]+)").find(iframeSrc)?.groupValues?.get(1)
+            ?: return false
+
         val postData = mapOf(
-            "vid" to vid,
+            "vid" to hash,
             "alternative" to "ankacdn",
             "ord" to "0"
         )
-        
-        try {
-            
-            val response = app.post(
-                url = "https://www.canlitvnews2.xyz/player/ajax_sources.php",
-                data = postData,
-                headers = mapOf(
-                    "X-Requested-With" to "XMLHttpRequest",
-                    "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
-                    "Referer" to iframeSrc,
-                    "Origin" to "https://www.canlitvnews2.xyz",
-                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
-                )
-            )
-            
-            val jsonResponse = response.parsedSafe<VideoResponse>()
-            Log.d("Badtv", "response: ${response.text}")
-            
-            if (jsonResponse?.status == "true" && jsonResponse.source?.isNotEmpty() == true) {
-                jsonResponse.source.forEach { source ->
-                    callback.invoke(
-                        newExtractorLink(
-                            source = name,
-                            name = "${name}",
-                            url = source.file,
 
-                            type = ExtractorLinkType.VIDEO
-                        ){
-                            this.referer = "https://www.canlitvnews2.xyz/"
-                            this.quality = Qualities.Unknown.value
-                        }
-                    )
-                }
-                return true
+        val response = app.post(
+            url = "$iframeHost/player/ajax_sources.php",
+            data = postData,
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Referer" to iframeSrc,
+                "Origin" to iframeHost,
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+        )
+
+        val jsonResponse = response.parsedSafe<VideoResponse>()
+
+        if (jsonResponse?.status == "true" && jsonResponse.source?.isNotEmpty() == true) {
+            jsonResponse.source.forEach { source ->
+                callback.invoke(
+                    newExtractorLink(
+                        source = name,
+                        name = name,
+                        url = source.file,
+                        type = ExtractorLinkType.VIDEO
+                    ) {
+                        this.referer = "$iframeHost/"
+                    }
+                )
             }
-        } catch (e: Exception) {
-            Log.e("Badtv", "hatacık : ${e.message}")
+            return true
         }
-        
         return false
     }
     
