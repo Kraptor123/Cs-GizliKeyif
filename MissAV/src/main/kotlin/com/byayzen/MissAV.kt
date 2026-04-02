@@ -2,13 +2,14 @@
 
 package com.byayzen
 
+import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 
 class MissAV : MainAPI() {
-    override var mainUrl = "https://missav.ws"
+    override var mainUrl = "https://missav.live"
     override var name = "MissAV"
     override val hasMainPage = true
     override var lang = "jp"
@@ -16,10 +17,27 @@ class MissAV : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/dm515/en/new?sort=published_at" to "Yeni Eklenenler",
-        "${mainUrl}/dm628/en/uncensored-leak?sort=monthly_views" to "Sansürsüzler",
-        "${mainUrl}/dm263/en/monthly-hot?sort=views" to "Ayın En İzlenenleri",
-        "${mainUrl}/dm169/en/weekly-hot?sort=weekly_views" to "Haftanın En İzlenenleri"
+        "$mainUrl/dm169/en/weekly-hot?sort=weekly_views" to "Weekly Hot",
+        "$mainUrl/dm263/en/monthly-hot?sort=views" to "Monthly Hot",
+        "$mainUrl/en/new?sort=published_at" to "Newly Added",
+        "$mainUrl/en/english-subtitle" to "English Subtitles",
+        "$mainUrl/dm628/en/uncensored-leak" to "Uncensored Leak",
+        "$mainUrl/dm150/en/fc2" to "FC2",
+        "$mainUrl/dm35/en/madou" to "Madou",
+        "$mainUrl/en/klive" to "K-Live",
+        "$mainUrl/en/clive" to "C-Live",
+        "$mainUrl/dm29/en/tokyohot" to "Tokyo Hot",
+        "$mainUrl/dm1198483/en/heyzo" to "HEYZO",
+        "$mainUrl/dm2469695/en/1pondo" to "1pondo",
+        "$mainUrl/dm3959622/en/caribbeancom" to "Caribbeancom",
+        "$mainUrl/dm48032/en/caribbeancompr" to "Caribbeancom Premium",
+        "$mainUrl/dm3710098/en/10musume" to "10musume",
+        "$mainUrl/dm1342558/en/pacopacomama" to "Pacopacomama",
+        "$mainUrl/dm136/en/gachinco" to "Gachinco",
+        "$mainUrl/dm29/en/xxxav" to "XXX-AV",
+        "$mainUrl/dm24/en/marriedslash" to "Married Slash",
+        "$mainUrl/dm20/en/naughty4610" to "Naughty 4610",
+        "$mainUrl/dm22/en/naughty0930" to "Naughty 0930"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -87,23 +105,19 @@ class MissAV : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
 
-        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description = document.selectFirst("div.mb-4 .mb-1.text-secondary")?.ownText()?.trim()
-        val year = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
-        val tags = document.select("span:containsOwn(Genre) ~ a").map { it.text().trim() }
-        val duration =
-            document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
+        val title = document.selectFirst("h1.text-base")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(document.selectFirst("meta[property='og:image']")?.attr("content"))
+        val year = document.selectFirst("time")?.text()?.split("-")?.firstOrNull()?.toIntOrNull()
 
-        val actors = document.select("span:containsOwn(Actress) ~ a").map { Actor(it.text()) }
-
+        val tags = document.select("div.text-secondary:contains(genre) a").map {
+            it.text().trim() }
+        val actresses = document.select("div.text-secondary:contains(actress) a").map {
+            Actor(it.text().trim()) }
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
-            this.plot = description
             this.year = year
             this.tags = tags
-            this.duration = duration
-            addActors(actors)
+            addActors(actresses)
         }
     }
 
@@ -113,17 +127,20 @@ class MissAV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        getAndUnpack(app.get(data).text)?.let { unpacked ->
-            """source=['"](.*?)['"]""".toRegex().find(unpacked)?.groupValues?.get(1)?.let { url ->
+        val response = app.get(data).text
+        getAndUnpack(response).let { unpacked ->
+            val playlistId = """/([a-f0-9\-]{36})/""".toRegex().find(unpacked)?.groupValues?.get(1)
+
+            if (playlistId != null) {
                 callback.invoke(
                     newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = url,
+                        source = "MissAV",
+                        name = "MissAV",
+                        url = "https://surrit.com/$playlistId/playlist.m3u8",
                         type = ExtractorLinkType.M3U8
                     ) {
-                        this.referer = "https://missav.com"
-                        this.quality = Qualities.Unknown.value
+                        this.referer = "$mainUrl/"
+                        this.headers = mapOf("Referer" to "$mainUrl/")
                     }
                 )
             }
@@ -131,4 +148,3 @@ class MissAV : MainAPI() {
         return true
     }
 }
-
