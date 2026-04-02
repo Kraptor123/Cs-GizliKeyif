@@ -20,7 +20,7 @@ class Pimpbunny : MainAPI() {
 
     override val mainPage = mainPageOf(
         "${mainUrl}/" to "Featured Videos",
-        "${mainUrl}/onlyfans-models/?models_per_page=30&sort_by=added_date" to "Newest Models",
+        "${mainUrl}/onlyfans-creators/?models_per_page=30" to "Newest Models",
         "${mainUrl}/categories/4k/" to "4K",
         "${mainUrl}/categories/anal/" to "Anal",
         "${mainUrl}/categories/bbc/" to "BBC",
@@ -133,35 +133,41 @@ class Pimpbunny : MainAPI() {
 
         val actors = document.select("div.blocks-model-view-title__7xX3ZF h1, ul.pages-view-video-models__OeBRr0 li").map {
             val name = it.select("div.pages-view-video-model-title__jPOPZM a").text().trim().ifEmpty { it.text().trim() }
-            val image = fixUrlNull(it.select("img").let { img -> img.attr("data-original").ifEmpty { img.attr("src") } })
+            val imgelement = it.selectFirst("img")
+            val image = if (imgelement != null) {
+                fixUrlNull(imgelement.attr("data-original").ifEmpty { imgelement.attr("src") })
+            } else null
             Actor(name, image)
         }
 
-        val mainPoster = document.selectFirst("div.blocks-model-view-thumbnail__z5_Ral img, div.pages-view-video-player-wrapper__8D_N_ img")?.let {
-            fixUrlNull(it.attr("data-original").ifEmpty { it.attr("src") })
-        } ?: actors.firstOrNull()?.image
+        val mainPosterElement = document.selectFirst("div.blocks-model-view-thumbnail__z5_Ral img, div.pages-view-video-player-wrapper__8D_N_ img")
+        val mainPoster = if (mainPosterElement != null) {
+            fixUrlNull(mainPosterElement.attr("data-original").ifEmpty { mainPosterElement.attr("src") })
+        } else {
+            actors.firstOrNull()?.image
+        }
 
-        val videoCards = document.select(".ui-card-root__0dWeQJ, .ui-card-video__Iv9u1W")
+        val isSeries = url.contains("/onlyfans-creators/") || url.contains("/categories/")
 
-        return if ((url.contains("/onlyfans-models/") || url.contains("/categories/")) && videoCards.isNotEmpty()) {
+        return if (isSeries) {
             val episodes = mutableListOf<Episode>()
-
             val lastPage = document.select("ul.includes-pagination-list__0cyzaJ li a").mapNotNull {
                 it.text().trim().toIntOrNull()
             }.maxOrNull() ?: 1
 
             for (i in 1..lastPage) {
                 val pageUrl = if (i == 1) url else "${url.removeSuffix("/")}/$i/"
-
                 val pageDoc = if (i == 1) document else app.get(pageUrl, interceptor = CloudflareKiller(), headers = mapOf("Referer" to "$mainUrl/")).document
 
-                val pagedCards = pageDoc.select(".ui-card-root__0dWeQJ, .ui-card-video__Iv9u1W")
-                pagedCards.forEach {
-                    val epHref = fixUrlNull(it.selectFirst("a.ui-card-link__KxRw6l, a")?.attr("href"))
-                    if (epHref != null && epHref.contains("pimpbunny.com")) {
+                pageDoc.select("#list_videos_model_video_list_items .ui-card-video__Iv9u1W").forEach { card ->
+                    val epHref = fixUrlNull(card.selectFirst("a.ui-card-link__KxRw6l")?.attr("href"))
+                    if (epHref != null) {
                         episodes.add(newEpisode(epHref) {
-                            name = it.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim()
-                            posterUrl = fixUrlNull(it.selectFirst("img")?.let { img -> img.attr("data-original").ifEmpty { img.attr("src") } })
+                            this.name = card.selectFirst(".ui-card-title__igirYJ")?.text()?.trim()
+                            val epImgElement = card.selectFirst("img")
+                            this.posterUrl = if (epImgElement != null) {
+                                fixUrlNull(epImgElement.attr("data-original").ifEmpty { epImgElement.attr("src") })
+                            } else null
                         })
                     }
                 }
@@ -177,6 +183,7 @@ class Pimpbunny : MainAPI() {
             newMovieLoadResponse(title, url, TvType.NSFW, url) {
                 this.posterUrl = mainPoster
                 this.plot = description
+                this.year = document.selectFirst("div.pages-view-video-video-info__re_sY")?.text()?.let { Regex("\\d{4}").find(it)?.value?.toIntOrNull() }
                 this.tags = tags
                 addActors(actors)
             }
