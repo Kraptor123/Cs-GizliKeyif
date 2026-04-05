@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import org.jsoup.Jsoup
 
 class TurkHub : MainAPI() {
-    override var mainUrl              = "https://altyzhub6.site"
+    override var mainUrl              = "https://turkhub12.cyou"
     override var name                 = "TurkHub"
     override val hasMainPage          = true
     override var lang                 = "tr"
@@ -19,115 +19,141 @@ class TurkHub : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/"                  to "TurkHub En Son",
-        "${mainUrl}/tag/altyazili/"               to "Altyazılı",
-        "${mainUrl}/tag/amator-porno/"            to "Amatör Porno",
-        "${mainUrl}/tag/amcik/"                   to "Amcık",
-        "${mainUrl}/tag/anal/"                    to "anal",
-        "${mainUrl}/tag/anime/"                   to "Anime",
-        "${mainUrl}/tag/anne/"                    to "anne",
-        "${mainUrl}/tag/arap/"                    to "Arap",
-        "${mainUrl}/tag/bakire/"                  to "Bakire",
-        "${mainUrl}/tag/banyo-dus/"               to "Banyo Duş",
-        "${mainUrl}/tag/blacked/"                 to "Blacked",
-        "${mainUrl}/tag/buyuk-meme/"              to "Büyük Meme",
-        "${mainUrl}/tag/degisik/"                 to "Değişik",
-        "${mainUrl}/tag/doktor/"                  to "Doktor",
-        "${mainUrl}/tag/dul/"                     to "dul",
-        "${mainUrl}/tag/ensest/"                  to "ensest",
-        "${mainUrl}/tag/erotik/"                  to "Erotik",
-        "${mainUrl}/tag/esmer/"                   to "Esmer",
-        "${mainUrl}/tag/fantezi/"                 to "fantezi",
-        "${mainUrl}/tag/fetis/"                   to "Fetiş",
-        "${mainUrl}/tag/gangbang/"                to "Gangbang",
-        "${mainUrl}/tag/genel/"                   to "Genel",
-        "${mainUrl}/tag/genc/"                    to "genç",
-        "${mainUrl}/tag/gizli-cekim/"             to "gizli cekim",
-        "${mainUrl}/tag/grup/"                    to "grup",
-        "${mainUrl}/tag/gotten/"                  to "götten",
-        "${mainUrl}/tag/hastane/"                 to "Hastane",
-        "${mainUrl}/tag/hdabla/"                  to "Hdabla",
-        "${mainUrl}/tag/hdturk/"                  to "hdturk",
-        "${mainUrl}/tag/ifsa/"                    to "ifsa",
-        "${mainUrl}/tag/konulu/"                  to "konulu",
-        "${mainUrl}/tag/liseli/"                  to "liseli",
-        "${mainUrl}/tag/mobil/"                   to "mobil",
-        "${mainUrl}/tag/olgun/"                   to "olgun",
-        "${mainUrl}/tag/onlyfans/"                to "onlyfans",
-        "${mainUrl}/tag/onlyfans-porno/"          to "onlyfans porno",
-        "${mainUrl}/tag/oral/"                    to "Oral",
-        "${mainUrl}/tag/periscope-turk-ifsa/"     to "periscope türk ifşa",
-        "${mainUrl}/tag/porno-turk/"              to "porno türk",
-        "${mainUrl}/tag/sakso/"                   to "sakso",
-        "${mainUrl}/tag/sarisin/"                 to "sarışın",
-        "${mainUrl}/tag/tombul/"                  to "Tombul",
-        "${mainUrl}/tag/tr-lez-porno/"            to "tr lez porno",
-        "${mainUrl}/tag/turk/"                    to "turk",
+        "${mainUrl}/"                                 to "TurkHub En Son",
+        "${mainUrl}/category/liseli-porno/"           to "Liseli Porno",
+        "${mainUrl}/category/turk-ifsa/"              to "Türk ifşa",
+        "${mainUrl}/category/konusmali-porno/"        to "Konuşmalı Porno",
+        "${mainUrl}/category/turbanli-porno/"         to "Türbanlı Porno",
+        "${mainUrl}/category/cuckold-porno/"          to "Cuckold Porno",
+        "${mainUrl}/category/fetis-porno/"            to "Fetiş Porno",
+        "${mainUrl}/category/genc-porno/"             to "Genç Porno",
+        "${mainUrl}/category/konulu-porno/"           to "Konulu Porno",
+        "${mainUrl}/category/sert-porno/"             to "Sert Porno",
+        "${mainUrl}/category/canli-porno/"            to "Canlı Porno",
+        "${mainUrl}/category/grup-porno/"             to "Grup Porno",
+        "${mainUrl}/category/tango-ifsa/"             to "Tango ifşa",
+        "${mainUrl}/category/turkce-altyazili/"       to "Türkçe Altyazılı",
+        "${mainUrl}/category/sahibe-porno/"           to "Sahibe Porno",
+        "${mainUrl}/category/twitter/"                to "Twitter",
+        "${mainUrl}/category/zenci/"                  to "Zenci",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page == 1) request.data else "${request.data}page/$page/"
         val document = app.get(url).document
-        val home = document.select("div.mag-box li").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        val home = document.select("div.grid-item, article[id^=post-]").mapNotNull {
+            it.toMainPageResult()
+        }.distinctBy { it.url }
+
+        return newHomePageResponse(request.name, home, hasNext = true)
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("h2, h3.post-title")?.text()?.trim() ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val entrytitle = this.selectFirst("h2.entry-title a")
+        val title      = entrytitle?.text()?.trim() ?: return null
+        val href       = fixUrlNull(entrytitle.attr("href")) ?: return null
+        val posterurl  = fixUrlNull(this.selectFirst("img.post-thumbnail-image")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$posterUrl", TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, "$href|$posterurl", TvType.NSFW) {
+            this.posterUrl = posterurl
+        }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url = if (page == 1) "$mainUrl/?s=$query" else "$mainUrl/page/$page/?s=$query"
         val document = app.get(url).document
 
-        val aramaCevap = document.select("div.mag-box li").mapNotNull { it.toMainPageResult() }
-        return newSearchResponseList(aramaCevap, hasNext = true)
+        val aramacevap = document.select("div.grid-item, article[id^=post-]").mapNotNull {
+            it.toMainPageResult()
+        }.filter {
+            !it.name.contains("İçerik kaldırma", ignoreCase = true) &&
+                    !it.name.contains("Gizlilik Politikası", ignoreCase = true) &&
+                    !it.url.contains("/terms")
+        }.distinctBy { it.url }
+
+        val hasnext = document.selectFirst("a.next.page-numbers") != null
+
+        return newSearchResponseList(aramacevap, hasnext)
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(data: String): LoadResponse? {
-        val (url, storedPoster) = data.split("|").let {
+        val (url, storedposter) = data.split("|").let {
             it[0] to it.getOrNull(1)
         }
 
         val response = app.get(url).text
         val document = Jsoup.parse(response)
 
-        val title           = document.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
-        val description     = document.selectFirst("div.entry-content p[style*=\"text-align: justify\"]")?.text()?.trim()
-        val tags            = document.select("span.tagcloud a").map { it.text() }
-        val recommendations = document.select("div.related-posts-list div.related-item").mapNotNull { it.toRecommendationResult() }
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
+
+        val plot = document.selectFirst("div.entry-content")?.ownText()?.trim()
+            ?: document.selectFirst("div.entry-content p")?.text()?.trim()
+
+        val tags = document.select("span.categories-list a").map { it.text() }
+
+        val recs = mutableListOf<SearchResponse>()
+
+        document.select("nav.post-nav a").mapNotNull {
+            it.toRecommendationResult()
+        }.forEach { recs.add(it) }
+
+        document.select("div.related-posts li").mapNotNull {
+            val rectitle = it.selectFirst(".post-title a")?.text()?.trim() ?: return@mapNotNull null
+            val rechref = fixUrlNull(it.selectFirst("a")?.attr("href")) ?: return@mapNotNull null
+            val recposter = fixUrlNull(it.selectFirst("img")?.attr("src"))
+
+            newMovieSearchResponse(rectitle, "$rechref|$recposter", TvType.NSFW) {
+                this.posterUrl = recposter
+            }
+        }.forEach { recs.add(it) }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = storedPoster
-            this.plot            = description
+            this.posterUrl       = storedposter
+            this.plot            = plot
             this.tags            = tags
-            this.recommendations = recommendations
+            this.recommendations = recs.distinctBy { it.url }
         }
     }
 
     private fun Element.toRecommendationResult(): SearchResponse? {
-        val title     = this.selectFirst("h3.post-title a")?.text()?.trim() ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val title = this.selectFirst(".post-nav-title")?.text()?.trim() ?: return null
+        val href = fixUrlNull(this.attr("href")) ?: return null
+        val posterurl = fixUrlNull(this.selectFirst(".post-nav-thumb img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$posterUrl", TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, "$href|$posterurl", TvType.NSFW) {
+            this.posterUrl = posterurl
+        }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("kraptor_$name", "data = ${data}")
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
         val document = app.get(data).document
+        val gateiframes = document.select("iframe.wpve-iframe, iframe").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
 
-        val iframe = document.selectFirst("iframe")?.attr("src").toString()
+        gateiframes.forEach { gateiframe ->
+            val gatehtml = app.get(gateiframe).text
+            val links = Regex("""videoUrls\['[^']+'\]\s*=\s*'([^']+)'""").findAll(gatehtml).map { it.groupValues[1] }.toList()
 
-         loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
-
+            if (links.isNotEmpty()) {
+                links.forEach {
+                    loadExtractor(it, gateiframe, subtitleCallback, callback)
+                }
+            } else {
+                Jsoup.parse(gatehtml).select("iframe").forEach {
+                    val src = it.attr("data-src").ifEmpty { it.attr("src") }
+                    if (src.isNotBlank() && !src.contains("ads")) {
+                        loadExtractor(src, gateiframe, subtitleCallback, callback)
+                    }
+                }
+            }
+        }
         return true
     }
 }
