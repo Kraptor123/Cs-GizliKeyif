@@ -87,18 +87,23 @@ class HQPorner : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}/$page", referer = "${mainUrl}/").document
+        val document = app.get("${request.data}/$page", referer = "$mainUrl/").document
         val home     = document.select("div.row section.box.feature:has(span.icon)").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(HomePageList(request.name, home, true))
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("img")?.attr("alt") ?: return null
+        val ftitle  = this.selectFirst("img")?.attr("alt") ?: return null
+        val title     = ftitle.replaceFirstChar { it.uppercase() }
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val src       = this.selectFirst("img")?.attr("src") ?: return null
+        val posterUrl = if (src.startsWith("//")) "https:$src" else src
 
-        return newMovieSearchResponse(title, "${href}kraptor${posterUrl?.substringAfter("//")}", TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, "${href}kraptor$posterUrl", TvType.NSFW) {
+            this.posterUrl = posterUrl
+            this.posterHeaders = mapOf("Referer" to "$mainUrl/")
+        }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
