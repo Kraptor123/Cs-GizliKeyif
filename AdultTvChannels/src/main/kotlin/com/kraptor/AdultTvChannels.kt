@@ -18,12 +18,12 @@ class AdultTvChannels : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/page/1/"      to "Sayfa 1",
-        "${mainUrl}/page/2/"      to "Sayfa 2",
-        "${mainUrl}/page/3/"      to "Sayfa 3",
-        "${mainUrl}/page/4/"      to "Sayfa 4",
-        "${mainUrl}/page/5/"      to "Sayfa 5",
-        "${mainUrl}/page/6/"      to "Sayfa 6",
+        "${mainUrl}/page/1/"      to "Page 1",
+        "${mainUrl}/page/2/"      to "Page 2",
+        "${mainUrl}/page/3/"      to "Page 3",
+        "${mainUrl}/page/4/"      to "Page 4",
+        "${mainUrl}/page/5/"      to "Page 5",
+        "${mainUrl}/page/6/"      to "Page 6",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
