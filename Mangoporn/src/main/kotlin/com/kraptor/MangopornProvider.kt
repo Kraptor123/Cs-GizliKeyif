@@ -37,6 +37,9 @@ class MangopornProvider: Plugin() {
         registerExtractorAPI(LuluVdoo())
         registerExtractorAPI(Vip4me())
         registerExtractorAPI(VidNest())
+        registerExtractorAPI(RPMShare())
+        registerExtractorAPI(Playmogo())
+        registerExtractorAPI(DoodDoply())
 
 
 

@@ -56,6 +56,11 @@ class Vip4me : Player4Me() {
     override var name = "Player4Me"
 }
 
+class RPMShare : Player4Me() {
+    override var mainUrl = "https://my.rpmplay.online"
+    override var name = "Player4Me"
+}
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Yanit(
     val hls: String? = null,

@@ -51,7 +51,7 @@ class Koreaye : MainAPI() {
         val href = fixUrlNull(anchor.attr("href")) ?: return null
         val title = anchor.attr("title")?.trim() ?: return null
 
-        val posterurl = fixUrlNull(
+        val posterUrl = fixUrlNull(
             selectFirst("source")?.let { source ->
                 val srcset = source.attr("srcset").ifBlank { source.attr("data-srcset") }
                 if (srcset.isNotBlank()) srcset.split(" ").firstOrNull() else null
@@ -60,10 +60,10 @@ class Koreaye : MainAPI() {
                 src
             }
         )
-        posterurl?.let { posterCache[href] = it }
+        posterUrl?.let { posterCache[href] = it }
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterurl
+            this.posterUrl = posterUrl
         }
     }
 
@@ -87,7 +87,7 @@ class Koreaye : MainAPI() {
         val href = fixUrlNull(anchor.attr("href")) ?: return null
         val title = anchor.attr("title")?.trim() ?: return null
 
-        val posterurl = fixUrlNull(
+        val posterUrl = fixUrlNull(
             selectFirst("source")?.let { source ->
                 val srcset = source.attr("srcset").ifBlank { source.attr("data-srcset") }
                 if (srcset.isNotBlank()) srcset.split(" ").firstOrNull() else null
@@ -96,10 +96,10 @@ class Koreaye : MainAPI() {
                 src
             }
         )
-        posterurl?.let { posterCache[href] = it }
+        posterUrl?.let { posterCache[href] = it }
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterurl
+            this.posterUrl = posterUrl
         }
     }
 

@@ -10,6 +10,11 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
 
+class Playmogo : DoodStream() {
+    override var mainUrl = "https://playmogo.com"
+    override var name = "DoodStream"
+}
+
 class DoodDoply : DoodStream() {
     override var mainUrl = "https://doply.net"
     override var name = "DoodStream"
