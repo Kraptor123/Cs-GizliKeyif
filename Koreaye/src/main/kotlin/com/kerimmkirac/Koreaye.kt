@@ -51,15 +51,19 @@ class Koreaye : MainAPI() {
         val href = fixUrlNull(anchor.attr("href")) ?: return null
         val title = anchor.attr("title")?.trim() ?: return null
 
-        val posterUrl = fixUrlNull(
-            selectFirst("source")?.attr("data-srcset")
-                ?: selectFirst("img")?.attr("src")
-                ?: selectFirst("img")?.attr("data-src")
+        val posterurl = fixUrlNull(
+            selectFirst("source")?.let { source ->
+                val srcset = source.attr("srcset").ifBlank { source.attr("data-srcset") }
+                if (srcset.isNotBlank()) srcset.split(" ").firstOrNull() else null
+            } ?: selectFirst("img")?.let { img ->
+                val src = img.attr("src").ifBlank { img.attr("data-src") }
+                src
+            }
         )
-        posterUrl?.let { posterCache[href] = it }
+        posterurl?.let { posterCache[href] = it }
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
+            this.posterUrl = posterurl
         }
     }
 
@@ -83,15 +87,19 @@ class Koreaye : MainAPI() {
         val href = fixUrlNull(anchor.attr("href")) ?: return null
         val title = anchor.attr("title")?.trim() ?: return null
 
-        val posterUrl = fixUrlNull(
-            selectFirst("source")?.attr("data-srcset")
-                ?: selectFirst("img")?.attr("src")
-                ?: selectFirst("img")?.attr("data-src")
+        val posterurl = fixUrlNull(
+            selectFirst("source")?.let { source ->
+                val srcset = source.attr("srcset").ifBlank { source.attr("data-srcset") }
+                if (srcset.isNotBlank()) srcset.split(" ").firstOrNull() else null
+            } ?: selectFirst("img")?.let { img ->
+                val src = img.attr("src").ifBlank { img.attr("data-src") }
+                src
+            }
         )
-        posterUrl?.let { posterCache[href] = it }
+        posterurl?.let { posterCache[href] = it }
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
+            this.posterUrl = posterurl
         }
     }
 
