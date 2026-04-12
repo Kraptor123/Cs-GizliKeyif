@@ -24,6 +24,7 @@ class AdultTvChannels : MainAPI() {
         "${mainUrl}/page/4/"      to "Page 4",
         "${mainUrl}/page/5/"      to "Page 5",
         "${mainUrl}/page/6/"      to "Page 6",
+        "${mainUrl}/page/7/"      to "Page 7",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -44,6 +45,22 @@ class AdultTvChannels : MainAPI() {
 
         return newLiveSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
+
+    override suspend fun search(query: String, page: Int): SearchResponseList {
+        val aramacevap = mutableListOf<SearchResponse>()
+
+        mainPage.forEach { request ->
+            val url = "${request.data}?s=$query"
+            val document = app.get(url).document
+            val sonuclar = document.select("div.col-lg-4").mapNotNull { it.toMainPageResult() }
+            aramacevap.addAll(sonuclar)
+        }
+
+        val siralicevap = aramacevap.distinctBy { it.url }.sortedBy { it.name }
+        return newSearchResponseList(siralicevap, hasNext = false)
+    }
+
+
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
