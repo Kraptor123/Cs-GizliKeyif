@@ -171,24 +171,30 @@ class Sextb : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        Log.d("sextb", data)
         val res = app.get(data, headers = commonHeaders)
         val filmId = Regex("""var filmId\s*=\s*(\d+)""").find(res.text)?.groupValues?.get(1)
+
+        Log.d("sextb", "$filmId")
 
         if (filmId == null) {
             return false
         }
 
         val episodes = res.document.select(".episode-list button.btn-player")
+        Log.d("sextb", "${episodes.size}")
         var foundAnyLink = false
 
         for (ep in episodes) {
             val episodeId = ep.attr("data-id")
+            Log.d("sextb", episodeId)
 
             try {
                 val ajaxResponse = app.post(
                     "${mainUrl}/ajax/player",
                     headers = commonHeaders.toMutableMap().apply {
                         put("Referer", data)
+                        put("X-Requested-With", "XMLHttpRequest")
                     },
                     data = mapOf("episode" to episodeId, "filmId" to filmId)
                 ).text
@@ -197,13 +203,18 @@ class Sextb : MainAPI() {
                     .find(ajaxResponse)?.groupValues?.get(1)
                     ?.replace("\\/", "/")
 
+                Log.d("sextb", "$iframeUrl")
+
                 if (iframeUrl != null && !iframeUrl.contains("upgrade")) {
                     val wasExtracted = loadExtractor(iframeUrl, data, subtitleCallback, callback)
+                    Log.d("sextb", "($iframeUrl): $wasExtracted")
                     if (wasExtracted) foundAnyLink = true
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.d("sextb", "${e.message}")
             }
         }
+        Log.d("sextb", "$foundAnyLink")
         return foundAnyLink
     }
 }

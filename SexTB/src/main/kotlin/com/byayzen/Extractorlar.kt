@@ -18,6 +18,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.USER_AGENT
+import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 
@@ -223,3 +224,44 @@ class Javggvideo : ExtractorApi() {
 class swhoi : Filesim() { override var mainUrl = "https://swhoi.com"; override var name = "Streamwish" }
 class MixDropis : MixDrop() { override var mainUrl = "https://mixdrop.is" }
 class Javmoon : Filesim() { override var mainUrl = "https://javmoon.me"; override var name = "FileMoon" }
+
+
+class StbP2P : VidStack() { override var mainUrl = "https://stb.strp2p.com"; override var name = "STBP2P" }
+class Playerupnone : VidStack() { override var mainUrl = "https://player.upn.one"; override var name = "UPNP2P" }
+
+open class Turtleviplay : ExtractorApi() {
+    override var name = "Turtleviplay"
+    override var mainUrl = "https://turtleviplay.xyz"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val res = app.get(url, referer = referer).document
+        val m3u8 = res.selectFirst("#video_player")?.attr("data-hash") ?: return
+
+        callback.invoke(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = m3u8,
+                type = ExtractorLinkType.M3U8,
+            ) {
+                this.referer = url
+                this.quality = Qualities.Unknown.value
+                this.headers = mapOf(
+                    "Origin" to "https://turtleviplay.xyz",
+                    "Accept" to "*/*",
+                )
+            }
+        )
+    }
+}
+
+class Turboviplay : Turtleviplay() {
+    override var name = "Turboviplay"
+    override var mainUrl = "https://turboviplay.com"
+}

@@ -47,5 +47,10 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(HgLink())
         registerExtractorAPI(RyderJet())
         registerExtractorAPI(MyCloudZ())
+        registerExtractorAPI(VidStack())
+        registerExtractorAPI(StbP2P())
+        registerExtractorAPI(Playerupnone())
+        registerExtractorAPI(Turtleviplay())
+        registerExtractorAPI(Turboviplay())
     }
 }
