@@ -3,16 +3,13 @@
 package com.kraptor
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.lagradost.api.Log
-import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 
 class Beeg : MainAPI() {
     override var mainUrl = "https://beeg.com"
@@ -29,6 +26,7 @@ class Beeg : MainAPI() {
     private val apiBeeg = "https://store.externulls.com"
 
     override val mainPage = mainPageOf(
+        "actors" to "Actors",
         "$apiBeeg/facts/tag?slug=WowGirls&limit=48&offset=" to "Wow Girls",
         "$apiBeeg/facts/tag?slug=BrattySis&limit=48&offset=" to "Bratty Sis",
         "$apiBeeg/facts/tag?slug=NubilesPorn&limit=48&offset=" to "Nubiles Porn",
@@ -103,15 +101,39 @@ class Beeg : MainAPI() {
         "$apiBeeg/facts/tag?slug=Interracial&limit=48&offset=" to "Interracial",
         "$apiBeeg/facts/tag?slug=Orgy&limit=48&offset=" to "Orgy",
         "$apiBeeg/facts/tag?slug=MatureWoman&limit=48&offset=" to "MatureWoman",
-        "$apiBeeg/facts/tag?slug=OldYoung&limit=48&offset=" to "OldYoung",
+        "$apiBeeg/facts/tag?slug=OldYoung&limit=48&offset=" to "OldYoung"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val responseString = app.get("${request.data}${page * 48}", referer = "${mainUrl}/").text
-        val response: List<ApiCevap> = mapper.readValue(responseString)
-        val items: List<SearchResponse> = response.flatMap { it.toMainPageResults() }
+        if (request.data == "actors") {
+            val responseString = app.get("$apiBeeg/tag/recommends?type=person&slug=index", headers = headerlar).text
+            val players = runCatching { parseJson<List<Map<String, Any>>>(responseString) }.getOrNull() ?: emptyList()
 
-        return newHomePageResponse(HomePageList(request.name, items, true))
+            val items = players.mapNotNull {
+                val name = it["tg_name"]?.toString() ?: return@mapNotNull null
+                val slug = it["tg_slug"]?.toString() ?: return@mapNotNull null
+
+                val thumbs = it["thumbs"] as? List<*>
+                val firstthumb = thumbs?.getOrNull(0) as? Map<*, *>
+                val crops = firstthumb?.get("crops") as? List<*>
+                val cropdata = crops?.getOrNull(0) as? Map<*, *>
+
+                val ptphoto = cropdata?.get("pt_photo")?.toString()
+                val cropid = cropdata?.get("id")?.toString()
+                val posterurl = if (ptphoto != null && cropid != null) "https://thumbs.externulls.com/photos/$ptphoto/to.webp?crop_id=$cropid&size_new=112x112" else ""
+
+                newMovieSearchResponse(name, "$mainUrl/$slug", TvType.NSFW) {
+                    this.posterUrl = posterurl
+                }
+            }
+            return newHomePageResponse(HomePageList(request.name, items, true))
+        } else {
+            val responseString = app.get("${request.data}${page * 48}", referer = "${mainUrl}/").text
+            val response: List<ApiCevap> = mapper.readValue(responseString)
+            val items: List<SearchResponse> = response.flatMap { it.toMainPageResults() }
+
+            return newHomePageResponse(HomePageList(request.name, items, true))
+        }
     }
 
     private fun ApiCevap.toMainPageResults(): List<SearchResponse> {
@@ -119,32 +141,149 @@ class Beeg : MainAPI() {
             val title = cevap.cd_value
             val apiDataJson = mapper.writeValueAsString(this.file)
             val apiTagsJson = mapper.writeValueAsString(this.tags)
-            val posterUrl = "https://thumbs.externulls.com/videos/${cevap.cd_file}/49.webp?size=480x270"
-            newMovieSearchResponse(title, "$apiDataJson|:$posterUrl|:$title|:$apiTagsJson", TvType.NSFW).apply {
+            val posterUrl =
+                "https://thumbs.externulls.com/videos/${cevap.cd_file}/49.webp?size=480x270"
+            newMovieSearchResponse(
+                title,
+                "$apiDataJson|:$posterUrl|:$title|:$apiTagsJson",
+                TvType.NSFW
+            ).apply {
                 this.posterUrl = posterUrl
             }
         }
     }
 
-    override suspend fun load(url: String): LoadResponse? {
-        val linkler = url.split("|:")
-        val apiData = linkler[0]
-        val apiTagsJson = linkler[3]
-        val title = linkler[2]
-        val poster = linkler[1]
-        val tagsListesi = mapper.readValue<List<TagData>>(apiTagsJson)
-        val tags = tagsListesi.flatMap { tagData ->
-            tagData.data.flatMap { tag ->
-                tag.td_value.split(",", ".").map { it.trim() }.filter { it.isNotEmpty() }
+
+    private val headerlar = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin" to "https://beeg.com",
+        "Referer" to "https://beeg.com/",
+        "Accept" to "application/json, text/plain, */*",
+        "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+    )
+
+    override suspend fun search(query: String, page: Int): SearchResponseList {
+        Log.d("beeg", query)
+
+        val response = try {
+            app.get("https://store.externulls.com/tag/recommends?type=person&slug=index", headers = headerlar).text
+        } catch (e: Exception) {
+            return newSearchResponseList(emptyList(), hasNext = false)
+        }
+
+        val players = try {
+            parseJson<List<Map<String, Any>>>(response)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val results = players.filter {
+            val name = it["tg_name"]?.toString() ?: ""
+            name.contains(query, ignoreCase = true)
+        }.mapNotNull {
+            val name = it["tg_name"]?.toString() ?: return@mapNotNull null
+            val slug = it["tg_slug"]?.toString() ?: return@mapNotNull null
+
+            val thumbs = it["thumbs"] as? List<*>
+            val firstthumb = thumbs?.getOrNull(0) as? Map<*, *>
+            val crops = firstthumb?.get("crops") as? List<*>
+            val cropdata = crops?.getOrNull(0) as? Map<*, *>
+
+            val ptphoto = cropdata?.get("pt_photo")?.toString()
+            val cropid = cropdata?.get("id")?.toString()
+            val poster = if (ptphoto != null && cropid != null) "https://thumbs.externulls.com/photos/$ptphoto/to.webp?crop_id=$cropid&size_new=112x112" else ""
+
+            Log.d("beeg", name)
+            newMovieSearchResponse(name, "$mainUrl/$slug", TvType.NSFW) {
+                this.posterUrl = poster
             }
         }
 
-        return newMovieLoadResponse(title, apiData, TvType.NSFW, apiData) {
-            this.posterUrl = poster
-            this.tags = tags
-        }
+        return newSearchResponseList(results, hasNext = false)
     }
 
+    override suspend fun load(url: String): LoadResponse? {
+        Log.d("beeg", url)
+
+        if (url.contains("|:")) {
+            val linkler = url.split("|:")
+            val apidata = linkler[0]
+            val poster = linkler[1]
+            val title = linkler[2]
+            val apitagsjson = linkler[3]
+
+            val tagslistesi = try {
+                mapper.readValue<List<TagData>>(apitagsjson)
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            val tags = tagslistesi.flatMap { tagdata ->
+                tagdata.data.flatMap { tag ->
+                    tag.td_value.split(",", ".").map { it.trim() }.filter { it.isNotEmpty() }
+                }
+            }
+
+            return newMovieLoadResponse(title, apidata, TvType.NSFW, apidata) {
+                this.posterUrl = poster
+                this.tags = tags
+            }
+        }
+
+        val html = try { app.get(url, headers = headerlar).document } catch (e: Exception) { null }
+        val title = html?.selectFirst("h1")?.text() ?: url.substringAfterLast("/").replaceFirstChar { it.uppercase() }
+
+        val slug = url.removeSuffix("/").substringAfterLast("/")
+        val allepisodes = mutableListOf<Episode>()
+
+        for (i in 0..10) {
+            val offset = i * 48
+            val apiurl = "$apiBeeg/tag/videos/$slug?limit=48&offset=$offset"
+            val jsonres = try { app.get(apiurl, headers = headerlar).text } catch (e: Exception) { null }
+
+            if (jsonres.isNullOrBlank() || jsonres == "[]") break
+
+            val videolist = try {
+                parseJson<List<Map<String, Any>>>(jsonres)
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            if (videolist.isEmpty()) break
+
+            val pageepisodes = videolist.mapNotNull { video ->
+                val fileobj = video["file"] as? Map<*, *> ?: return@mapNotNull null
+                val dataarray = fileobj["data"] as? List<*>
+                val firstdata = dataarray?.getOrNull(0) as? Map<*, *>
+
+                val eptitle = firstdata?.get("cd_value")?.toString() ?: "Video"
+                val videoid = (video["id"] ?: fileobj["id"])?.toString() ?: return@mapNotNull null
+
+                val durationinseconds = fileobj["fl_duration"]?.toString()?.toIntOrNull() ?: 0
+                val duration = "${durationinseconds / 60}:${String.format("%02d", durationinseconds % 60)}"
+
+                val epdatajson = try { mapper.writeValueAsString(fileobj) } catch (e: Exception) { return@mapNotNull null }
+
+                Log.d("beeg", eptitle)
+
+                newEpisode(epdatajson) {
+                    this.name = eptitle
+                    this.posterUrl = "https://thumbs.externulls.com/videos/$videoid/0.webp?size=480x270"
+                    this.description = duration
+                }
+            }
+
+            allepisodes.addAll(pageepisodes)
+            if (pageepisodes.size < 48) break
+        }
+
+        Log.d("beeg", allepisodes.size.toString())
+
+        return newTvSeriesLoadResponse(title, url, TvType.NSFW, allepisodes) {
+            this.posterUrl = allepisodes.randomOrNull()?.posterUrl
+            this.plot = title
+        }
+    }
 
     override suspend fun loadLinks(
         data: String,
@@ -152,99 +291,80 @@ class Beeg : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("kraptor_$name", "data = $data")
+        Log.d("beeg", data)
 
-        val linkler = data.split("|")
-        val apiDataJson = linkler[0]
-        val apiData = try {
-            mapper.readValue<ApiData>(apiDataJson)
-        } catch (e: Exception) {
-            Log.e("kraptor_$name", "Failed to parse apiData: ${e.message}")
-            return false
-        }
+        val apidatajson = if (data.contains("|")) data.split("|")[0] else data
+        val apidata = try { mapper.readValue<ApiData>(apidatajson) } catch (e: Exception) { null }
 
-        if (apiData.hls_resources != null && !apiData.hls_resources.fl_cdn_multi.isNullOrBlank()) {
-            val hlsUrl = "https://video.beeg.com/${apiData.hls_resources.fl_cdn_multi}"
-            callback.invoke(
-                newExtractorLink(
-                this.name,
-                this.name,
-                hlsUrl,
-                ExtractorLinkType.M3U8,
-                {
-                    this.referer = "$mainUrl/"
-                }
-            ))
-        } else {
-            val url = app.get("https://store.externulls.com/facts/file/${apiData.id}", referer = "${mainUrl}/").text
-            val cevap = mapper.readValue<ApiStore>(url)
-            val video = cevap.fc_facts.first().hls_resources.fl_cdn_multi
-            val hlsUrl = "https://video.beeg.com/${video}"
+        val hlsmulti = apidata?.hls_resources?.fl_cdn_multi
+
+        if (!hlsmulti.isNullOrBlank()) {
             callback.invoke(
                 newExtractorLink(
                     this.name,
                     this.name,
-                    hlsUrl,
+                    "https://video.beeg.com/$hlsmulti",
                     ExtractorLinkType.M3U8,
-                    {
-                        this.referer = "$mainUrl/"
-                    }
-                ))
-
+                    { this.referer = "$mainUrl/" }
+                )
+            )
+            return true
         }
 
-        return true
+        if (apidata?.id != null) {
+            try {
+                val res = app.get("$apiBeeg/facts/file/${apidata.id}", referer = "$mainUrl/").text
+                val root = mapper.readTree(res)
+                val video = root.get("file")?.get("hls_resources")?.get("fl_cdn_multi")?.asText()
+                    ?: root.get("fc_facts")?.get(0)?.get("hls_resources")?.get("fl_cdn_multi")?.asText()
+
+                if (video != null) {
+                    callback.invoke(
+                        newExtractorLink(
+                            this.name,
+                            this.name,
+                            "https://video.beeg.com/$video",
+                            ExtractorLinkType.M3U8,
+                            { this.referer = "$mainUrl/" }
+                        )
+                    )
+                    return true
+                }
+            } catch (e: Exception) {
+                return false
+            }
+        }
+        return false
     }
 }
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class ApiStore(
-    val fc_facts: List<Boslar>
-)
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class Boslar(
-    val hls_resources: HlsSource
-)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class ApiCevap(
-    val file: ApiData,
-    val tags: List<TagData>
-)
+data class ApiCevap(val file: ApiData, val tags: List<TagData>)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class ApiData(
     val data: List<Icerik>,
-    val hls_resources: HlsSource?,
-    val qualities: Map<String, List<Videolar>>?,
+    val hls_resources: HlsSource? = null,
+    val qualities: Map<String, List<Videolar>>? = null,
     val id: Long
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Videolar(
-    val quality: Int,
-    val url: String
-)
+data class Videolar(val quality: Int, val url: String)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Icerik(
-    val cd_file: String,
-    val cd_value: String
-)
-
+data class Icerik(val cd_file: String, val cd_value: String)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class TagData(
-    val data: List<Tagler>
-)
+data class TagData(val data: List<Tagler>)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Tagler(
-    val td_value: String
-)
+data class Tagler(val td_value: String)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class HlsSource(
-    val fl_cdn_multi: String
-)
+data class HlsSource(val fl_cdn_multi: String? = null)
+
+
+
 
