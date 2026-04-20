@@ -21,8 +21,6 @@ class OnScreens : MainAPI() {
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
-
-    // Cursor'ları saklamak için map
     private val cursorMap = mutableMapOf<String, String>()
 
     override val mainPage = mainPageOf(
@@ -43,7 +41,6 @@ class OnScreens : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val home = if (page == 1) {
-            // İlk sayfa - HTML parse
             val document = app.get("$mainUrl${request.data}", headers = mapOf(
                 "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
                 "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -64,12 +61,9 @@ class OnScreens : MainAPI() {
 
             val articles = document.select("article.flex")
 
-            // Son article'dan cursor bilgisini al ve kaydet
             articles.lastOrNull()?.let { lastArticle ->
                 val href = lastArticle.selectFirst("a")?.attr("href") ?: ""
                 val videoId = href.removePrefix("/").substringBefore("/")
-
-                // Cursor oluştur (timestamp + video_id formatında)
                 val timestamp = System.currentTimeMillis()
                 val adjustedTimestamp = timestamp - (6 * 3600 * 1000)
                 val formattedTime = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
@@ -83,7 +77,6 @@ class OnScreens : MainAPI() {
 
             articles.mapNotNull { it.toMainPageResult() }
         } else {
-            // İkinci ve sonraki sayfalar - JSON API
             val cursor = cursorMap[request.name] ?: return newHomePageResponse(request.name, emptyList())
             val tag = request.data.substringAfterLast("/")
 
@@ -105,13 +98,9 @@ class OnScreens : MainAPI() {
                     "TE" to "trailers"
                 )
             ).parsed<ApiResponse>()
-
-            // Yeni cursor'u güncelle (son video'dan)
             response.videos?.lastOrNull()?.let { lastVideo ->
                 val videoId = lastVideo.videoId ?: return@let
                 val createdAt = lastVideo.createdAt ?: return@let
-
-                // created_at formatını "2026-01-04T11:46:36.831746Z" formatına çevir
                 val timestamp = if (createdAt.contains("+")) {
                     createdAt.substringBefore("+") + "Z"
                 } else if (createdAt.lastIndexOf("-") > 10) {
@@ -166,7 +155,7 @@ class OnScreens : MainAPI() {
 
         val results = response.videos?.mapNotNull { video ->
             val videoId = video.videoId ?: return@mapNotNull null
-            val title = video.title?.replace(Regex("</?b>"), "") ?: return@mapNotNull null // HTML tag'leri temizle
+            val title = video.title?.replace(Regex("</?b>"), "") ?: return@mapNotNull null
             val slug = video.slug ?: return@mapNotNull null
             video.toSearchResponse(videoId, title, slug)
         } ?: emptyList()
