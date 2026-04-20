@@ -61,18 +61,26 @@ class JavGuru : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page == 1) "${request.data}/" else "${request.data}/page/$page/"
+        val url = if (page == 1) {
+            "${request.data}/"
+        } else {
+            "${request.data.removeSuffix("/")}/page/$page/"
+        }
+
+        Log.d("Cloudstream", "MainPage URL: $url")
+
         val document = app.get(url, headers = mainHeaders).document
         val items = document.select("div.inside-article, article, div.tabcontent li, .item-list li")
 
         val home = items.mapNotNull { it.toSearchResponse() }
-        val hasNext = document.select("a.next, a.last, nav.pagination").isNotEmpty()
+
+        val hasNext = home.isNotEmpty()
 
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,
                 list = home,
-                isHorizontalImages = true
+                isHorizontalImages = request.horizontalImages
             ),
             hasNext = hasNext
         )
@@ -89,6 +97,8 @@ class JavGuru : MainAPI() {
             ?: this.selectFirst("h2")?.text()?.trim()
             ?: return null
 
+        if (title.contains("Advanced search", ignoreCase = true)) return null
+
         val posterUrl = fixUrlNull(imgElement?.attr("src") ?: imgElement?.attr("data-src"))
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
@@ -98,12 +108,13 @@ class JavGuru : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = if (page == 1) "$mainUrl/?s=$query" else "$mainUrl/page/$page/?s=$query"
+        val url = "$mainUrl/page/$page/?s=$query"
+
         val document = app.get(url, headers = mainHeaders).document
         val items = document.select("div.inside-article, article")
 
         val results = items.mapNotNull { it.toSearchResponse() }
-        val hasNext = document.select("a.next, a.last").isNotEmpty()
+        val hasNext = results.isNotEmpty()
 
         return newSearchResponseList(results, hasNext = hasNext)
     }

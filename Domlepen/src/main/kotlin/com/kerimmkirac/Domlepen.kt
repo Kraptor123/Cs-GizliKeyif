@@ -86,17 +86,9 @@ class Domlepen : MainAPI() {
         val (url, poster) = data.split("|").let {
             it[0] to it.getOrNull(1)
         }
-
         val doc = app.get(url).document
-
-        
         val title = doc.selectFirst("h1.name.post-title.entry-title span[itemprop=name]")?.text()?.trim()
             ?: return null
-
-        
-        
-
-       
         val tags = doc.select("span.post-cats a").take(5).map { it.text().trim() }
 
         return newMovieLoadResponse(title, data, TvType.NSFW, data) {
