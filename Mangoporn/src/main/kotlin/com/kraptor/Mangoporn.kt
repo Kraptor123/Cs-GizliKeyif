@@ -135,11 +135,21 @@ class Mangoporn : MainAPI() {
         val kirliKelimeRegex = Regex(desen, RegexOption.IGNORE_CASE)
         val tags = document.select("span.valors a[href*=/genre/]").map { it.text() }
 
+        val recommendations = document.select("div.sbox.srelacionados article").map {
+            newMovieSearchResponse(
+                it.select("img").attr("alt").replace("Watch ", "").replace(" Porn Online Free", ""),
+                it.select("a").attr("href"),
+                TvType.NSFW
+            ) {
+                this.posterUrl = it.select("img").attr("data-wpfc-original-src")
+            }
+        }
+
         val imageHeaders = mapOf("Accept" to "image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5")
 
         if (tags.any { it.contains(kirliKelimeRegex) }) {
-            val blockedTitle = "Engellenmiş İçerik"
-            val blockedDescription = "Bu içerik filtreleriniz nedeniyle engellenmiştir."
+            val blockedTitle = "Disabled content."
+            val blockedDescription = "This content disabled due to filters."
             val blockedPoster = "https://i.imgur.com/3eR1JvE.png"
             val urlBos = ""
             return newMovieLoadResponse(blockedTitle, urlBos, TvType.NSFW, urlBos) {
@@ -156,6 +166,7 @@ class Mangoporn : MainAPI() {
                 this.year = year
                 this.duration = duration
                 this.tags = tags
+                this.recommendations = recommendations
                 this.posterHeaders = imageHeaders
                 addActors(actors)
             }
