@@ -37,5 +37,6 @@ class JavGuruPlugin: BasePlugin() {
         registerExtractorAPI(ShaveTape())
         registerExtractorAPI(Watchadsontape())
         registerExtractorAPI(Lancewhoisdifficult())
+        registerExtractorAPI(Javlesbians())
     }
 }

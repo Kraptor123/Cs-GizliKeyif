@@ -159,11 +159,11 @@ open class Streamwish : ExtractorApi() {
 open class Maxstream : ExtractorApi() {
     override var name = "Maxstream"
     override var mainUrl = "https://maxstream.org"
-    override val requiresReferer = false
+    override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val response = app.get(url).document
-        val extractedpack =response.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data().toString()
+        val extractedpack = response.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data().toString()
         JsUnpacker(extractedpack).unpack()?.let { unPacked ->
             Regex("file:\"(.*?)\"").find(unPacked)?.groupValues?.get(1)?.let { link ->
                 return listOf(
@@ -171,10 +171,14 @@ open class Maxstream : ExtractorApi() {
                         source = this.name,
                         name = this.name,
                         url = link,
-                        INFER_TYPE
+                        type = INFER_TYPE
                     ) {
-                        this.referer = referer ?: ""
                         this.quality = Qualities.Unknown.value
+                        this.referer = "$mainUrl/"
+                        this.headers = mapOf(
+                            "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+                            "Origin" to mainUrl
+                        )
                     }
                 )
             }
@@ -369,4 +373,8 @@ class ShaveTape : StreamTAPE() {
 
 class Lancewhoisdifficult: Voe() {
     override var mainUrl = "https://lancewhosedifficult.com"
+}
+
+class Javlesbians: Voe() {
+    override var mainUrl = "https://javlesbians.com"
 }
