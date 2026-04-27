@@ -37,5 +37,6 @@ class SxyprnPlugin: Plugin() {
         registerExtractorAPI(Voe())
         registerExtractorAPI(Voe1())
         registerExtractorAPI(VeevToExtractor())
+        registerExtractorAPI(Vidara())
     }
 }

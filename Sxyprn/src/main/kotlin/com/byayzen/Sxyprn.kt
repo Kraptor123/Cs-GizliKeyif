@@ -174,7 +174,6 @@ class Sxyprn : MainAPI() {
                     type = ExtractorLinkType.VIDEO
                 ) {
                     this.referer = url
-                    this.quality = Qualities.P1080.value
                 }
             )
             videoFound = true
