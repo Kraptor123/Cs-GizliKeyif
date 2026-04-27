@@ -92,39 +92,60 @@ class Chatrubate : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("kraptor_$name","data = $data")
-        val doc = app.get(data).document
-        val script = doc.select("script").find { item-> item.html().contains("window.initialRoomDossier") }
-        val json = script!!.html().substringAfter("window.initialRoomDossier = \"").substringBefore(";").unescapeUnicode()
-        val m3u8Url = "\"hls_source\": \"(.*).m3u8\"".toRegex().find(json)?.groups?.get(1)?.value
-        callback.invoke(
-            newExtractorLink(
-                source = name,
-                name = name,
-                url = m3u8Url.toString()+".m3u8",
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = ""
-                this.quality = Qualities.Unknown.value
-            }
+        Log.d("kraptor_$name", data)
+
+        val username = data.split("/").last { it.isNotEmpty() }
+        val apiUrl = "https://chaturbate.com/api/chatvideocontext/$username/"
+
+        val response = app.get(
+            apiUrl,
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Referer" to data,
+                "Accept" to "application/json"
+            )
         )
+
+        Log.d("kraptor_$name", "durum = ${response.code}")
+        Log.d("kraptor_$name", "içerik = ${response.text}")
+
+        val parsedResponse = response.parsed<ChatResponse>()
+        val m3u8Url = parsedResponse.hlsSource
+
+        if (!m3u8Url.isNullOrEmpty()) {
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = m3u8Url,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = ""
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
 
         return true
     }
 
-    data class Room(
-        @JsonProperty("img")    val img: String       = "",
-        @JsonProperty("username")  val username: String  = "",
-        @JsonProperty("subject")  val subject: String  = "",
-        @JsonProperty("tags")  val tags: List<String> = arrayListOf()
+    data class ChatResponse(
+        @JsonProperty("hls_source") val hlsSource: String? = null,
+        @JsonProperty("broadcaster_username") val username: String? = null
+    )
 
+    data class Room(
+        @JsonProperty("img") val img: String = "",
+        @JsonProperty("username") val username: String = "",
+        @JsonProperty("subject") val subject: String = "",
+        @JsonProperty("tags") val tags: List<String> = arrayListOf()
     )
 
     data class Response(
-        @JsonProperty("all_rooms_count") val all_rooms_count: String      = "",
-        @JsonProperty("room_list_id")   val room_list_id: String        = "",
-        @JsonProperty("total_count")   val total_count: String        = "",
-        @JsonProperty("rooms")  val rooms: List<Room> = arrayListOf()
+        @JsonProperty("all_rooms_count") val all_rooms_count: String = "",
+        @JsonProperty("room_list_id") val room_list_id: String = "",
+        @JsonProperty("total_count") val total_count: String = "",
+        @JsonProperty("rooms") val rooms: List<Room> = arrayListOf()
     )
 }
 
