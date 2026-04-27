@@ -10,5 +10,6 @@ class FamilyPornPlugin: Plugin() {
         registerMainAPI(FamilyPorn())
         registerExtractorAPI(VideoStreamingWorld())
         registerExtractorAPI(BestWish())
+        registerExtractorAPI(Fireplayer())
     }
 }
