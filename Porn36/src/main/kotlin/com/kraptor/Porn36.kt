@@ -46,17 +46,25 @@ class Porn36 : MainAPI() {
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("a")?.attr("title") ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl    = this.selectFirst("img")?.attr("src")
-        val posterAlt    = this.selectFirst("a.thumb_img img")?.attr("data-src")
-        val poster       = if (posterUrl?.contains("data:image/gif;base64") ?: return null) {
-            posterAlt
-        }else{
-            posterUrl
+        val title = this.selectFirst(".title, .thumb_title, a.thumb_img")?.attr("title")?.trim()
+            ?: this.selectFirst("strong.title")?.text()?.trim()
+            ?: return null
+
+        val href = fixUrlNull(this.selectFirst("a.thumb_img")?.attr("href"))
+            ?: return null
+
+        val imgelement = this.selectFirst("img")
+        val poster = imgelement?.attr("data-src").takeIf { !it.isNullOrBlank() }
+            ?: imgelement?.attr("src").takeIf { !it.isNullOrBlank() && !it.contains("data:image") }
+
+        if (poster == null) {
+            Log.d(name, "Poster $title")
+            return null
         }
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = poster }
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = fixUrl(poster)
+        }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
