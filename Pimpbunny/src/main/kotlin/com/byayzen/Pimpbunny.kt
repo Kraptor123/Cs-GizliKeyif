@@ -2,12 +2,14 @@
 
 package com.byayzen
 
+import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.network.CloudflareKiller
+import com.lagradost.cloudstream3.network.WebViewResolver
 
 class Pimpbunny : MainAPI() {
     override var mainUrl = "https://pimpbunny.com"
@@ -84,10 +86,12 @@ class Pimpbunny : MainAPI() {
 
         if (!href.contains("pimpbunny.com")) return null
 
-        val title = this.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim() ?: return null
+        val title = this.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim()
+            ?: return null
         val img = this.selectFirst("img.ui-card-thumbnail__8dZcLX, img")
         val posterUrl = fixUrlNull(
-            img?.attr("data-original") ?: img?.attr("data-webp") ?: img?.attr("data-src") ?: img?.attr("src")
+            img?.attr("data-original") ?: img?.attr("data-webp") ?: img?.attr("data-src")
+            ?: img?.attr("src")
         )
 
         return if (isModel || href.contains("/onlyfans-models/")) {
@@ -104,7 +108,8 @@ class Pimpbunny : MainAPI() {
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val itemsPerPage = 30
         val timestamp = System.currentTimeMillis()
-        val searchUrl = "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_models_models_list_search_result&from_models=$page&sort_by=title&items_per_page=$itemsPerPage&models_per_page=$itemsPerPage&_=$timestamp"
+        val searchUrl =
+            "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_models_models_list_search_result&from_models=$page&sort_by=title&items_per_page=$itemsPerPage&models_per_page=$itemsPerPage&_=$timestamp"
         val response = app.get(
             url = searchUrl,
             interceptor = CloudflareKiller(),
@@ -125,24 +130,40 @@ class Pimpbunny : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url, interceptor = CloudflareKiller(), headers = mapOf("Referer" to "$mainUrl/")).document
+        val document = app.get(
+            url,
+            interceptor = CloudflareKiller(),
+            headers = mapOf("Referer" to "$mainUrl/")
+        ).document
 
-        val title = document.selectFirst("h1.ui-heading-h1__0HdXaM, h1.ui-text-root__ZkCuFK, div.pages-view-video-video-title__9lYVyi")?.text()?.trim() ?: return null
-        val description = document.selectFirst("div.blocks-model-view-creator-description__MQ09nz, .ui-text-muted__v_mC_E, div.ui-text-md__xx4iLH")?.text()?.trim()
-        val tags = document.select("ul.includes-list-categories-wrapper__NTP3e_ li a, ul.pages-view-video-tags__EjO14g li a").map { it.text().trim() }
+        val title =
+            document.selectFirst("h1.ui-heading-h1__0HdXaM, h1.ui-text-root__ZkCuFK, div.pages-view-video-video-title__9lYVyi")
+                ?.text()?.trim() ?: return null
+        val description =
+            document.selectFirst("div.blocks-model-view-creator-description__MQ09nz, .ui-text-muted__v_mC_E, div.ui-text-md__xx4iLH")
+                ?.text()?.trim()
+        val tags =
+            document.select("ul.includes-list-categories-wrapper__NTP3e_ li a, ul.pages-view-video-tags__EjO14g li a")
+                .map { it.text().trim() }
 
-        val actors = document.select("div.blocks-model-view-title__7xX3ZF h1, ul.pages-view-video-models__OeBRr0 li").map {
-            val name = it.select("div.pages-view-video-model-title__jPOPZM a").text().trim().ifEmpty { it.text().trim() }
-            val imgelement = it.selectFirst("img")
-            val image = if (imgelement != null) {
-                fixUrlNull(imgelement.attr("data-original").ifEmpty { imgelement.attr("src") })
-            } else null
-            Actor(name, image)
-        }
+        val actors =
+            document.select("div.blocks-model-view-title__7xX3ZF h1, ul.pages-view-video-models__OeBRr0 li")
+                .map {
+                    val name = it.select("div.pages-view-video-model-title__jPOPZM a").text().trim()
+                        .ifEmpty { it.text().trim() }
+                    val imgelement = it.selectFirst("img")
+                    val image = if (imgelement != null) {
+                        fixUrlNull(
+                            imgelement.attr("data-original").ifEmpty { imgelement.attr("src") })
+                    } else null
+                    Actor(name, image)
+                }
 
-        val mainPosterElement = document.selectFirst("div.blocks-model-view-thumbnail__z5_Ral img, div.pages-view-video-player-wrapper__8D_N_ img")
+        val mainPosterElement =
+            document.selectFirst("div.blocks-model-view-thumbnail__z5_Ral img, div.pages-view-video-player-wrapper__8D_N_ img")
         val mainPoster = if (mainPosterElement != null) {
-            fixUrlNull(mainPosterElement.attr("data-original").ifEmpty { mainPosterElement.attr("src") })
+            fixUrlNull(
+                mainPosterElement.attr("data-original").ifEmpty { mainPosterElement.attr("src") })
         } else {
             actors.firstOrNull()?.image
         }
@@ -157,20 +178,29 @@ class Pimpbunny : MainAPI() {
 
             for (i in 1..lastPage) {
                 val pageUrl = if (i == 1) url else "${url.removeSuffix("/")}/$i/"
-                val pageDoc = if (i == 1) document else app.get(pageUrl, interceptor = CloudflareKiller(), headers = mapOf("Referer" to "$mainUrl/")).document
+                val pageDoc = if (i == 1) document else app.get(
+                    pageUrl,
+                    interceptor = CloudflareKiller(),
+                    headers = mapOf("Referer" to "$mainUrl/")
+                ).document
 
-                pageDoc.select("#list_videos_model_video_list_items .ui-card-video__Iv9u1W").forEach { card ->
-                    val epHref = fixUrlNull(card.selectFirst("a.ui-card-link__KxRw6l")?.attr("href"))
-                    if (epHref != null) {
-                        episodes.add(newEpisode(epHref) {
-                            this.name = card.selectFirst(".ui-card-title__igirYJ")?.text()?.trim()
-                            val epImgElement = card.selectFirst("img")
-                            this.posterUrl = if (epImgElement != null) {
-                                fixUrlNull(epImgElement.attr("data-original").ifEmpty { epImgElement.attr("src") })
-                            } else null
-                        })
+                pageDoc.select("#list_videos_model_video_list_items .ui-card-video__Iv9u1W")
+                    .forEach { card ->
+                        val epHref =
+                            fixUrlNull(card.selectFirst("a.ui-card-link__KxRw6l")?.attr("href"))
+                        if (epHref != null) {
+                            episodes.add(newEpisode(epHref) {
+                                this.name =
+                                    card.selectFirst(".ui-card-title__igirYJ")?.text()?.trim()
+                                val epImgElement = card.selectFirst("img")
+                                this.posterUrl = if (epImgElement != null) {
+                                    fixUrlNull(
+                                        epImgElement.attr("data-original")
+                                            .ifEmpty { epImgElement.attr("src") })
+                                } else null
+                            })
+                        }
                     }
-                }
             }
 
             newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes.distinctBy { it.data }) {
@@ -183,7 +213,8 @@ class Pimpbunny : MainAPI() {
             newMovieLoadResponse(title, url, TvType.NSFW, url) {
                 this.posterUrl = mainPoster
                 this.plot = description
-                this.year = document.selectFirst("div.pages-view-video-video-info__re_sY")?.text()?.let { Regex("\\d{4}").find(it)?.value?.toIntOrNull() }
+                this.year = document.selectFirst("div.pages-view-video-video-info__re_sY")?.text()
+                    ?.let { Regex("\\d{4}").find(it)?.value?.toIntOrNull() }
                 this.tags = tags
                 addActors(actors)
             }
@@ -196,59 +227,59 @@ class Pimpbunny : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val response = app.get(
-            url = data,
-            headers = mapOf("Referer" to "$mainUrl/")
-        )
-        val document = response.document
-
-        val downloadLinks =
-            document.select("div[data-popover-name='download-actions'] ul li a").mapNotNull {
-                val link = it.attr("href")
-                val qualityText = it.text().trim()
-                if (link.isBlank()) null else Pair(link, qualityText)
-            }
-
-        if (downloadLinks.isNotEmpty()) {
-            downloadLinks.forEach { (link, qText) ->
-                callback(
-                    newExtractorLink(
-                        source = name,
-                        name = "PimpBunny",
-                        url = link
-                    ) {
-                        this.referer = data
-                        this.quality = when {
-                            qText.contains("1440") || qText.contains("2K") -> Qualities.P2160.value
-                            qText.contains("1080") -> Qualities.P1080.value
-                            qText.contains("720") -> Qualities.P720.value
-                            qText.contains("480") -> Qualities.P480.value
-                            qText.contains("360") -> Qualities.P360.value
-                            else -> getQualityFromName(link)
-                        }
+        val webView = WebViewResolver(
+            interceptUrl = Regex("st\\d+\\.pimpbunny\\.com/.*\\.mp4.*"),
+            additionalUrls = emptyList(),
+            userAgent = null,
+            useOkhttp = false,
+            script = """
+            (function() {
+                var checkAndPlay = setInterval(function() {
+                    // Try to trigger the player directly if available
+                    if (window.player_obj && typeof window.player_obj.play === 'function') {
+                        window.player_obj.play();
                     }
-                )
-            }
-        } else {
-            val html = response.text
-            val videoRegex =
-                Regex("""(?:video_url|video_alt_url\d*)\s*:\s*['"](?:function/\d+/)?(https?://[^'"]+)""")
-            videoRegex.findAll(html).forEach { match ->
-                val link = match.groupValues[1]
-                if (link.isNotBlank() && !link.contains("_preview.mp4")) {
-                    callback(
-                        newExtractorLink(
-                            source = name,
-                            name = "PimpBunny Player",
-                            url = link
-                        ) {
-                            this.referer = data
-                            this.quality = getQualityFromName(link)
-                        }
-                    )
+                    
+                    // Look for any play buttons overlaying the video and click them
+                    var playButtons = document.querySelectorAll('.vjs-big-play-button, .fp-play');
+                    if (playButtons.length > 0) {
+                        playButtons[0].click();
+                    }
+                }, 1000);
+                
+                // Safety clear after 15 seconds so it doesn't run forever
+                setTimeout(function() {
+                    clearInterval(checkAndPlay);
+                }, 15000);
+            })();
+        """.trimIndent()
+        )
+
+        val result = webView.resolveUsingWebView(
+            url = data,
+            referer = data
+        )
+
+        val mainRequest = result.first
+
+        if (mainRequest != null) {
+            val linkUrl = mainRequest.url.toString()
+
+            Log.d("PimpBunny", linkUrl)
+
+            callback.invoke(
+                newExtractorLink(
+                    source = "PimpBunny Player",
+                    name = "PimpBunny Player",
+                    url = linkUrl,
+                    type = ExtractorLinkType.VIDEO
+                ) {
+                    this.referer = data
+                    this.headers = mainRequest.headers.toMap()
                 }
-            }
+            )
         }
+
         return true
     }
 }

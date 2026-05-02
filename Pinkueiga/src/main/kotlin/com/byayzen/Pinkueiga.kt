@@ -17,6 +17,7 @@ import android.webkit.WebViewClient
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import android.content.Context
+import com.lagradost.api.Log
 
 class Pinkueiga : MainAPI() {
     override var mainUrl = "https://pinkueiga.net"
@@ -34,46 +35,38 @@ class Pinkueiga : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) request.data else "${request.data}page/$page/"
         val document = app.get(url).document
-        val home = document.select("div.items article").mapNotNull {
+        val home = document.select("article.thumb").mapNotNull {
             it.toMainPageResult()
         }
         return newHomePageResponse(request.name, home)
     }
 
-    private fun Element.toMainPageResult(): SearchResponse? {
-        val title = this.selectFirst("div.data h3 a")?.text() ?: return null
-        val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    }
-
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url = if (page <= 1) {
-            "$mainUrl/?s=$query"
+            "$mainUrl/search/$query"
         } else {
-            "$mainUrl/page/$page/?s=$query"
+            "$mainUrl/search/$query/page/$page/"
         }
 
-        val response = app.get(url).document
-        val aramaCevap = response.select("div.result-item").mapNotNull {
-            it.toSearchResult()
+        val document = app.get(url).document
+        val results = document.select("article.thumb").mapNotNull {
+            it.toMainPageResult()
         }
-        val hasNext = response.selectFirst("div.pagination a.arrow_pag") != null ||
-                response.selectFirst("div.resppages a") != null
 
-        return newSearchResponseList(aramaCevap, hasNext = hasNext)
+        return newSearchResponseList(results, results.isNotEmpty())
     }
 
-    private fun Element.toSearchResult(): SearchResponse? {
-        val titleElement = this.selectFirst("div.details div.title a")
-        val title = titleElement?.text() ?: return null
-        val href = titleElement.attr("href")
-        val posterUrl = fixUrlNull(this.selectFirst("div.image img")?.attr("src"))
+    private fun Element.toMainPageResult(): SearchResponse? {
+        val title = this.selectFirst("h2.entry-title")?.text()?.trim()
+            ?: this.selectFirst("a.halim-thumb")?.attr("title")?.trim()
+            ?: return null
+        val href = fixUrlNull(this.selectFirst("a.halim-thumb")?.attr("href")) ?: return null
+        val posterurl = fixUrlNull(
+            this.selectFirst("img")?.attr("data-src") ?: this.selectFirst("img")?.attr("src")
+        )
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
+            this.posterUrl = posterurl
         }
     }
 
@@ -82,119 +75,131 @@ class Pinkueiga : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: ""
+        val poster = fixUrlNull(document.selectFirst("img.movie-thumb")?.attr("src"))
+        val description = document.selectFirst("article.item-content p")?.text()?.trim()
+        val year = document.selectFirst("span.released a")?.text()?.trim()?.toIntOrNull()
 
-        val title = document.selectFirst("div.data h1")?.text()?.trim() ?: ""
-        val poster = document.selectFirst("div.poster img")?.attr("src")
-        val banner = document.selectFirst("div.backdrop img")?.attr("src") ?: poster
-        val description = document.selectFirst("#info .wp-content p")?.text()?.trim()
-
-        val actors = document.select("#cast .persons .person").mapNotNull {
-            val name = it.selectFirst("meta[itemprop=name]")?.attr("content")
-                ?: it.selectFirst(".name a")?.text()
-            val image = it.selectFirst("img")?.attr("src")
-            if (name.isNullOrBlank()) return@mapNotNull null
-            Actor(name, image)
+        val actors = document.select("p.actors a").map {
+            Actor(it.text().trim(), null)
         }
 
-        val episodes = document.select("#seasons .se-c .se-a ul li").mapNotNull {
-            val epNum = it.selectFirst(".num")?.text()?.toIntOrNull()
-            val epName = it.selectFirst(".episodiotitle a")?.text()
-            val epUrl = it.selectFirst(".episodiotitle a")?.attr("href")
-            if (epUrl == null) return@mapNotNull null
-            newEpisode(fixUrl(epUrl)) {
-                this.name = epName
-                this.episode = epNum
+        val recommendations = document.select("div#halim-ajax-popular-post div.item").mapNotNull {
+            val rectitle = it.selectFirst("h3.title")?.text() ?: return@mapNotNull null
+            val rechref = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
+            val recposter = fixUrlNull(
+                it.selectFirst("img")?.attr("data-src") ?: it.selectFirst("img")?.attr("src")
+            )
+            newMovieSearchResponse(rectitle, rechref, TvType.NSFW) {
+                this.posterUrl = recposter
             }
         }
 
-        val watchBtn = document.selectFirst("div.sgeneros a")?.attr("href")
+        val episodes = ArrayList<Episode>()
+        document.select("ul.halim-list-eps li.halim-episode-item").forEach {
+            val epurl = it.selectFirst("a")?.attr("href") ?: it.attr("data-href") ?: return@forEach
+            val epname =
+                it.selectFirst("span")?.text()?.trim() ?: it.selectFirst("a")?.attr("title")?.trim()
+                ?: ""
+            episodes.add(newEpisode(epurl) {
+                this.name = epname
+                this.episode = epname.filter { it.isDigit() }.toIntOrNull()
+            })
+        }
 
-        return if (episodes.isNotEmpty()) {
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.backgroundPosterUrl = banner
-                this.plot = description
-                addActors(actors)
+        if (episodes.isEmpty()) {
+            val script =
+                document.select("script").find { it.data().contains("var jsonEpisodes") }?.data()
+            if (script != null) {
+                val regex = """\"postUrl\":\"(.*?)\".*?\"episodeName\":\"(.*?)\"""".toRegex()
+                regex.findAll(script).forEach { match ->
+                    val epurl = match.groupValues[1].replace("\\/", "/")
+                    val epname = match.groupValues[2]
+                    episodes.add(newEpisode(epurl) {
+                        this.name = epname
+                        this.episode = epname.filter { it.isDigit() }.toIntOrNull()
+                    })
+                }
             }
-        } else if (watchBtn != null) {
-            val fullUrl = fixUrl(watchBtn)
-            newMovieLoadResponse(title, url, TvType.Movie, fullUrl) {
+        }
+
+        val watchurl = document.selectFirst("a.watch-movie")?.attr("href")
+
+        return if (episodes.size > 1) {
+            newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
                 this.posterUrl = poster
-                this.backgroundPosterUrl = banner
+                this.year = year
                 this.plot = description
+                this.recommendations = recommendations
                 addActors(actors)
             }
         } else {
-            val movieSlug = url.trimEnd('/').substringAfterLast("/")
-            val constructedUrl = "$mainUrl/watch-$movieSlug?sv=1&ep=1"
-            newMovieLoadResponse(title, url, TvType.Movie, constructedUrl) {
+            val movieurl = episodes.firstOrNull()?.data ?: watchurl ?: url
+            newMovieLoadResponse(title, url, TvType.NSFW, movieurl) {
                 this.posterUrl = poster
-                this.backgroundPosterUrl = banner
+                this.year = year
                 this.plot = description
+                this.recommendations = recommendations
                 addActors(actors)
             }
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled", "PrivateApi")
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val context = Class.forName("android.app.ActivityThread")
-            .getMethod("currentApplication")
-            .invoke(null) as? Context ?: return false
+        val response = app.get(data)
+        val mainpage = response.text
+        val nonce = Regex("""data-nonce="([^"]+)"""").find(mainpage)?.groupValues?.get(1)
+        val postid = Regex("""post_id":(\d+)""").find(mainpage)?.groupValues?.get(1)
+        val serverid = Regex("""server":"(\d+)"""").find(mainpage)?.groupValues?.get(1)
 
-        val capturedUrl = suspendCancellableCoroutine { cont ->
-            Handler(Looper.getMainLooper()).post {
-                val webView = WebView(context).apply {
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-                }
-
-                webView.webViewClient = object : WebViewClient() {
-                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                        val url = request.url.toString()
-                        if (url.contains(".m3u8") && cont.isActive) {
-                            cont.resume(url)
-                            view.post { view.destroy() }
-                        }
-                        return super.shouldInterceptRequest(view, request)
-                    }
-
-                    override fun onPageFinished(view: WebView, url: String?) {
-                        view.evaluateJavascript("""
-                        setInterval(() => {
-                            if (typeof jwplayer === 'function') jwplayer().play();
-                            document.querySelector('.jw-display-icon-display, .videoapi-btn')?.click();
-                        }, 1000);
-                    """.trimIndent(), null)
-                    }
-                }
-
-                webView.loadUrl(data)
-
-                Handler(Looper.getMainLooper()).postDelayed({
-                    if (cont.isActive) {
-                        cont.resume(null)
-                        webView.destroy()
-                    }
-                }, 30_000)
-            }
+        var episodeslug = data.trimEnd('/').substringAfterLast("/").replace(".html", "")
+        if (episodeslug.contains("-sv")) {
+            episodeslug = episodeslug.substringBefore("-sv")
         }
 
-        return capturedUrl?.let {
+        if (nonce == null || postid == null) return false
+
+        val playerresponse = app.get(
+            url = "$mainUrl/wp-content/themes/halimmovies/player.php",
+            params = mapOf(
+                "episode_slug" to episodeslug,
+                "server_id" to (serverid ?: "1"),
+                "subsv_id" to "",
+                "post_id" to postid,
+                "nonce" to nonce,
+                "custom_var" to ""
+            ),
+            headers = mapOf(
+                "Referer" to data,
+                "X-Requested-With" to "XMLHttpRequest",
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+            )
+        ).text
+
+        val m3u8url =
+            Regex("""(?i)"file"\s*:\s*"([^"]+)"""").find(playerresponse)?.groupValues?.get(1)
+                ?.replace("\\/", "/")
+
+        return if (!m3u8url.isNullOrBlank()) {
             callback.invoke(
-                newExtractorLink(this.name, this.name, it) {
-                    this.referer = "https://pinkueiga.net/"
+                newExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = m3u8url
+                ) {
+                    this.referer = "$mainUrl/"
                     this.type = ExtractorLinkType.M3U8
                     this.quality = Qualities.P720.value
                 }
             )
-            return true
-        } ?: false
+            true
+        } else {
+            false
+        }
     }
 }
