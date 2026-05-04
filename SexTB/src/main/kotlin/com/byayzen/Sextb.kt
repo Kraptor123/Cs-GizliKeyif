@@ -173,48 +173,96 @@ class Sextb : MainAPI() {
     ): Boolean {
         Log.d("sextb", data)
         val res = app.get(data, headers = commonHeaders)
-        val filmId = Regex("""var filmId\s*=\s*(\d+)""").find(res.text)?.groupValues?.get(1)
 
-        Log.d("sextb", "$filmId")
+        val filmid = Regex("""var filmId\s*=\s*(\d+)""").find(res.text)?.groupValues?.get(1)
+        var currentpt = Regex("""__pt\s*=\s*['"](.*?)['"]""").find(res.text)?.groupValues?.get(1)
+        var currentpk = Regex("""__pk\s*=\s*['"](.*?)['"]""").find(res.text)?.groupValues?.get(1)
 
-        if (filmId == null) {
+        Log.d("sextb", "$filmid")
+        Log.d("sextb", "$currentpt")
+
+        if (filmid == null || currentpt == null) {
             return false
         }
 
         val episodes = res.document.select(".episode-list button.btn-player")
         Log.d("sextb", "${episodes.size}")
-        var foundAnyLink = false
+        var foundanylink = false
 
         for (ep in episodes) {
-            val episodeId = ep.attr("data-id")
-            Log.d("sextb", episodeId)
+            val episodeid = ep.attr("data-id")
+            val sourceid = ep.attr("data-source").ifEmpty { filmid }
+            Log.d("sextb", episodeid)
 
             try {
-                val ajaxResponse = app.post(
+                val safept = currentpt ?: ""
+                val postdata = mapOf(
+                    "episode" to episodeid,
+                    "filmId" to sourceid,
+                    "pt" to safept
+                )
+
+                val ajaxresponse = app.post(
                     "${mainUrl}/ajax/player",
-                    headers = commonHeaders.toMutableMap().apply {
-                        put("Referer", data)
-                        put("X-Requested-With", "XMLHttpRequest")
-                    },
-                    data = mapOf("episode" to episodeId, "filmId" to filmId)
-                ).text
+                    headers = mapOf(
+                        "Referer" to data,
+                        "X-Requested-With" to "XMLHttpRequest",
+                        "Authorization" to "Basic Y1ZGUWNVSnROVlJOTUVWMlZsUldVMjlsWjBGelFUMDk6T0ZaNksxQmhjVTFhTHpCdFlWZDFNbE5CUm01Qlp6MDk=",
+                        "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                        "Accept" to "*/*",
+                        "Origin" to mainUrl
+                    ),
+                    data = postdata
+                )
 
-                val iframeUrl = Regex("""src=\\?["'](https:.*?)(?:\?|\\?["']|["'])""")
-                    .find(ajaxResponse)?.groupValues?.get(1)
-                    ?.replace("\\/", "/")
+                Log.d("sextb", ajaxresponse.text)
 
-                Log.d("sextb", "$iframeUrl")
+                val responsedata = ajaxresponse.parsedSafe<PlayerResponse>()
+                val encryptedplayer = responsedata?.player_enc
+                val key = currentpk ?: ""
 
-                if (iframeUrl != null && !iframeUrl.contains("upgrade")) {
-                    val wasExtracted = loadExtractor(iframeUrl, data, subtitleCallback, callback)
-                    Log.d("sextb", "($iframeUrl): $wasExtracted")
-                    if (wasExtracted) foundAnyLink = true
+                responsedata?.next_pt?.let { currentpt = it }
+                responsedata?.next_pk?.let { currentpk = it }
+
+                if (encryptedplayer != null && key.isNotEmpty()) {
+                    val decryptedraw = decryptPlayer(encryptedplayer, key)
+                    Log.d("sextb", decryptedraw)
+
+                    val iframeurl = Regex("""src=\\?["'](https:.*?)(?:\?|\\?["']|["'])""")
+                        .find(decryptedraw)?.groupValues?.get(1)
+                        ?.replace("\\/", "/")
+
+                    if (iframeurl != null && !iframeurl.contains("upgrade")) {
+                        val wasextracted = loadExtractor(iframeurl, data, subtitleCallback, callback)
+                        Log.d("sextb", "$wasextracted")
+                        if (wasextracted) foundanylink = true
+                    }
                 }
             } catch (e: Exception) {
                 Log.d("sextb", "${e.message}")
             }
         }
-        Log.d("sextb", "$foundAnyLink")
-        return foundAnyLink
+        Log.d("sextb", "$foundanylink")
+        return foundanylink
     }
+
+    private fun decryptPlayer(encoded: String, key: String): String {
+        return try {
+            val decoded = base64Decode(encoded)
+            val result = StringBuilder()
+            for (i in decoded.indices) {
+                result.append((decoded[i].toInt() xor key[i % key.length].toInt()).toChar())
+            }
+            result.toString()
+        } catch (e: Exception) {
+            Log.d("sextb", "${e.message}")
+            ""
+        }
+    }
+
+    data class PlayerResponse(
+        val player_enc: String? = null,
+        val next_pt: String? = null,
+        val next_pk: String? = null
+    )
 }
