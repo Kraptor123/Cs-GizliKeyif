@@ -2,7 +2,7 @@
 version = 3
 
 cloudstream {
-    authors     = listOf("ByAyzen, Kraptor")
+    authors     = listOf("ByAyzen", "Kraptor")
     language    = "en"
     description = "Cumlouder, Internet is for porn!"
     status  = 1 // will be 3 if unspecified
