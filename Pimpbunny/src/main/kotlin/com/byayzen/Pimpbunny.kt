@@ -227,59 +227,54 @@ class Pimpbunny : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val webView = WebViewResolver(
-            interceptUrl = Regex("st\\d+\\.pimpbunny\\.com/.*\\.mp4.*"),
+        val webview = WebViewResolver(
+            interceptUrl = Regex(".*pimpbunny\\.com/get_file/.*?\\.mp4.*"),
             additionalUrls = emptyList(),
             userAgent = null,
             useOkhttp = false,
             script = """
-            (function() {
-                var checkAndPlay = setInterval(function() {
-                    // Try to trigger the player directly if available
-                    if (window.player_obj && typeof window.player_obj.play === 'function') {
-                        window.player_obj.play();
-                    }
-                    
-                    // Look for any play buttons overlaying the video and click them
-                    var playButtons = document.querySelectorAll('.vjs-big-play-button, .fp-play');
-                    if (playButtons.length > 0) {
-                        playButtons[0].click();
-                    }
-                }, 1000);
-                
-                // Safety clear after 15 seconds so it doesn't run forever
-                setTimeout(function() {
-                    clearInterval(checkAndPlay);
-                }, 15000);
-            })();
-        """.trimIndent()
+                (function() {
+                    var attempt = 0;
+                    var timer = setInterval(function() {
+                        var btn = document.querySelector('.vjs-big-play-button') || document.querySelector('.fp-play');
+                        if (btn) {
+                            btn.click();
+                            clearInterval(timer);
+                        }
+                        if (window.player_obj && typeof window.player_obj.play === 'function') {
+                            window.player_obj.play();
+                            clearInterval(timer);
+                        }
+                        if (attempt++ > 20) clearInterval(timer);
+                    }, 500);
+                })();
+            """.trimIndent()
         )
-
-        val result = webView.resolveUsingWebView(
+        Log.d("PimpBunny", data)
+        val sonuc = webview.resolveUsingWebView(
             url = data,
-            referer = data
+            referer = "$mainUrl/"
         )
+        val istek = sonuc.first
 
-        val mainRequest = result.first
-
-        if (mainRequest != null) {
-            val linkUrl = mainRequest.url.toString()
-
-            Log.d("PimpBunny", linkUrl)
-
+        if (istek != null) {
+            val url = istek.url.toString()
+            val headers = istek.headers.toMap()
+            Log.d("PimpBunny", url)
             callback.invoke(
                 newExtractorLink(
-                    source = "PimpBunny Player",
-                    name = "PimpBunny Player",
-                    url = linkUrl,
+                    source = this.name,
+                    name = this.name,
+                    url = url,
                     type = ExtractorLinkType.VIDEO
                 ) {
                     this.referer = data
-                    this.headers = mainRequest.headers.toMap()
+                    this.headers = headers
                 }
             )
+            return true
         }
 
-        return true
+        return false
     }
 }
