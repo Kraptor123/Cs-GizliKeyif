@@ -3,6 +3,7 @@
 package com.kraptor
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -65,15 +66,16 @@ class XMoviesForYou : MainAPI() {
         }
 
         val sayfa = app.get(link).document
-        val icerik = sayfa.select("article:has(img)").mapNotNull { it.toMainPageResult() }
+        val icerik = sayfa.select("a.group.flex.flex-col").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(request.name, icerik, hasNext = true)
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val baslik_elementi = this.selectFirst("h3 a") ?: this.selectFirst("a")
-        val baslik = baslik_elementi?.text()?.trim() ?: return null
-        val adres = fixUrlNull(baslik_elementi?.attr("href")) ?: return null
+        val baslikelementi = this.selectFirst("h3")
+        val asilbaslik = baslikelementi?.text()?.trim() ?: return null
+        val baslik = asilbaslik.replace(Regex("""\[.*?\]"""), "").trim()
+        val adres = fixUrlNull(this.attr("href")) ?: return null
         val afis = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
         return newMovieSearchResponse(baslik, adres, TvType.NSFW) {
@@ -89,7 +91,7 @@ class XMoviesForYou : MainAPI() {
         }
 
         val sayfa = app.get(link).document
-        val sonuclar = sayfa.select("article:has(img)").mapNotNull { it.toMainPageResult() }
+        val sonuclar = sayfa.select("a.group.flex.flex-col").mapNotNull { it.toMainPageResult() }
 
         return newSearchResponseList(sonuclar, hasNext = true)
     }
@@ -109,8 +111,9 @@ class XMoviesForYou : MainAPI() {
 
         val ozet = sayfa.selectFirst("div.prose p")?.text()?.trim()
 
-        val yil_bulucu = Regex("""\b(19|20)\d{2}\b""")
-        val yil = yil_bulucu.find(baslik)?.value?.toIntOrNull()
+        val yilElementi = sayfa.selectFirst("span.material-symbols-outlined:contains(calendar_month)")?.parent()?.text()
+        val yilBulucu = Regex("""\b\d{4}\b""")
+        val yil = yilBulucu.find(yilElementi ?: baslik)?.value?.toIntOrNull()
 
         val etiketler = sayfa.select("a[href*='/category/']").map {
             it.text().replace("category", "", ignoreCase = true).trim()
@@ -120,22 +123,25 @@ class XMoviesForYou : MainAPI() {
             Actor(it.text().trim(), null)
         }
 
-        val oneriler = try {
-            val post_id = cevap.text.substringAfter("const postId = \"").substringBefore("\"")
-
-            if (post_id.isNotEmpty() && post_id.length > 3) {
-                val api_cevap = app.get("$mainUrl/api/related/$post_id", referer = url).text
-                val ayristirilmis = parseJson<List<RelatedResponse>>(api_cevap)
-
-                ayristirilmis.map {
-                    newMovieSearchResponse(it.title ?: "", fixUrl(it.slug ?: ""), TvType.NSFW) {
-                        this.posterUrl = it.thumbnail_url
+        val postId = cevap.text.substringAfter("const postId = \"").substringBefore("\"")
+        val oneriler = if (postId.isNotEmpty() && postId.length > 3) {
+            try {
+                val apiCevap = app.get("$mainUrl/api/related/$postId", referer = url).text
+                val veri = parseJson<RelatedData>(apiCevap)
+                veri.data?.mapNotNull { item ->
+                    newMovieSearchResponse(
+                        item.title ?: return@mapNotNull null,
+                        fixUrl(item.slug ?: return@mapNotNull null),
+                        TvType.NSFW
+                    ) {
+                        this.posterUrl = item.thumbnail_url
                     }
                 }
-            } else null
-        } catch (e: Exception) {
-            null
-        }
+            } catch (e: Exception) {
+                Log.d("RelatedError", e.message ?: "")
+                null
+            }
+        } else null
 
         return newMovieLoadResponse(baslik, url, TvType.NSFW, url) {
             this.posterUrl = afis
@@ -146,6 +152,7 @@ class XMoviesForYou : MainAPI() {
             addActors(oyuncular)
         }
     }
+
 
     override suspend fun loadLinks(
         data: String,
@@ -165,9 +172,14 @@ class XMoviesForYou : MainAPI() {
         return true
     }
 
-    data class RelatedResponse(
+    data class RelatedData(
+        val data: List<RelatedItem>? = null
+    )
+
+    data class RelatedItem(
         val title: String? = null,
         val slug: String? = null,
         val thumbnail_url: String? = null
     )
+
 }
