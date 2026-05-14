@@ -34,7 +34,7 @@ class CloudflareInterceptor(private val cloudflareKiller: CloudflareKiller): Int
 }
 
 class Hentaizm : MainAPI() {
-    override var mainUrl = "https://www.hentaizm6.online"
+    override var mainUrl = "https://www.hentaizm1.com"
     override var name = "Hentaizm"
     override val hasMainPage = true
     override var lang = "tr"
