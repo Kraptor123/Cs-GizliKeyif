@@ -23,9 +23,9 @@ class Javtiful : MainAPI() {
         "${mainUrl}/videos" to "Newest",
         "${mainUrl}/videos?sort=most_viewed" to "Most Viewed",
         "${mainUrl}/videos?sort=top_rated" to "Top Rated",
-        "${mainUrl}/videos?sort=top_favorites" to "Top Favorites",
-        "${mainUrl}/videos?sort=being_watched" to "Being Watched",
-        "${mainUrl}/censored" to "Censored",
+       // "${mainUrl}/videos?sort=top_favorites" to "Top Favorites",
+       //"${mainUrl}/videos?sort=being_watched" to "Being Watched",
+        //"${mainUrl}/censored" to "Censored",
         "${mainUrl}/uncensored" to "Uncensored",
         "${mainUrl}/category/female-investigator" to "Female Investigator",
         "${mainUrl}/category/chinese-av" to "Chinese AV",
@@ -53,30 +53,36 @@ class Javtiful : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) request.data else "${request.data}?page=$page"
         val res = app.get(url).document
-        val home = res.select("article.front-video-card:not(.front-ad-card)").mapNotNull {
+        val home = res.select("article.front-video-card:not(.front-partner-card)").mapNotNull {
             it.mainPageResults()
         }
-        return newHomePageResponse(request.name, home, true)
+        val hasNext = res.selectFirst("a.front-pagination-link:contains(Next)") != null
+        return newHomePageResponse(request.name, home, hasNext)
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url = if (page <= 1) "$mainUrl/search?q=$query" else "$mainUrl/search?page=$page&q=$query"
         val res = app.get(url).document
-        val results = res.select("article.front-video-card:not(.front-ad-card)").mapNotNull {
+        val results = res.select("article.front-video-card:not(.front-partner-card)").mapNotNull {
             it.mainPageResults()
         }
-        return newSearchResponseList(results, results.isNotEmpty())
+        val hasNext = res.selectFirst("a.front-pagination-link:contains(Next)") != null
+        return newSearchResponseList(results, hasNext)
     }
 
     private fun Element.mainPageResults(): SearchResponse? {
         val link = this.selectFirst("a.front-video-title") ?: return null
         val title = link.text().trim()
-        val href = fixUrl(link.attr("href"))
+        val href = fixUrlNull(link.attr("href")) ?: return null
         val img = this.selectFirst("img") ?: return null
-        val poster = fixUrl(img.attr("src"))
+        val poster = fixUrlNull(img.attr("data-front-lazy-src").ifEmpty { img.attr("src") })
+        val quality = this.selectFirst("span.front-quality-tag")?.text()?.trim()
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = poster
+            if (quality != null) {
+                addQuality(quality)
+            }
         }
     }
 
@@ -87,11 +93,12 @@ class Javtiful : MainAPI() {
         val title = res.selectFirst("div.front-watch-title h1")?.text()?.trim() ?: return null
         val poster = res.selectFirst("meta[property=\"og:image\"]")?.attr("content")
 
-        val recommendations = res.select("div.front-video-grid-related article.front-video-card:not(.front-ad-card)").mapNotNull {
+        val recommendations = res.select("div.front-video-grid-related article.front-video-card:not(.front-partner-card)").mapNotNull {
             val link = it.selectFirst("a.front-video-title") ?: return@mapNotNull null
             val rectitle = link.text().trim()
             val rechref = fixUrl(link.attr("href"))
-            val recposter = it.selectFirst("img")?.attr("src")
+            val img = it.selectFirst("img") ?: return@mapNotNull null
+            val recposter = img.attr("data-front-lazy-src").ifEmpty { img.attr("src") }
 
             newMovieSearchResponse(rectitle, rechref, TvType.NSFW) {
                 this.posterUrl = fixUrlNull(recposter)
