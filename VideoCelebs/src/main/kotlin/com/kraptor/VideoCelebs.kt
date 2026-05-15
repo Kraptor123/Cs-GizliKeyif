@@ -99,7 +99,7 @@ class VideoCelebs(context: Context) : MainAPI() {
             document.selectFirst("div.rating span.voters")?.text()?.trim()?.replace("%", "")?.substringBefore(" ")
                 ?.trim()
         val duration = document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
-        val recommendations = document.select("div.srelacionados article").mapNotNull { it.toRecommendationResult() }
+        val recommendations = document.select("div.pupular_video ul.wpp-list li").mapNotNull { it.toRecommendationResult() }
         val actors = document.select("div.entry-utility strong:contains(Actress) + a").map { Actor(it.text()) }
         val trailer = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)
             ?.let { "https://www.youtube.com/embed/$it" }
@@ -120,7 +120,7 @@ class VideoCelebs(context: Context) : MainAPI() {
     private fun Element.toRecommendationResult(): SearchResponse? {
         val title = this.selectFirst("a img")?.attr("alt") ?: return null
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
+        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("src"))
 
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
