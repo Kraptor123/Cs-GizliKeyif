@@ -30,6 +30,10 @@ class Sextb : MainAPI() {
         "Accept-Language" to "en-US,en;q=0.9"
     )
 
+    override var sequentialMainPage = true
+    override var sequentialMainPageDelay       = 1400L
+    override var sequentialMainPageScrollDelay = 1400L
+
     override val mainPage = mainPageOf(
         "${mainUrl}/genre/amateur" to "Amateur",
         "${mainUrl}/genre/anal" to "Anal",
@@ -37,19 +41,19 @@ class Sextb : MainAPI() {
         "${mainUrl}/genre/beautiful-girl" to "Beautiful Girl",
         "${mainUrl}/genre/beautiful-pussy" to "Beautiful Pussy",
         "${mainUrl}/genre/big-asses" to "Big Asses",
-        "${mainUrl}/genre/big-tits" to "Big Tits",
-        "${mainUrl}/genre/blowjob" to "Blowjob",
-        "${mainUrl}/genre/bondage" to "Bondage",
-        "${mainUrl}/genre/bukkake" to "Bukkake",
-        "${mainUrl}/genre/cheating-wife" to "Cheating Wife",
-        "${mainUrl}/genre/cosplay" to "Cosplay",
-        "${mainUrl}/genre/creampie" to "Creampie",
-        "${mainUrl}/genre/cumshot" to "Cumshot",
-        "${mainUrl}/genre/deep-throat" to "Deep Throat",
-        "${mainUrl}/genre/doggy-style" to "Doggy Style",
-        "${mainUrl}/genre/drama" to "Drama",
-        "${mainUrl}/genre/facials" to "Facials",
-        "${mainUrl}/genre/featured-actress" to "Featured Actress"
+        //"${mainUrl}/genre/big-tits" to "Big Tits",
+      //"${mainUrl}/genre/blowjob" to "Blowjob",
+      //"${mainUrl}/genre/bondage" to "Bondage",
+      //"${mainUrl}/genre/bukkake" to "Bukkake",
+      //"${mainUrl}/genre/cheating-wife" to "Cheating Wife",
+      //"${mainUrl}/genre/cosplay" to "Cosplay",
+      //"${mainUrl}/genre/creampie" to "Creampie",
+      //"${mainUrl}/genre/cumshot" to "Cumshot",
+      //"${mainUrl}/genre/deep-throat" to "Deep Throat",
+      //"${mainUrl}/genre/doggy-style" to "Doggy Style",
+      //"${mainUrl}/genre/drama" to "Drama",
+      //"${mainUrl}/genre/facials" to "Facials",
+      //"${mainUrl}/genre/featured-actress" to "Featured Actress"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
@@ -71,22 +75,44 @@ class Sextb : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = if (page <= 1) {
-            "$mainUrl/search/$query"
-        } else {
-            "$mainUrl/search/$query/pg-$page"
-        }
+        val url = "$mainUrl/ajax/search"
+        val response = app.post(
+            url,
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Content-Type" to "application/x-www-form-urlencoded;charset=UTF-8",
+                "Referer" to "$mainUrl/"
+            ),
+            data = mapOf(
+                "q" to query,
+                "page" to page.toString()
+            )
+        )
 
-        val document = app.get(url, headers = commonHeaders).document
-        val items = document.select("div.tray-item").mapNotNull {
-            it.toSearchResult()
-        }
+        val json = response.text
+        val hitsRegex = """\{"code":"([^"]+)","code_compact":"[^"]*","content_id":"[^"]*","name":"([^"]+)"[^}]+,"_formatted":\{[^}]+"poster":"([^"]+)"""".toRegex()
+        val matches = hitsRegex.findAll(json)
+
+        val items = matches.mapNotNull { match ->
+            val code = match.groupValues[1]
+            val title = match.groupValues[2].replace("<mark>", "").replace("</mark>", "")
+            val posterUrl = match.groupValues[3].replace("\\/", "/")
+            val fullHref = "$mainUrl/movie/$code"
+
+            newMovieSearchResponse(title, fullHref, TvType.NSFW) {
+                this.posterUrl = posterUrl
+            }
+        }.toList()
 
         if (items.isEmpty()) {
-            Log.d("STB_Search", "Arama listesi boş döndü! URL: $url")
+            Log.d("STB_Search", "$url $query $page")
         }
 
-        return newSearchResponseList(items, hasNext = items.isNotEmpty())
+        val totalPagesRegex = """"totalPages":(\d+)""".toRegex()
+        val totalPages = totalPagesRegex.find(json)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        val hasNext = page < totalPages
+
+        return newSearchResponseList(items, hasNext = hasNext)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {

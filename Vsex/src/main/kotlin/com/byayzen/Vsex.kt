@@ -171,10 +171,13 @@ class Vsex : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean = coroutineScope {
+        Log.d("loadLinks", data)
         val iframeUrl = app.get(data).document.selectFirst("iframe")?.attr("src") ?: return@coroutineScope false
+        Log.d("loadLinks", iframeUrl)
         val html = app.get(iframeUrl, referer = data).text
 
         val redirectUrl = Regex("""url=(https?://[^"'>]+)""").find(html)?.groupValues?.get(1) ?: iframeUrl
+        Log.d("loadLinks", redirectUrl)
         loadExtractor(redirectUrl, iframeUrl, subtitleCallback, callback)
         true
     }

@@ -140,40 +140,55 @@ open class LuluBase : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        Log.d("LuluBase", url)
         try {
-            val embedUrl = url.replace("/d/", "/e/")
+            val embedurl = url.replace("/d/", "/e/")
+            Log.d("LuluBase", embedurl)
 
-            val currentHost = try { URI(embedUrl).host } catch (e: Exception) { "lulustream.com" }
-            val currentOrigin = "https://$currentHost"
+            val currenthost = try { URI(embedurl).host } catch (e: Exception) { "lulustream.com" }
+            val currentorigin = "https://$currenthost"
 
-            val requestHeaders = mapOf(
+            val requestheaders = mapOf(
                 "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Referer" to (referer ?: embedUrl)
+                "Referer" to (referer ?: embedurl)
             )
 
-            val response = app.get(embedUrl, headers = requestHeaders)
+            val response = app.get(embedurl, headers = requestheaders)
             val html = response.text
-            val m3u8Regex = """["']([^"']+\.m3u8[^"']*)["']""".toRegex()
-            val match = m3u8Regex.find(html)
+            val unpacked = getAndUnpack(html)
+
+            val m3u8regex = """["']([^"']+\.m3u8[^"']*)["']""".toRegex()
+            val match = m3u8regex.find(unpacked)
 
             if (match != null) {
-                val m3u8Url = match.groupValues[1]
+                var m3u8url = match.groupValues[1]
+                Log.d("LuluBase", m3u8url)
 
-                val videoHeaders = mapOf(
+                if (m3u8url.contains("index-v1-a1.m3u8")) {
+                    m3u8url = m3u8url.replace("index-v1-a1.m3u8", "master.m3u8")
+                    Log.d("LuluBase", m3u8url)
+                }
+
+                val videoheaders = mapOf(
                     "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Referer" to embedUrl,
-                    "Origin" to currentOrigin,
+                    "Referer" to embedurl,
+                    "Origin" to currentorigin,
                     "Accept" to "*/*"
                 )
 
-                M3u8Helper.generateM3u8(
-                    source = this.name,
-                    streamUrl = m3u8Url,
-                    referer = embedUrl,
-                    headers = videoHeaders
-                ).forEach(callback)
+                callback(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = m3u8url,
+                    ) {
+                            headers = videoheaders.toMutableMap()
+                            quality = getQualityFromName(m3u8url)
+                        }
+                    )
             }
         } catch (e: Exception) {
+            Log.d("LuluBase", e.message ?: "Exception")
         }
     }
 }
@@ -205,13 +220,20 @@ class LuluPvp : LuluBase() {
 
 class Luludlc : LuluBase() {
     override val name = "Lulustream"
-    override val mainUrl = "https://lulu.dlc.ovh"
+    override val mainUrl = "https://lulu.dlc.ovh/"
 }
 
 class Lulu0 : LuluBase() {
     override val name = "Lulustream"
-    override val mainUrl = "https://lulu0.ovh"
+    override val mainUrl = "https://lulu0.ovh/"
 }
+
+class Lulux08 : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://x08.ovh/"
+}
+
+
 
 class VidNest : ExtractorApi() {
     override val name = "VidNest"

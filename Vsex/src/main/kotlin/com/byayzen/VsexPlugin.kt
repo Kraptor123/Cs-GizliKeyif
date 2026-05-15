@@ -21,7 +21,6 @@ class VsexPlugin: Plugin() {
         registerExtractorAPI(LuluStream())
         registerExtractorAPI(FileMoon2())
         registerExtractorAPI(FileMoonIn())
-        registerExtractorAPI(FileMoonSx())
         registerExtractorAPI(Bysedikamoum())
         registerExtractorAPI(Bysezoexe())
         registerExtractorAPI(Filemoonx08())
@@ -33,12 +32,6 @@ class VsexPlugin: Plugin() {
         registerExtractorAPI(Lulu0())
         registerExtractorAPI(LuluVdoo())
         registerExtractorAPI(VidNest())
-        registerExtractorAPI(FileMoon2())
-        registerExtractorAPI(FileMoonIn())
-        registerExtractorAPI(FileMoonSx())
-        registerExtractorAPI(Bysedikamoum())
-        registerExtractorAPI(Bysezoexe())
-
-
+        registerExtractorAPI(Lulux08())
     }
 }

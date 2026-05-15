@@ -21,6 +21,7 @@ import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
+import java.net.URI
 
 open class DoodStream : ExtractorApi() {
     override var name = "DoodStream"
@@ -172,28 +173,108 @@ class RyderJet : VidHidePro() { override var name = "RyderJet"; override var mai
 class MyCloudZ : VidHidePro() { override var mainUrl = "https://mycloudz.cc"; override var name = "MyCloudZ" }
 class Turboplayers : StreamTape() { override var mainUrl = "https://turboplayers.xyz"; override var name = "Streamtape" }
 
-class LulusStream : ExtractorApi() {
-    override var name = "LuluStream"
-    override var mainUrl = "https://luluvid.com"
-    override val requiresReferer = true
+open class LuluBase : ExtractorApi() {
+    override val name = "LuluStream"
+    override val mainUrl = "https://lulustream.com"
+    override val requiresReferer = false
 
     override suspend fun getUrl(
-        url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ) {
-        val filecode = url.substringAfterLast("/")
-        val post = app.post(
-            "$mainUrl/dl",
-            data = mapOf("op" to "embed", "file_code" to filecode, "auto" to "1", "referer" to (referer ?: ""))
-        ).document
-        post.selectFirst("script:containsData(vplayer)")?.data()?.let { script ->
-            Regex("file:\"(.*)\"").find(script)?.groupValues?.get(1)?.let { link ->
-                callback(newExtractorLink(name, name, link) {
-                    this.referer = mainUrl
-                    this.quality = Qualities.P1080.value
-                })
+        Log.d("LuluBase", url)
+        try {
+            val embedurl = url.replace("/d/", "/e/")
+            Log.d("LuluBase", embedurl)
+
+            val currenthost = try { URI(embedurl).host } catch (e: Exception) { "lulustream.com" }
+            val currentorigin = "https://$currenthost"
+
+            val requestheaders = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer" to (referer ?: embedurl)
+            )
+
+            val response = app.get(embedurl, headers = requestheaders)
+            val html = response.text
+            val unpacked = getAndUnpack(html)
+
+            val m3u8regex = """["']([^"']+\.m3u8[^"']*)["']""".toRegex()
+            val match = m3u8regex.find(unpacked)
+
+            if (match != null) {
+                var m3u8url = match.groupValues[1]
+                Log.d("LuluBase", m3u8url)
+
+                if (m3u8url.contains("index-v1-a1.m3u8")) {
+                    m3u8url = m3u8url.replace("index-v1-a1.m3u8", "master.m3u8")
+                    Log.d("LuluBase", m3u8url)
+                }
+
+                val videoheaders = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Referer" to embedurl,
+                    "Origin" to currentorigin,
+                    "Accept" to "*/*"
+                )
+
+                callback(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = m3u8url,
+                    ) {
+                        headers = videoheaders.toMutableMap()
+                        quality = getQualityFromName(m3u8url)
+                    }
+                )
             }
+        } catch (e: Exception) {
+            Log.d("LuluBase", e.message ?: "Exception")
         }
     }
+}
+
+class LuluStream : LuluBase() {
+    override val name = "LuluStream"
+    override val mainUrl = "https://lulustream.com"
+}
+
+class LuluVid : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://luluvid.com"
+}
+
+class LuluVdo : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://luluvdo.com"
+}
+
+class LuluVdoo : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://luluvdoo.com"
+}
+
+class LuluPvp : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://lulupvp.com"
+}
+
+class Luludlc : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://lulu.dlc.ovh/"
+}
+
+class Lulu0 : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://lulu0.ovh/"
+}
+
+class Lulux08 : LuluBase() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://x08.ovh/"
 }
 
 class Javclan : ExtractorApi() {

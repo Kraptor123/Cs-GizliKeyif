@@ -76,15 +76,11 @@ class Javtiful : MainAPI() {
         val href = fixUrlNull(link.attr("href")) ?: return null
         val img = this.selectFirst("img") ?: return null
         val poster = fixUrlNull(img.attr("data-front-lazy-src").ifEmpty { img.attr("src") })
-        val quality = this.selectFirst("span.front-quality-tag")?.text()?.trim()
-
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = poster
-            if (quality != null) {
-                addQuality(quality)
             }
         }
-    }
+
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 

@@ -72,7 +72,7 @@ class Javseen : MainAPI() {
         "${mainUrl}/nasty/" to "Nasty",
         "${mainUrl}/promiscuity/" to "Promiscuity",
         "${mainUrl}/prostitutes/" to "Prostitutes",
-        "${mainUrl}/reducing-mosaic/" to "Reducing Mosaic",
+        "${mainUrl}/mosaic/" to "Mosaic",
         "${mainUrl}/risky-mosaic/" to "Risky Mosaic"
     )
 
