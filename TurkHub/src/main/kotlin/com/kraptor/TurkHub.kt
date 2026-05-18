@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import org.jsoup.Jsoup
 
 class TurkHub : MainAPI() {
-    override var mainUrl              = "https://turkhub33.cyou"
+    override var mainUrl              = "https://turkhub34.cyou"
     override var name                 = "TurkHub"
     override val hasMainPage          = true
     override var lang                 = "tr"
