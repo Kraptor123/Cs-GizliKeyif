@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import kotlinx.serialization.json.Json
 
 class NetFapX : MainAPI() {
     override var mainUrl              = "https://netfapx.com"
@@ -120,12 +121,14 @@ class NetFapX : MainAPI() {
         }
     }
 
+
     inline fun <reified T> tryParseJson(json: String): T? {
-        return try {
-            com.google.gson.Gson().fromJson(json, T::class.java)
-        } catch (e: Exception) {
-            null
-        }
+        return runCatching {
+            Json {
+                ignoreUnknownKeys = true
+                coerceInputValues = true
+            }.decodeFromString<T>(json)
+        }.getOrNull()
     }
 
     private fun Element.toRecommendationResult(): SearchResponse? {

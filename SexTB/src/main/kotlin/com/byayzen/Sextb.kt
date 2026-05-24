@@ -97,16 +97,12 @@ class Sextb : MainAPI() {
             val code = match.groupValues[1]
             val title = match.groupValues[2].replace("<mark>", "").replace("</mark>", "")
             val posterUrl = match.groupValues[3].replace("\\/", "/")
-            val fullHref = "$mainUrl/movie/$code"
+            val fullHref = "$mainUrl/$code"
 
             newMovieSearchResponse(title, fullHref, TvType.NSFW) {
                 this.posterUrl = posterUrl
             }
         }.toList()
-
-        if (items.isEmpty()) {
-            Log.d("STB_Search", "$url $query $page")
-        }
 
         val totalPagesRegex = """"totalPages":(\d+)""".toRegex()
         val totalPages = totalPagesRegex.find(json)?.groupValues?.get(1)?.toIntOrNull() ?: 1
@@ -118,9 +114,7 @@ class Sextb : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val linkElement = this.selectFirst("a") ?: return null
         val href = linkElement.attr("href")
-
         if (href.startsWith("/search") || href.contains("javascript") || href.startsWith("/genre")) return null
-
         val fullHref = fixUrl(href)
         val title = this.selectFirst("div.tray-item-title")?.text()?.trim()
             ?: this.selectFirst("img")?.attr("alt")?.trim()

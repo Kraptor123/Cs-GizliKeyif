@@ -20,7 +20,7 @@ class Mangoporn : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    private val MAX_PAGE = 3676
+    private val MAX_PAGE = 3821
     override val mainPage
         get() = mainPageOf(
             *(try {

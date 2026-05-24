@@ -9,9 +9,6 @@ import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
-import com.google.gson.JsonParser
-import com.google.gson.JsonObject
-import com.google.gson.JsonElement
 import com.lagradost.cloudstream3.amap
 import kotlinx.serialization.json.jsonObject
 

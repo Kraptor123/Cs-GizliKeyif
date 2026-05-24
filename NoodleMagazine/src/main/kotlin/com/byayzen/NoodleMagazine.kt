@@ -3,7 +3,7 @@ package com.byayzen
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.google.gson.Gson
+import kotlinx.serialization.json.Json
 
 class NoodleMagazine : MainAPI() {
     override var mainUrl = "https://noodlemagazine.com"
@@ -59,12 +59,12 @@ class NoodleMagazine : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val d = app.get(url).document
-        val t = d.selectFirst("h1")?.text()?.trim() ?: return null
-        return newMovieLoadResponse(t, url, TvType.NSFW, url) {
-            posterUrl = fixUrlNull(d.selectFirst("meta[property=og:image]")?.attr("content"))
-            plot = d.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-            recommendations = d.select("div.item").mapNotNull { it.toRes() }
+        val doc = app.get(url).document
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            posterUrl = fixUrlNull(doc.selectFirst("meta[property=og:image]")?.attr("content"))
+            plot = doc.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+            recommendations = doc.select("div.item").mapNotNull { it.toRes() }
         }
     }
 
@@ -76,15 +76,25 @@ class NoodleMagazine : MainAPI() {
     ): Boolean {
         val text = app.get(data).text
         return Regex("""window\.playlist\s*=\s*(\{.*?\});""").find(text)?.let { m ->
-            try {
-                Gson().fromJson(m.groupValues[1], Playlist::class.java).sources.forEach { s ->
-                    cb(newExtractorLink("Noodle", "Noodle", s.file, INFER_TYPE) {
-                        this.referer = "$mainUrl/"
-                        this.quality = s.label.filter { it.isDigit() }.toIntOrNull() ?: Qualities.Unknown.value
-                    })
+            runCatching {
+                Json { ignoreUnknownKeys = true }.decodeFromString<Playlist>(m.groupValues[1])
+            }.onSuccess { playlist ->
+                playlist.sources.forEach { s ->
+                    val videoQuality = s.label.filter { it.isDigit() }.toIntOrNull() ?: Qualities.Unknown.value
+
+                    cb(
+                        newExtractorLink(
+                            source = name,
+                            name = name,
+                            url = s.file,
+                            type = INFER_TYPE
+                        ) {
+                            this.referer = "$mainUrl/"
+                            this.quality = videoQuality
+                        }
+                    )
                 }
-                true
-            } catch (e: Exception) { false }
+            }.isSuccess
         } ?: false
     }
 

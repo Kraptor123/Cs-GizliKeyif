@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.extractors.FileMoonSx
 
 @CloudstreamPlugin
 class SextbPlugin: Plugin() {
@@ -48,7 +49,6 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(DoodPmExtractor())
         registerExtractorAPI(LuluStream())
         registerExtractorAPI(FileMoonIn())
-        registerExtractorAPI(StreamTape())
         registerExtractorAPI(LuluVdo())
         registerExtractorAPI(LuluPvp())
         registerExtractorAPI(LuluVid())
@@ -65,5 +65,23 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(Playerupnone())
         registerExtractorAPI(Turtleviplay())
         registerExtractorAPI(Turboviplay())
+        registerExtractorAPI(Vidguardto())
+        registerExtractorAPI(MixDropAG())
+        registerExtractorAPI(MixDropMy())
+        registerExtractorAPI(FileMoon2())
+        registerExtractorAPI(Bysedikamoum())
+        registerExtractorAPI(Bysezoexe())
+        registerExtractorAPI(Filemoonx08())
+        registerExtractorAPI(Player4Me())
+        registerExtractorAPI(Vip4me())
+        registerExtractorAPI(RPMShare())
+        registerExtractorAPI(Playmogo())
+        registerExtractorAPI(Voe())
+        registerExtractorAPI(Stape())
+        registerExtractorAPI(StreamTAPE())
+        registerExtractorAPI(ShaveTape())
+        registerExtractorAPI(Watchadsontape())
+        registerExtractorAPI(Lancewhoisdifficult())
+        registerExtractorAPI(Javlesbians())
     }
 }

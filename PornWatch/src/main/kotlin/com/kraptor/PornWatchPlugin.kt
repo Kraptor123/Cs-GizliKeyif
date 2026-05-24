@@ -1,6 +1,14 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 package com.kraptor
 
+import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
+import com.lagradost.cloudstream3.extractors.FileMoonSx
+import com.lagradost.cloudstream3.extractors.Maxstream
+import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.extractors.StreamTapeNet
+import com.lagradost.cloudstream3.extractors.StreamTapeXyz
+import com.lagradost.cloudstream3.extractors.VidStack
+import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
 
@@ -8,8 +16,77 @@ import com.lagradost.cloudstream3.plugins.BasePlugin
 class PornWatchPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(PornWatch())
-        registerExtractorAPI(Player4Me())
+        registerExtractorAPI(StreamTape())
+        registerExtractorAPI(StreamTapeNet())
+        registerExtractorAPI(StreamTapeXyz())
+        registerExtractorAPI(Turboplayers())
         registerExtractorAPI(DoodStream())
         registerExtractorAPI(DoodDoply())
+        registerExtractorAPI(DoodVideo())
+        registerExtractorAPI(Ds2Play())
+        registerExtractorAPI(d000d())
+        registerExtractorAPI(VidHidePro())
+        registerExtractorAPI(VidHidePro1())
+        registerExtractorAPI(VidHidePro2())
+        registerExtractorAPI(VidHidePro3())
+        registerExtractorAPI(VidHidePro4())
+        registerExtractorAPI(VidHidePro6())
+        registerExtractorAPI(VidHidePro7())
+        registerExtractorAPI(VidhideVIP())
+        registerExtractorAPI(Javlion())
+        registerExtractorAPI(Dhcplay())
+        registerExtractorAPI(Smoothpre())
+        registerExtractorAPI(Dhtpre())
+        registerExtractorAPI(Peytonepre())
+        registerExtractorAPI(Movearnpre())
+        registerExtractorAPI(Dintezuvio())
+        registerExtractorAPI(Streamwish())
+        registerExtractorAPI(Streamhihi())
+        registerExtractorAPI(Javsw())
+        registerExtractorAPI(swhoi())
+        registerExtractorAPI(Javmoon())
+        registerExtractorAPI(MixDropis())
+        registerExtractorAPI(Javclan())
+        registerExtractorAPI(Maxstream())
+        registerExtractorAPI(Javggvideo())
+        registerExtractorAPI(EmturbovidExtractor())
+        registerExtractorAPI(FileMoonSx())
+        registerExtractorAPI(DoodPmExtractor())
+        registerExtractorAPI(LuluStream())
+        registerExtractorAPI(FileMoonIn())
+        registerExtractorAPI(LuluVdo())
+        registerExtractorAPI(LuluPvp())
+        registerExtractorAPI(LuluVid())
+        registerExtractorAPI(Luludlc())
+        registerExtractorAPI(Lulu0())
+        registerExtractorAPI(LuluVdoo())
+        registerExtractorAPI(VidNest())
+        registerExtractorAPI(Lulux08())
+        registerExtractorAPI(HgLink())
+        registerExtractorAPI(RyderJet())
+        registerExtractorAPI(MyCloudZ())
+        registerExtractorAPI(VidStack())
+        registerExtractorAPI(StbP2P())
+        registerExtractorAPI(Playerupnone())
+        registerExtractorAPI(Turtleviplay())
+        registerExtractorAPI(Turboviplay())
+        registerExtractorAPI(Vidguardto())
+        registerExtractorAPI(MixDropAG())
+        registerExtractorAPI(MixDropMy())
+        registerExtractorAPI(FileMoon2())
+        registerExtractorAPI(Bysedikamoum())
+        registerExtractorAPI(Bysezoexe())
+        registerExtractorAPI(Filemoonx08())
+        registerExtractorAPI(Player4Me())
+        registerExtractorAPI(Vip4me())
+        registerExtractorAPI(RPMShare())
+        registerExtractorAPI(Playmogo())
+        registerExtractorAPI(Voe())
+        registerExtractorAPI(Stape())
+        registerExtractorAPI(StreamTAPE())
+        registerExtractorAPI(ShaveTape())
+        registerExtractorAPI(Watchadsontape())
+        registerExtractorAPI(Lancewhoisdifficult())
+        registerExtractorAPI(Javlesbians())
     }
 }
