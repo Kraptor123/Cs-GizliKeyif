@@ -2,12 +2,12 @@
 
 package com.byayzen
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 
 class RouVideo : MainAPI() {
     override var mainUrl = "https://rou.video"
@@ -132,7 +132,7 @@ class RouVideo : MainAPI() {
         val sonrakiVeri = Regex("""<script id="__NEXT_DATA__" type="application/json">(.*?)</script>""")
             .find(yanit)?.groupValues?.get(1) ?: return false
 
-        val json = parseJson<Map<String, Any>>(sonrakiVeri)
+        val json = try { mapper.readValue<Map<String, Any>>(sonrakiVeri) } catch (e: Exception) { null } ?: return false
         val ev = (((json["props"] as? Map<*, *>)
             ?.get("pageProps") as? Map<*, *>)
             ?.get("ev") as? Map<*, *>) ?: return false
@@ -154,7 +154,7 @@ class RouVideo : MainAPI() {
             return false
         }
 
-        val sonuc = parseJson<Map<String, Any>>(cozulmus)
+        val sonuc = try { mapper.readValue<Map<String, Any>>(cozulmus) } catch (e: Exception) { null } ?: return false
         val videoUrl = sonuc["videoUrl"] as? String ?: return false
 
         Log.d("rou", "url=$videoUrl")

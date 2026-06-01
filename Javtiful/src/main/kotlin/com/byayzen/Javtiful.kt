@@ -2,10 +2,11 @@
 
 package com.byayzen
 
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import okhttp3.MultipartBody
 import okhttp3.Request
 import org.jsoup.nodes.Element
@@ -23,8 +24,8 @@ class Javtiful : MainAPI() {
         "${mainUrl}/videos" to "Newest",
         "${mainUrl}/videos?sort=most_viewed" to "Most Viewed",
         "${mainUrl}/videos?sort=top_rated" to "Top Rated",
-       // "${mainUrl}/videos?sort=top_favorites" to "Top Favorites",
-       //"${mainUrl}/videos?sort=being_watched" to "Being Watched",
+        // "${mainUrl}/videos?sort=top_favorites" to "Top Favorites",
+        //"${mainUrl}/videos?sort=being_watched" to "Being Watched",
         //"${mainUrl}/censored" to "Censored",
         "${mainUrl}/uncensored" to "Uncensored",
         "${mainUrl}/category/female-investigator" to "Female Investigator",
@@ -61,7 +62,8 @@ class Javtiful : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = if (page <= 1) "$mainUrl/search?q=$query" else "$mainUrl/search?page=$page&q=$query"
+        val url =
+            if (page <= 1) "$mainUrl/search?q=$query" else "$mainUrl/search?page=$page&q=$query"
         val res = app.get(url).document
         val results = res.select("article.front-video-card:not(.front-partner-card)").mapNotNull {
             it.mainPageResults()
@@ -78,8 +80,8 @@ class Javtiful : MainAPI() {
         val poster = fixUrlNull(img.attr("data-front-lazy-src").ifEmpty { img.attr("src") })
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = poster
-            }
         }
+    }
 
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
@@ -89,17 +91,19 @@ class Javtiful : MainAPI() {
         val title = res.selectFirst("div.front-watch-title h1")?.text()?.trim() ?: return null
         val poster = res.selectFirst("meta[property=\"og:image\"]")?.attr("content")
 
-        val recommendations = res.select("div.front-video-grid-related article.front-video-card:not(.front-partner-card)").mapNotNull {
-            val link = it.selectFirst("a.front-video-title") ?: return@mapNotNull null
-            val rectitle = link.text().trim()
-            val rechref = fixUrl(link.attr("href"))
-            val img = it.selectFirst("img") ?: return@mapNotNull null
-            val recposter = img.attr("data-front-lazy-src").ifEmpty { img.attr("src") }
+        val recommendations =
+            res.select("div.front-video-grid-related article.front-video-card:not(.front-partner-card)")
+                .mapNotNull {
+                    val link = it.selectFirst("a.front-video-title") ?: return@mapNotNull null
+                    val rectitle = link.text().trim()
+                    val rechref = fixUrl(link.attr("href"))
+                    val img = it.selectFirst("img") ?: return@mapNotNull null
+                    val recposter = img.attr("data-front-lazy-src").ifEmpty { img.attr("src") }
 
-            newMovieSearchResponse(rectitle, rechref, TvType.NSFW) {
-                this.posterUrl = fixUrlNull(recposter)
-            }
-        }
+                    newMovieSearchResponse(rectitle, rechref, TvType.NSFW) {
+                        this.posterUrl = fixUrlNull(recposter)
+                    }
+                }
 
         val actorslist = res.select("a.front-watch-actor-card").map {
             val name = it.selectFirst("span")?.text()?.trim() ?: ""
@@ -109,13 +113,17 @@ class Javtiful : MainAPI() {
             Actor(name, fixUrlNull(image))
         }
 
-        val datetext = res.selectFirst("div.front-watch-detail:contains(Added on) time")?.attr("datetime")
+        val datetext =
+            res.selectFirst("div.front-watch-detail:contains(Added on) time")?.attr("datetime")
         val year = datetext?.split("-")?.firstOrNull()?.toIntOrNull()
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = fixUrlNull(poster)
-            this.plot = res.selectFirst("meta[property=\"og:description\"]")?.attr("content")?.trim()
+            this.plot =
+                res.selectFirst("meta[property=\"og:description\"]")?.attr("content")?.trim()
             this.year = year
-            this.tags = res.select("div.front-watch-detail:contains(Categories) a, div.front-watch-detail:contains(Tags) a").map { it.text().trim() }
+            this.tags =
+                res.select("div.front-watch-detail:contains(Categories) a, div.front-watch-detail:contains(Tags) a")
+                    .map { it.text().trim() }
             this.recommendations = recommendations
             addActors(actorslist)
         }
@@ -132,9 +140,7 @@ class Javtiful : MainAPI() {
             .substringBefore("</script>")
 
         val configdata = try {
-            app.baseClient.newCall(Request.Builder().url("https://invalid.com").build()).let {
-                parseJson<WatchConfig>(configraw)
-            }
+            mapper.readValue<WatchConfig>(configraw)
         } catch (e: Exception) {
             null
         }
@@ -148,7 +154,8 @@ class Javtiful : MainAPI() {
                 ) {
                     this.quality = source.size ?: Qualities.Unknown.value
                     this.referer = "$mainUrl/"
-                    this.type = if (source.src.contains(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
+                    this.type =
+                        if (source.src.contains(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
                 }
             )
         }
@@ -157,12 +164,12 @@ class Javtiful : MainAPI() {
     }
 
     data class WatchConfig(
-        val playerSources: List<PlayerSource>? = null
+        @param:JsonProperty("playerSources") val playerSources: List<PlayerSource>? = null
     )
 
     data class PlayerSource(
-        val src: String,
-        val type: String? = null,
-        val size: Int? = null
+        @param:JsonProperty("src") val src: String,
+        @param:JsonProperty("type") val type: String? = null,
+        @param:JsonProperty("size") val size: Int? = null
     )
 }

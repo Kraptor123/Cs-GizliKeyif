@@ -1,9 +1,9 @@
 package com.kraptor
 
 import android.util.Log
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.AesHelper
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -35,11 +35,9 @@ open class UpnsLiveExtractor() : ExtractorApi() {
         Log.d("kraptor_$name", "istek = $istek")
         Log.d("kraptor_$name", "istek length = ${istek.length}")
 
-        // Python byte değerlerinin ASCII karşılıkları (normal string)
         val key = "kiemtienmua911ca"
         val iv = "1234567890oiuytr"
 
-        // Hex string çift sayıda karakter olmalı
         val edataHex = if (istek.length % 2 != 0) {
             istek.dropLast(1)
         } else {
@@ -52,11 +50,9 @@ open class UpnsLiveExtractor() : ExtractorApi() {
             val aesCoz = AesHelper.decryptAES(edataHex, key, iv)
             Log.d("kraptor_$name", "aesCoz = $aesCoz")
 
-            // JSON parse et
-            val jsonData = parseJson<VideoResponse>(aesCoz)
+            val jsonData = try { mapper.readValue<VideoResponse>(aesCoz) } catch (e: Exception) { null }
 
             if (jsonData?.title != null) {
-                // Video URL'sini oluştur: mainUrl + /djx/ + title
                 val videoUrl = jsonData.cf ?: jsonData.source
 
                 Log.d("kraptor_$name", "videoUrl = $videoUrl")
@@ -80,7 +76,6 @@ open class UpnsLiveExtractor() : ExtractorApi() {
         }
     }
 
-    // JSON response için data class
     data class VideoResponse(
         val torrentTrackers: List<String>?,
         val title: String?,
@@ -126,7 +121,7 @@ open class UpnsLiveExtractor() : ExtractorApi() {
         val restrictEmbed: String?,
         val translation: String?,
         val defaultSubtitle: String?,
-        val ui: String?,   // JSON string, ayrı modele parse etmek istersen ayrıca yapabilirsin
+        val ui: String?,
         val pickSubtitle: Boolean?,
         val logo: String?,
         val id: String?,

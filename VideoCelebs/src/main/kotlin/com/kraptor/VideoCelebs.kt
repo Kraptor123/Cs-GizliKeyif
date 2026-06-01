@@ -8,13 +8,14 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -276,10 +277,10 @@ class VideoCelebs(context: Context) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-//        Log.d("kraptor_VideCelebs", "data » $data")
+        Log.d("kraptor_VideCelebs", "data » $data")
         val pageHtml = app.get(data).text
 
-//        Log.d("kraptor_VideCelebs", "WebView ile kt_player video URL'si çıkarılıyor...")
+        Log.d("kraptor_VideCelebs", "WebView ile kt_player video URL'si çıkarılıyor...")
 
         val videoResultJson = suspendCoroutine { continuation ->
             runBlocking {
@@ -289,16 +290,15 @@ class VideoCelebs(context: Context) : MainAPI() {
             }
         }
 
-//        Log.d("kraptor_VideCelebs", "Video JSON Result = $videoResultJson")
+        Log.d("kraptor_VideCelebs", "Video JSON = $videoResultJson")
 
         videoResultJson?.let { jsonResult ->
             try {
-                // JSON parse et
-                val videoList = parseJson<List<VideoQuality>>(jsonResult)
+                val videoList = try { mapper.readValue<List<VideoQuality>>(jsonResult) } catch (e: Exception) { null }
 
                 videoList?.forEach { video ->
                     if (video.url.startsWith("http")) {
-//                        Log.d("kraptor_VideCelebs", "Adding: ${video.quality} - ${video.url}")
+                        Log.d("kraptor_VideCelebs", "${video.quality} - ${video.url}")
 
                         callback.invoke(
                             newExtractorLink(
@@ -312,10 +312,10 @@ class VideoCelebs(context: Context) : MainAPI() {
                             })
                     }
                 }
-                return videoList.isNotEmpty()
+                return videoList?.isNotEmpty() == true
 
             } catch (e: Exception) {
-//                Log.e("kraptor_VideCelebs", "Parse error: ${e.message}")
+               Log.e("kraptor_VideCelebs", "Parse Hata verdi: ${e.message}")
                 return false
             }
         }
@@ -324,8 +324,7 @@ class VideoCelebs(context: Context) : MainAPI() {
     }
 }
 
- // Data class ekle
- data class VideoQuality(
-     val url: String,
-     val quality: String
- )
+data class VideoQuality(
+    @param:JsonProperty("url") val url: String,
+    @param:JsonProperty("quality") val quality: String
+)

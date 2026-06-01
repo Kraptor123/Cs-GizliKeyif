@@ -8,13 +8,14 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.module.kotlin.readValue
 //import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -329,7 +330,7 @@ private fun Element.toRecommendationResult(): SearchResponse? {
         videoResultJson?.let { jsonResult ->
             try {
                 // JSON parse et
-                val videoList = parseJson<List<VideoQuality>>(jsonResult)
+                val videoList = mapper.readValue<List<VideoQuality>>(jsonResult)
 
                 videoList?.forEach { video ->
                     if (video.url.startsWith("http")) {
@@ -361,6 +362,6 @@ private fun Element.toRecommendationResult(): SearchResponse? {
 
 // Data class ekle
 data class VideoQuality(
-    val url: String,
-    val quality: String
+    @param:JsonProperty("url") val url: String,
+    @param:JsonProperty("quality") val quality: String
 )

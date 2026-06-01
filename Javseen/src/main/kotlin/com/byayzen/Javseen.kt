@@ -10,7 +10,6 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import org.jsoup.Jsoup
 
 class Javseen : MainAPI() {
@@ -176,14 +175,15 @@ class Javseen : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         try {
-            parseJson<List<String>>(data).forEach { url ->
+            mapper.readValue<List<String>>(data).forEach { url ->
                 Log.d("LoadLinks", "JSON URL: $url")
                 loadExtractor(url, subtitleCallback, callback)
             }
         } catch (e: Exception) {
             Jsoup.parse(data).select(".button_choice_server").forEach { element ->
                 element.attr("data-embed").takeIf { it.isNotEmpty() }?.let { encoded ->
-                    val decoded = String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT))
+                    val decoded =
+                        String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT))
                     Log.d("LoadLinks", "HTML Decoded: $decoded")
                     loadExtractor(decoded, subtitleCallback, callback)
                 }

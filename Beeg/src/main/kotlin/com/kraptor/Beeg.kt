@@ -9,7 +9,6 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 
 class Beeg : MainAPI() {
     override var mainUrl = "https://beeg.com"
@@ -107,7 +106,7 @@ class Beeg : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         if (request.data == "actors") {
             val responseString = app.get("$apiBeeg/tag/recommends?type=person&slug=index", headers = headerlar).text
-            val players = runCatching { parseJson<List<Map<String, Any>>>(responseString) }.getOrNull() ?: emptyList()
+            val players = runCatching { mapper.readValue<List<Map<String, Any>>>(responseString) }.getOrNull() ?: emptyList()
 
             val items = players.mapNotNull {
                 val name = it["tg_name"]?.toString() ?: return@mapNotNull null
@@ -172,7 +171,7 @@ class Beeg : MainAPI() {
         }
 
         val players = try {
-            parseJson<List<Map<String, Any>>>(response)
+            mapper.readValue<List<Map<String, Any>>>(response)
         } catch (e: Exception) {
             emptyList()
         }
@@ -244,7 +243,7 @@ class Beeg : MainAPI() {
             if (jsonres.isNullOrBlank() || jsonres == "[]") break
 
             val videolist = try {
-                parseJson<List<Map<String, Any>>>(jsonres)
+                mapper.readValue<List<Map<String, Any>>>(jsonres)
             } catch (e: Exception) {
                 emptyList()
             }

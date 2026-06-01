@@ -15,10 +15,11 @@ import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
 import android.util.Base64
 import android.util.Log
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.cloudstream3.extractors.MixDrop
+import com.lagradost.cloudstream3.mapper
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import java.net.URI
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -53,7 +54,7 @@ open class Vidguardto : ExtractorApi() {
         val res = app.get(url)
         val resc = res.document.select("script:containsData(eval)").firstOrNull()?.data()
         resc?.let {
-            val jsonStr2 = AppUtils.parseJson<SvgObject>(runJS2(it))
+            val jsonStr2 = try { mapper.readValue<SvgObject>(runJS2(it)) } catch (e: Exception) { null } ?: return
             val watchlink = sigDecode(jsonStr2.stream)
 
             callback.invoke(
@@ -317,7 +318,7 @@ open class Filemoon : ExtractorApi() {
             return
         }
 
-        val json = try { parseJson<PlaybackResponse>(response) } catch (e: Exception) { null } ?: return
+        val json = try { mapper.readValue<PlaybackResponse>(response) } catch (e: Exception) { null } ?: return
 
         val finalSources = json.sources ?: json.playback?.let { pb ->
             try {
@@ -326,7 +327,7 @@ open class Filemoon : ExtractorApi() {
                     SecretKeySpec(xn(pb.key_parts), "AES"), GCMParameterSpec(128, ft(pb.iv))
                 )
                 val decryptedData = cipher.doFinal(ft(pb.payload)).toString(Charsets.ISO_8859_1)
-                parseJson<PlaybackResponse>(decryptedData).sources
+                mapper.readValue<PlaybackResponse>(decryptedData).sources
             } catch (e: Exception) {
                 null
             }

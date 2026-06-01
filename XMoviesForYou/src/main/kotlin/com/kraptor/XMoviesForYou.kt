@@ -3,13 +3,13 @@
 package com.kraptor
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 
 class XMoviesForYou : MainAPI() {
     override var mainUrl = "https://xmoviesforyou.com"
@@ -127,7 +127,7 @@ class XMoviesForYou : MainAPI() {
         val oneriler = if (postId.isNotEmpty() && postId.length > 3) {
             try {
                 val apiCevap = app.get("$mainUrl/api/related/$postId", referer = url).text
-                val veri = parseJson<RelatedData>(apiCevap)
+                val veri = mapper.readValue<RelatedData>(apiCevap)
                 veri.data?.mapNotNull { item ->
                     newMovieSearchResponse(
                         item.title ?: return@mapNotNull null,

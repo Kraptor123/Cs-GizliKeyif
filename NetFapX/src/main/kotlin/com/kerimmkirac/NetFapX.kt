@@ -2,6 +2,7 @@
 
 package com.kerimmkirac
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
@@ -11,28 +12,28 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import kotlinx.serialization.json.Json
 
 class NetFapX : MainAPI() {
-    override var mainUrl              = "https://netfapx.com"
-    override var name                 = "NetFapX"
-    override val hasMainPage          = true
-    override var lang                 = "en"
-    override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.NSFW)
+    override var mainUrl = "https://netfapx.com"
+    override var name = "NetFapX"
+    override val hasMainPage = true
+    override var lang = "en"
+    override val hasQuickSearch = false
+    override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}"      to "All Porn Videos",
-        "${mainUrl}/tag/step-mom"  to "Step Mom Porn Videos",
-        "${mainUrl}/tag/step-sister"  to "Step Sister Porn Videos",
-        "${mainUrl}/category/milf"   to "Milf Porn Videos",
-        "${mainUrl}/category/big-ass"  to "Big Ass Porn Videos",
-        "${mainUrl}/category/big-tits"  to "Big Tits Porn Videos",
+        "${mainUrl}" to "All Porn Videos",
+        "${mainUrl}/tag/step-mom" to "Step Mom Porn Videos",
+        "${mainUrl}/tag/step-sister" to "Step Sister Porn Videos",
+        "${mainUrl}/category/milf" to "Milf Porn Videos",
+        "${mainUrl}/category/big-ass" to "Big Ass Porn Videos",
+        "${mainUrl}/category/big-tits" to "Big Tits Porn Videos",
         "${mainUrl}/category/asian" to "Asian Porn Videos",
-        "${mainUrl}/tag/bikini"  to "Bikini Porn Videos",
-        
-    )
+        "${mainUrl}/tag/bikini" to "Bikini Porn Videos",
+
+        )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}/page/$page").document
-        val home     = document.select("article").mapNotNull { it.toMainPageResult() }
+        val home = document.select("article").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(request.name, home)
     }
@@ -56,8 +57,9 @@ class NetFapX : MainAPI() {
         val document = app.get(url).document
         val aramaCevap = document.select("article").mapNotNull { it.toSearchResult() }
 
-            return newSearchResponseList(aramaCevap, hasNext = true)
-        }
+        return newSearchResponseList(aramaCevap, hasNext = true)
+    }
+
     private fun Element.toSearchResult(): SearchResponse? {
         val aTag = this.selectFirst("a") ?: return null
         val href = fixUrlNull(aTag.attr("href")) ?: return null
@@ -77,7 +79,11 @@ class NetFapX : MainAPI() {
         val document = app.get(url).document
         val jsonData = document.selectFirst("script.aioseo-schema")?.data() ?: return null
 
-        val json = tryParseJson<Map<String, Any>>(jsonData) ?: return null
+        val json = try {
+            mapper.readValue<Map<String, Any>>(jsonData)
+        } catch (e: Exception) {
+            null
+        } ?: return null
         val graph = json["@graph"] as? List<*> ?: return null
         val article = graph.mapNotNull { it as? Map<*, *> }
             .firstOrNull { it["@type"] == "Article" } ?: return null
@@ -85,14 +91,18 @@ class NetFapX : MainAPI() {
         val title = document.selectFirst("h1")?.text()?.trim() ?: return null
         val poster = fixUrlNull((article["image"] as? Map<*, *>)?.get("url")?.toString())
 
-        val description = document.selectFirst("div.textbox h2:contains(Description:) + div")?.selectFirst("p")?.text()?.trim()
+        val description =
+            document.selectFirst("div.textbox h2:contains(Description:) + div")?.selectFirst("p")
+                ?.text()?.trim()
 
         val actors = document.select("div.infovideo h2:contains(Pornstars:) + p a").map {
             Actor(it.text().trim())
         }
 
-        val categories = document.select("div.infovideo h2:contains(Categories:) + p a").map { it.text().trim() }
-        val tagsFromHtml = document.select("div.infovideo h2:contains(Tags:) + p a").map { it.text().trim() }
+        val categories =
+            document.select("div.infovideo h2:contains(Categories:) + p a").map { it.text().trim() }
+        val tagsFromHtml =
+            document.select("div.infovideo h2:contains(Tags:) + p a").map { it.text().trim() }
         val tags = (categories + tagsFromHtml).distinct()
         val recommendations = document.select("article").mapNotNull {
             it.toRecommendationResult()
@@ -121,16 +131,6 @@ class NetFapX : MainAPI() {
         }
     }
 
-
-    inline fun <reified T> tryParseJson(json: String): T? {
-        return runCatching {
-            Json {
-                ignoreUnknownKeys = true
-                coerceInputValues = true
-            }.decodeFromString<T>(json)
-        }.getOrNull()
-    }
-
     private fun Element.toRecommendationResult(): SearchResponse? {
         val aTag = this.selectFirst("a") ?: return null
         val href = fixUrlNull(aTag.attr("href")) ?: return null
@@ -152,20 +152,21 @@ class NetFapX : MainAPI() {
     ): Boolean {
         try {
             val document = app.get(data).document
-            
-            val scriptElement = document.selectFirst("script#wp-postviews-cache-js-extra") ?: return false
+
+            val scriptElement =
+                document.selectFirst("script#wp-postviews-cache-js-extra") ?: return false
             val scriptContent = scriptElement.data()
-            
+
             val postIdPattern = "\"post_id\":\"(\\d+)\"".toRegex()
             val postIdMatch = postIdPattern.find(scriptContent)
             val postId = postIdMatch?.groupValues?.get(1) ?: return false
-            
+
             val noncePattern = "\"nonce\":\"([^\"]+)\"".toRegex()
             val nonceMatch = noncePattern.find(scriptContent)
             val nonce = nonceMatch?.groupValues?.get(1) ?: return false
-            
+
             val ajaxUrl = "https://netfapx.com/wp-admin/admin-ajax.php"
-            
+
             val ajaxResponse = app.post(
                 url = ajaxUrl,
                 data = mapOf(
@@ -179,17 +180,17 @@ class NetFapX : MainAPI() {
                     "Origin" to "https://netfapx.com"
                 )
             )
-            
+
             if (ajaxResponse.code != 200) return false
-            
+
             val responseText = ajaxResponse.text
-            
+
             val videoUrlPattern = "https://videos\\.netfapx\\.com/[^\"'\\s]+\\.mp4".toRegex()
             val urlMatch = videoUrlPattern.find(responseText)
-            
+
             if (urlMatch != null) {
                 val videoUrl = urlMatch.value
-                
+
                 callback.invoke(
                     newExtractorLink(
                         name = "NetFapX",
@@ -203,12 +204,16 @@ class NetFapX : MainAPI() {
                 )
                 return true
             } else {
-                val jsonResponse = tryParseJson<Map<String, Any>>(responseText)
+                val jsonResponse = try {
+                    mapper.readValue<Map<String, Any>>(responseText)
+                } catch (e: Exception) {
+                    null
+                }
                 if (jsonResponse != null) {
-                    val videoUrl = jsonResponse["url"]?.toString() ?: 
-                                 jsonResponse["video_url"]?.toString() ?: 
-                                 jsonResponse["src"]?.toString()
-                    
+                    val videoUrl =
+                        jsonResponse["url"]?.toString() ?: jsonResponse["video_url"]?.toString()
+                        ?: jsonResponse["src"]?.toString()
+
                     if (videoUrl != null && videoUrl.isNotEmpty()) {
                         callback.invoke(
                             newExtractorLink(
@@ -225,9 +230,9 @@ class NetFapX : MainAPI() {
                     }
                 }
             }
-            
+
             return false
-            
+
         } catch (e: Exception) {
             return false
         }
