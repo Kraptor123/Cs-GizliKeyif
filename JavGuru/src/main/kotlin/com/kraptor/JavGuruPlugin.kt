@@ -84,5 +84,7 @@ class JavGuruPlugin: BasePlugin() {
         registerExtractorAPI(Watchadsontape())
         registerExtractorAPI(Lancewhoisdifficult())
         registerExtractorAPI(Javlesbians())
+        registerExtractorAPI(CloudWish())
+        registerExtractorAPI(Dooood())
     }
 }

@@ -20,6 +20,8 @@ class JavseenPlugin: Plugin() {
         registerExtractorAPI(DoodDoply())
         registerExtractorAPI(DoodVideo())
         registerExtractorAPI(Ds2Play())
+        registerExtractorAPI(CloudWish())
+        registerExtractorAPI(Dooood())
         registerExtractorAPI(d000d())
         registerExtractorAPI(VidHidePro())
         registerExtractorAPI(VidHidePro1())
@@ -84,5 +86,6 @@ class JavseenPlugin: Plugin() {
         registerExtractorAPI(Watchadsontape())
         registerExtractorAPI(Lancewhoisdifficult())
         registerExtractorAPI(Javlesbians())
+
     }
 }

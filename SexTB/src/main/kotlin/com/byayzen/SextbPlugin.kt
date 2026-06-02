@@ -83,5 +83,7 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(Watchadsontape())
         registerExtractorAPI(Lancewhoisdifficult())
         registerExtractorAPI(Javlesbians())
+        registerExtractorAPI(CloudWish())
+        registerExtractorAPI(Dooood())
     }
 }

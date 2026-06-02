@@ -53,6 +53,8 @@ class XXXParodyHDPlugin: Plugin() {
         registerExtractorAPI(FileMoonIn())
         registerExtractorAPI(LuluVdo())
         registerExtractorAPI(LuluPvp())
+        registerExtractorAPI(CloudWish())
+        registerExtractorAPI(Dooood())
         registerExtractorAPI(LuluVid())
         registerExtractorAPI(Luludlc())
         registerExtractorAPI(Lulu0())

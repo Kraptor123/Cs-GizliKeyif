@@ -32,6 +32,8 @@ class MangopornProvider: Plugin() {
         registerExtractorAPI(VidHidePro6())
         registerExtractorAPI(VidHidePro7())
         registerExtractorAPI(VidhideVIP())
+        registerExtractorAPI(CloudWish())
+        registerExtractorAPI(Dooood())
         registerExtractorAPI(Javlion())
         registerExtractorAPI(Dhcplay())
         registerExtractorAPI(Smoothpre())

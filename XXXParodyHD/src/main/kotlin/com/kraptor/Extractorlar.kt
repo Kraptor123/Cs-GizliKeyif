@@ -34,6 +34,8 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import com.lagradost.cloudstream3.utils.M3u8Helper
+import org.jsoup.Jsoup
+import java.net.URL
 
 open class Streamwish : ExtractorApi() {
     override var name = "Streamwish"
@@ -272,7 +274,6 @@ open class Vidguardto : ExtractorApi() {
     }
 
     private fun runJS2(hideMyHtmlContent: String): String {
-        Log.d("runJS", "start")
         val rhino = Context.enter()
         rhino.initSafeStandardObjects()
         rhino.optimizationLevel = -1
@@ -280,7 +281,6 @@ open class Vidguardto : ExtractorApi() {
         scope.put("window", scope, scope)
         var result = ""
         try {
-            Log.d("runJS", "Executing JavaScript: $hideMyHtmlContent")
             rhino.evaluateString(scope, hideMyHtmlContent, "JavaScript", 1, null)
             val svgObject = scope.get("svg", scope)
             result = if (svgObject is NativeObject) {
@@ -289,7 +289,6 @@ open class Vidguardto : ExtractorApi() {
                 Context.toString(svgObject)
             }
         } catch (e: Exception) {
-            Log.e("runJS", "Error executing JavaScript", e)
         } finally {
             Context.exit()
         }
@@ -492,7 +491,6 @@ open class Filemoon : ExtractorApi() {
 
     private suspend fun processSources(sources: List<VideoSource>, referer: String, callback: (ExtractorLink) -> Unit) {
         sources.forEach { source ->
-            Log.d("Filemoon", "Kaynak: ${source.label}p -> ${source.url.take(30)}...")
             if (source.url.contains("m3u8")) {
                 M3u8Helper.generateM3u8(this.name, source.url, referer).forEach(callback)
             } else {
@@ -611,7 +609,6 @@ open class DoodStream : ExtractorApi() {
         url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit
     ) {
         val embedUrl = url.replace("doply.net", "myvidplay.com")
-        Log.d("kraptor_Dood","url = $url")
         val response = app.get(
             embedUrl,
             referer = mainUrl,
@@ -674,9 +671,14 @@ class d000d : DoodStream() {
     override var mainUrl = "https://d000d.com"
 }
 
+class Dooood : DoodStream() {
+    override var mainUrl = "https://dooood.com"
+}
 
 
-open class javclan : ExtractorApi() {
+
+
+class javclan : ExtractorApi() {
     override var name = "Javclan"
     override var mainUrl = "https://javclan.com"
     override val requiresReferer = true
@@ -755,13 +757,14 @@ open class StreamTAPE : ExtractorApi() {
     override val requiresReferer = true
 
     private val stapeHeaders = mapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
         "Upgrade-Insecure-Requests" to "1",
-        "Sec-Fetch-Dest" to "iframe",
+        "Sec-Fetch-Dest" to "document",
         "Sec-Fetch-Mode" to "navigate",
-        "Sec-Fetch-Site" to "cross-site",
+        "Sec-Fetch-Site" to "none",
+        "Sec-Fetch-User" to "?1",
         "Sec-GPC" to "1",
     )
 
@@ -771,46 +774,79 @@ open class StreamTAPE : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val html = app.get(
-            url,
-            headers = stapeHeaders + mapOf("Referer" to (referer ?: "https://jav.guru/"))
-        ).text
+        try {
+            Log.d("StreamtapeDebug", "İstek başladı: $url")
+            val response = app.get(
+                url,
+                headers = stapeHeaders
+            )
+            val html = response.text
+            Log.d("StreamtapeDebug", "HTML alındı, boyut: ${html.length}")
 
-        val divUrl = Regex("""<div id="ideoolink"[^>]*>([^<]+)</div>""")
-            .find(html)?.groupValues?.get(1)?.trim() ?: return
-        val realToken = Regex("""token=([a-zA-Z0-9]+)['"]""")
-            .findAll(html).lastOrNull()?.groupValues?.get(1) ?: return
+            val parsedUrl = java.net.URL(url)
+            val host = parsedUrl.host
+            val path = parsedUrl.path
+            val id = path.substringAfterLast("/")
 
-        val getVideoUrl = "https:/${divUrl.replace(Regex("token=[a-zA-Z0-9]+"), "token=$realToken")}&stream=1"
+            val corsMatch = Regex("""expires=([^&"']+)&ip=([^&"']+)""").find(html)?.groupValues
+            val expires = corsMatch?.get(1)
+            val ip = corsMatch?.get(2)
+            val realToken = Regex("""token=([a-zA-Z0-9\-_]+)""").findAll(html).lastOrNull()?.groupValues?.get(1)
 
-        val finalUrl = app.get(
-            getVideoUrl,
-            headers = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
-                "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
-                "Referer" to "$mainUrl/",
-                "Origin" to mainUrl,
-            ),
-            allowRedirects = false
-        ).headers["location"] ?: run {
-            Log.d("kraptor_$name", "HATA: Redirect location alınamadı")
-            return
-        }
+            Log.d("StreamtapeDebug", "ID: $id")
+            Log.d("StreamtapeDebug", "Expires: $expires")
+            Log.d("StreamtapeDebug", "IP: $ip")
+            Log.d("StreamtapeDebug", "Token: $realToken")
 
-        Log.d("kraptor_$name", "Final URL: $finalUrl")
-
-        callback.invoke(
-            newExtractorLink(
-                source = name,
-                name = name,
-                url = finalUrl,
-            ) {
-                this.referer = "$mainUrl/"
-                this.quality = Qualities.Unknown.value
+            if (expires.isNullOrEmpty() || ip.isNullOrEmpty() || realToken.isNullOrEmpty()) {
+                Log.d("StreamtapeDebug", "HATA: Gerekli parametreler bulunamadı")
+                return
             }
-        )
+
+            val getVideoUrl = "https://$host/get_video?id=$id&expires=$expires&ip=$ip&token=$realToken&stream=1"
+            Log.d("StreamtapeDebug", "Get Video URL: $getVideoUrl")
+
+            val location = app.get(
+                getVideoUrl,
+                headers = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
+                    "Accept" to "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5",
+                    "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Range" to "bytes=0-",
+                    "Referer" to "https://$host$path",
+                    "Cookie" to "_b=kube12",
+                    "Sec-Fetch-Dest" to "video",
+                    "Sec-Fetch-Mode" to "cors",
+                    "Sec-Fetch-Site" to "same-origin",
+                    "Accept-Encoding" to "identity",
+                    "Sec-GPC" to "1"
+                ),
+                allowRedirects = false
+            ).headers["location"]
+
+            if (location.isNullOrEmpty()) {
+                Log.d("StreamtapeDebug", "HATA: Location bulunamadı")
+                return
+            }
+
+            Log.d("StreamtapeDebug", "Final URL: $location")
+
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = location,
+                ) {
+                    this.referer = "https://$host/"
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        } catch (e: Exception) {
+            Log.d("StreamtapeDebug", "Hata: ${e.message}")
+        }
     }
 }
+
 
 
 class Watchadsontape : StreamTAPE() {
@@ -821,7 +857,7 @@ class Stape : StreamTAPE() {
 }
 
 class StreamTapeNet : StreamTAPE() {
-    override var mainUrl = "https://streamtape.net"
+    override var mainUrl = "https://streamtape.net/"
 }
 
 class StreamTapeXyz : StreamTAPE() {
@@ -840,6 +876,219 @@ class Javlesbians: Voe() {
     override var mainUrl = "https://javlesbians.com"
 }
 
+
+
+open class CloudWish : ExtractorApi() {
+    override val name = "CloudWish"
+    override val mainUrl = "https://cloudwish.xyz"
+    override val requiresReferer = true
+
+    private val baseHeaders = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Upgrade-Insecure-Requests" to "1",
+        "Sec-Fetch-Dest" to "document",
+        "Sec-Fetch-Mode" to "navigate",
+        "Sec-Fetch-Site" to "none",
+        "Sec-Fetch-User" to "?1",
+        "Sec-GPC" to "1",
+    )
+
+    private fun unpack(packedJs: String): String? {
+        try {
+            val pattern = Regex(
+                """\}\('((?:[^'\\]|\\.)*)'\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*'((?:[^'\\]|\\.)*)'""",
+                RegexOption.DOT_MATCHES_ALL
+            )
+            val match = pattern.find(packedJs)
+
+            if (match == null) {
+                Log.d("CloudWishDebug", "Regex No Match")
+                return null
+            }
+
+            val p = match.groupValues[1]
+                .replace("\\'", "'")
+                .replace("\\\\", "\\")
+            val a = match.groupValues[2].toInt()
+            val c = match.groupValues[3].toInt()
+            val kRaw = match.groupValues[4]
+            val k = kRaw.split("|").toMutableList()
+
+            Log.d("CloudWishDebug", "Unpack Init")
+
+            while (k.size < c) {
+                k.add("")
+            }
+
+            var result = p
+            for (i in (c - 1) downTo 0) {
+                if (k[i].isNotEmpty()) {
+                    val token = Integer.toString(i, a)
+                    result = result.replace("\\b$token\\b".toRegex(RegexOption.IGNORE_CASE), k[i])
+                }
+            }
+
+            return result
+        } catch (e: Exception) {
+            Log.d("CloudWishDebug", "Unpack Error")
+            return null
+        }
+    }
+
+    open class CloudWish : ExtractorApi() {
+        override val name = "CloudWish"
+        override val mainUrl = "https://cloudwish.xyz"
+        override val requiresReferer = true
+
+        private val baseHeaders = mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
+            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Upgrade-Insecure-Requests" to "1",
+            "Sec-Fetch-Dest" to "document",
+            "Sec-Fetch-Mode" to "navigate",
+            "Sec-Fetch-Site" to "none",
+            "Sec-Fetch-User" to "?1",
+            "Sec-GPC" to "1",
+        )
+
+        private fun unpack(packedJs: String): String? {
+            try {
+                val pattern = Regex(
+                    """\}\('((?:[^'\\]|\\.)*)'\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*'((?:[^'\\]|\\.)*)'""",
+                    RegexOption.DOT_MATCHES_ALL
+                )
+                val match = pattern.find(packedJs)
+
+                if (match == null) {
+                    Log.d("CloudWishDebug", "Regex Eşleşmedi")
+                    return null
+                }
+
+                val p = match.groupValues[1]
+                    .replace("\\'", "'")
+                    .replace("\\\\", "\\")
+                val a = match.groupValues[2].toInt()
+                val c = match.groupValues[3].toInt()
+                val kRaw = match.groupValues[4]
+                val k = kRaw.split("|").toMutableList()
+
+                Log.d("CloudWishDebug", "Unpack Hazırlanıyor")
+
+                while (k.size < c) {
+                    k.add("")
+                }
+
+                var result = p
+                for (i in (c - 1) downTo 0) {
+                    if (k[i].isNotEmpty()) {
+                        val token = Integer.toString(i, a)
+                        result =
+                            result.replace("\\b$token\\b".toRegex(RegexOption.IGNORE_CASE), k[i])
+                    }
+                }
+
+                return result
+            } catch (e: Exception) {
+                Log.d("CloudWishDebug", "Unpack Hatası")
+                return null
+            }
+        }
+
+        override suspend fun getUrl(
+            url: String,
+            referer: String?,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
+        ) {
+            Log.d("CloudWishDebug", "İşlem Başladı")
+            try {
+                val response = app.get(url, headers = baseHeaders)
+                val html = response.text
+                Log.d("CloudWishDebug", "Sayfa Alındı")
+
+                val document = Jsoup.parse(html)
+
+                val packedScript = document.select("script")
+                    .map { it.data() }
+                    .firstOrNull { it.contains("eval(function(p,a,c,k,e,d)") }
+
+                if (packedScript == null) {
+                    Log.d("CloudWishDebug", "Paketli Script Yok")
+                    return
+                }
+
+                Log.d("CloudWishDebug", "Unpack Başlatılıyor")
+
+                val unpacked = unpack(packedScript)
+                if (unpacked.isNullOrEmpty()) {
+                    Log.d("CloudWishDebug", "Unpacked Hata")
+                    return
+                }
+
+                Log.d("CloudWishDebug", "Unpack Başarılı")
+
+                val parsedUrl = java.net.URL(url)
+                val host = parsedUrl.host
+
+                val m3u8Pattern =
+                    Regex("""(https?://[^\s"'<>]+master\.m3u8[^\s"'<>]*|/stream/[^\s"'<>]+master\.m3u8)""")
+                val m3u8Urls = m3u8Pattern.findAll(unpacked)
+                    .map { it.groupValues[1] }
+                    .distinct()
+                    .toList()
+
+                val masterUrl = m3u8Urls.firstOrNull { it.startsWith("/stream/") }
+
+                if (masterUrl != null) {
+                    val fullUrl = "https://$host$masterUrl"
+                    Log.d("CloudWishDebug", "Master Link Bulundu")
+                    callback.invoke(
+                        newExtractorLink(
+                            source = name,
+                            name = name,
+                            url = fullUrl,
+                        ) {
+                            this.referer = url
+                            this.quality = Qualities.Unknown.value
+                            this.headers = mapOf(
+                                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
+                                "Sec-GPC" to "1",
+                                "Sec-Fetch-Dest" to "empty",
+                                "Sec-Fetch-Mode" to "cors",
+                                "Sec-Fetch-Site" to "same-origin",
+                            )
+                        }
+                    )
+                } else if (m3u8Urls.isNotEmpty()) {
+                    Log.d("CloudWishDebug", "Çok fazla Video Mevcut")
+                    for (m3u8Url in m3u8Urls) {
+                        val fullUrl =
+                            if (m3u8Url.startsWith("/")) "https://$host$m3u8Url" else m3u8Url
+                        val quality = when {
+                            fullUrl.contains("/hls4/") -> Qualities.P1080.value
+                            fullUrl.contains("/hls3/") -> Qualities.P720.value
+                            else -> Qualities.Unknown.value
+                        }
+                        callback.invoke(
+                            newExtractorLink(source = name, name = name, url = fullUrl) {
+                                this.referer = url
+                                this.quality = quality
+                            }
+                        )
+                    }
+                } else {
+                    Log.d("CloudWishDebug", "Yayın Bulunamadı")
+                }
+
+            } catch (e: Exception) {
+                Log.d("CloudWishDebug", "Genel Hata")
+            }
+        }
+    }
+}
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Yanit(

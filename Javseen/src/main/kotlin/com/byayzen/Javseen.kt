@@ -76,12 +76,47 @@ class Javseen : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page <= 1) request.data else "${request.data.removeSuffix("/")}/$page/"
-        val document = app.get(url).document
+        val baseUrl = request.data.removeSuffix("/")
+        val isRecent = baseUrl.endsWith("/recent")
+        val ajaxParam = if (isRecent) "browse_videos" else "category_videos"
+
+        val url = if (page <= 1) "$baseUrl/?ajax=$ajaxParam" else "$baseUrl/$page/?ajax=$ajaxParam"
+        Log.d("Ayzen", "URL: $url")
+
+        val json = app.get(
+            url,
+            headers = mapOf(
+                "Accept" to "*/*",
+                "Referer" to if (page <= 1) "$baseUrl/" else "$baseUrl/$page/"
+            )
+        ).parsedSafe<Anamenujson>()
+
+        val document = json?.html?.let { Jsoup.parse(it) } ?: return newHomePageResponse(request.name, emptyList())
         val home = document.select("li[id^=video-]").mapNotNull { it.toMainPageResult() }
+        Log.d("Ayzen", "İçerik: ${home.size}")
 
         return newHomePageResponse(request.name, home)
     }
+
+    private fun Element.toMainPageResult(): SearchResponse? {
+        val link = this.selectFirst("a.thumbnail") ?: run {
+            Log.d("Ayzen", "Link: ${this.html()}")
+            return null
+        }
+        val title = link.selectFirst("span.video-title")?.text()?.trim() ?: link.attr("title")
+        val href = fixUrlNull(link.attr("href")) ?: run {
+            Log.d("Ayzen", "Href: ${link.html()}")
+            return null
+        }
+        val posterUrl = fixUrlNull(link.selectFirst("img")?.attr("src"))
+        Log.d("Ayzen", "Başlık: $title, Link: $href, Poster: $posterUrl")
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
+    }
+
+
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url = if (page <= 1) {
@@ -96,16 +131,7 @@ class Javseen : MainAPI() {
         return newSearchResponseList(results, hasNext = results.isNotEmpty())
     }
 
-    private fun Element.toMainPageResult(): SearchResponse? {
-        val link = this.selectFirst("a.thumbnail") ?: return null
-        val title = link.selectFirst("span.video-title")?.text() ?: link.attr("title")
-        val href = fixUrlNull(link.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(link.selectFirst("img")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
@@ -177,6 +203,7 @@ class Javseen : MainAPI() {
         try {
             mapper.readValue<List<String>>(data).forEach { url ->
                 Log.d("LoadLinks", "JSON URL: $url")
+                Log.d("Ayzen", "Extractor (JSON): $url")
                 loadExtractor(url, subtitleCallback, callback)
             }
         } catch (e: Exception) {
@@ -185,6 +212,7 @@ class Javseen : MainAPI() {
                     val decoded =
                         String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT))
                     Log.d("LoadLinks", "HTML Decoded: $decoded")
+                    Log.d("Ayzen", "Extractor'a gönderilen URL (HTML): $decoded")
                     loadExtractor(decoded, subtitleCallback, callback)
                 }
             }
@@ -193,3 +221,8 @@ class Javseen : MainAPI() {
         return true
     }
 }
+
+data class Anamenujson(
+    val status: Int,
+    val html: String?
+)

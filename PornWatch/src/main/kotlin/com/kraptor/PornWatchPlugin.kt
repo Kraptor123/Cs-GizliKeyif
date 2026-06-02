@@ -79,6 +79,8 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(Filemoonx08())
         registerExtractorAPI(Player4Me())
         registerExtractorAPI(Vip4me())
+        registerExtractorAPI(CloudWish())
+        registerExtractorAPI(Dooood())
         registerExtractorAPI(RPMShare())
         registerExtractorAPI(Playmogo())
         registerExtractorAPI(Voe())
