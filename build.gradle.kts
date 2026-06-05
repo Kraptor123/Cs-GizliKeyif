@@ -1,20 +1,30 @@
+import com.android.build.api.dsl.LibraryExtension
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
-import com.android.build.gradle.BaseExtension
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.kotlin.dsl.register
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 buildscript {
     repositories {
         google()
         mavenCentral()
-        // Shitpack repo which contains our tools and dependencies
         maven("https://jitpack.io")
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.13.2")
-        // Cloudstream gradle plugin which makes everything work and builds plugins
-        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
+        classpath("com.android.tools.build:gradle:9.1.1")
+        classpath("com.github.recloudstream:gradle:81b1d424d2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21")
+    }
+}
+
+subprojects {
+    tasks.withType<KotlinCompile>().configureEach {
+        compilerOptions {
+            freeCompilerArgs.add("-Xannotation-default-target=param-property")
+        }
     }
 }
 
@@ -28,9 +38,9 @@ allprojects {
 
 fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
 
-fun Project.android(configuration: BaseExtension.() -> Unit) {
-    extensions.getByName<BaseExtension>("android").apply {
-        (extensions.findByName("java") as? JavaPluginExtension)?.apply {
+fun Project.android(configuration: LibraryExtension.() -> Unit) {
+    extensions.getByName<LibraryExtension>("android").apply {
+        project.extensions.findByType(JavaPluginExtension::class.java)?.apply {
             // Use Java 17 toolchain even if a higher JDK runs the build.
             // We still use Java 8 for now which higher JDKs have deprecated.
             toolchain {
@@ -44,22 +54,37 @@ fun Project.android(configuration: BaseExtension.() -> Unit) {
 
 subprojects {
     apply(plugin = "com.android.library")
-    apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
+
+    tasks.withType<KotlinJvmCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
+            freeCompilerArgs.addAll(
+                "-Xno-call-assertions",
+                "-Xno-param-assertions",
+                "-Xno-receiver-assertions",
+                "-Xannotation-default-target=param-property"
+            )
+        }
+    }
 
     cloudstream {
         // when running through gitHub workflow, GITHUB_REPOSITORY should contain current repository name
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/Kraptor123/kraptoranime")
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/Kraptor123/Cs-GizliKeyif")
 
         authors = listOf("kraptor")
     }
 
+
     android {
-        namespace = "com.kraptor"
+        namespace = "com.kraptor.${project.name.lowercase().replace("-", "_")}"
+        compileSdk = 36
 
         defaultConfig {
             minSdk = 21
-            compileSdkVersion(36)
+        }
+
+        lint {
             targetSdk = 36
         }
 
@@ -67,22 +92,7 @@ subprojects {
             sourceCompatibility = JavaVersion.VERSION_1_8
             targetCompatibility = JavaVersion.VERSION_1_8
         }
-
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile> {
-            compilerOptions {
-                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
-                freeCompilerArgs.addAll(
-                    listOf(
-                        "-Xno-call-assertions",
-                        "-Xno-param-assertions",
-                        "-Xno-receiver-assertions",
-                        "-Xannotation-default-target=param-property"
-                    )
-                )
-            }
-        }
     }
-
 
     dependencies {
         val cloudstream by configurations
@@ -110,12 +120,22 @@ subprojects {
 }
 
 
-tasks.register<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
-}
 tasks.register("derle") {
     group = "help"
     doLast {
-        println("Filtreleme modu aktif: status=0 olan eklentiler derleme dışı bırakıldı.")
+        println("Filtreleme modu aktif: status=1 olanlar disindaki eklentiler derleme disi birakildi.")
+    }
+}
+
+gradle.taskGraph.whenReady {
+    if (hasTask(":derle")) {
+        allTasks.forEach { task ->
+            if (task.project != rootProject) {
+                val csExt = task.project.extensions.findByType<CloudstreamExtension>()
+                if (csExt != null && csExt.status != 1) {
+                    task.enabled = false
+                }
+            }
+        }
     }
 }
