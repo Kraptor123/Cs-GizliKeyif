@@ -227,54 +227,24 @@ class Pimpbunny : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val webview = WebViewResolver(
-            interceptUrl = Regex(".*pimpbunny\\.com/get_file/.*?\\.mp4.*"),
-            additionalUrls = emptyList(),
-            userAgent = null,
-            useOkhttp = false,
-            script = """
-                (function() {
-                    var attempt = 0;
-                    var timer = setInterval(function() {
-                        var btn = document.querySelector('.vjs-big-play-button') || document.querySelector('.fp-play');
-                        if (btn) {
-                            btn.click();
-                            clearInterval(timer);
-                        }
-                        if (window.player_obj && typeof window.player_obj.play === 'function') {
-                            window.player_obj.play();
-                            clearInterval(timer);
-                        }
-                        if (attempt++ > 20) clearInterval(timer);
-                    }, 500);
-                })();
-            """.trimIndent()
-        )
-        Log.d("PimpBunny", data)
-        val sonuc = webview.resolveUsingWebView(
-            url = data,
-            referer = "$mainUrl/"
-        )
-        val istek = sonuc.first
+        val response = app.get(data).text
+        val regex = Regex("""contentUrl"\s*:\s*"([^"]+)""")
+        val match = regex.find(response)
+        val url = match?.groupValues?.get(1)?.replace("\\/", "/")
 
-        if (istek != null) {
-            val url = istek.url.toString()
-            val headers = istek.headers.toMap()
-            Log.d("PimpBunny", url)
+        if (url != null) {
             callback.invoke(
                 newExtractorLink(
-                    source = this.name,
-                    name = this.name,
+                    source = name,
+                    name = name,
                     url = url,
                     type = ExtractorLinkType.VIDEO
                 ) {
                     this.referer = data
-                    this.headers = headers
                 }
             )
             return true
         }
-
         return false
     }
 }

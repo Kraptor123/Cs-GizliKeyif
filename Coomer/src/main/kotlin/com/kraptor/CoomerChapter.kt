@@ -30,7 +30,7 @@ import coil3.size.Scale
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.kraptor.BuildConfig
+import com.kraptor.coomer.BuildConfig
 import com.lagradost.api.Log
 import kotlinx.coroutines.*
 import kotlin.math.abs

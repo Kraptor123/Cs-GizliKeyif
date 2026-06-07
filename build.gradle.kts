@@ -77,7 +77,7 @@ subprojects {
 
 
     android {
-        namespace = "com.kraptor.${project.name.lowercase().replace("-", "_")}"
+        namespace = "com.kraptor.${project.name.lowercase().replace("-", "_").let { if (it.firstOrNull()?.isDigit() == true) "p$it" else it }}"
         compileSdk = 36
 
         defaultConfig {
