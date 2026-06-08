@@ -174,11 +174,8 @@ class OnScreens : MainAPI() {
 
         val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
         val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description     = if (iframe.isEmpty()){
-            "No Videos Found On This Page"
-        } else {
-            document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-        }
+        if (iframe.isEmpty()) throw ErrorLoadingException("NO VIDEOS FOUND ON THIS PAGE!")
+        val description     = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
         val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
         val tags            = document.select("div.max-w-md.sm\\:max-w-6xl a").map { it.text() }
         val score          = document.selectFirst("span.dt_rating_vgs")?.text()?.trim()

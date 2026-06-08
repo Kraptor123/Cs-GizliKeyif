@@ -30,7 +30,7 @@ class Turkifsahub : MainAPI() {
         "${mainUrl}/kategoriler/amatör" to "Amatör",
         "${mainUrl}/kategoriler/anal" to "Anal",
         "${mainUrl}/kategoriler/cuckold" to "Cuckold",
-        "${mainUrl}/kategoriler/fetiş" to "Fetiş",
+        //"${mainUrl}/kategoriler/fetiş" to "Fetiş",
         "${mainUrl}/kategoriler/genç" to "Genç",
         "${mainUrl}/kategoriler/grup" to "Grup",
         "${mainUrl}/kategoriler/konulu" to "Konulu",
@@ -40,7 +40,7 @@ class Turkifsahub : MainAPI() {
         "${mainUrl}/kategoriler/milf" to "Milf",
         "${mainUrl}/kategoriler/sahibe" to "Sahibe",
         "${mainUrl}/kategoriler/şişman" to "Şişman",
-        "${mainUrl}/kategoriler/tango" to "Tango",
+    //    "${mainUrl}/kategoriler/tango" to "Tango",
         "${mainUrl}/kategoriler/türbanlı" to "Türbanlı",
         "${mainUrl}/kategoriler/vip" to "Vip",
         "${mainUrl}/kategoriler/zenci" to "Zenci"

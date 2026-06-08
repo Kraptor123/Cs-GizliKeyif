@@ -42,9 +42,9 @@ class Evooli : MainAPI() {
         "${mainUrl}/sarisin-o/"         to "Sarışın",
         "${mainUrl}/sert-o/"         to "Sert",
         "${mainUrl}/teen-o/"         to "Genç",
-        "${mainUrl}/turbanli-porno-p/"         to "Türbanlı",
-        "${mainUrl}/turk-porno-p/"         to "Türk",
-        "${mainUrl}/turkce-altyazili-p/"         to "Türkçe Altyazılı",
+      //  "${mainUrl}/turbanli-porno-p/"         to "Türbanlı",
+     //   "${mainUrl}/turk-porno-p/"         to "Türk",
+       // "${mainUrl}/turkce-altyazili-p/"         to "Türkçe Altyazılı",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {

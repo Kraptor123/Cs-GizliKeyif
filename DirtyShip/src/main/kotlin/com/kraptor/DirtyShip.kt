@@ -39,7 +39,6 @@ class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
         "${mainUrl}/category/loyalfans-a/" to "LoyalFans",
         "${mainUrl}/category/onlyfans-k/" to "OnlyFans",
         "${mainUrl}/category/patreon-fg/" to "Patreon",
-        "${mainUrl}/category/snapchat-e/" to "Snapchat",
         "${mainUrl}/category/squirting-efg/" to "Squirting",
         "${mainUrl}/category/teen-fg/" to "Teen",
         "${mainUrl}/category/tiktok-a1/" to "TikTok",

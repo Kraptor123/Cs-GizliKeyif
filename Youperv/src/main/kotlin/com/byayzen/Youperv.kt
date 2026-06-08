@@ -20,9 +20,9 @@ class Youperv : MainAPI() {
 
     override val mainPage = mainPageOf(
         "${mainUrl}/" to "Home",
-        "${mainUrl}/top-50-most-viewed-videos.html" to "Most Viewed 30 Day",
-        "${mainUrl}/top-porn-videos.html" to "Top Rated 30 Day",
-        "${mainUrl}/tags/" to "TAGS",
+        //"${mainUrl}/top-50-most-viewed-videos.html" to "Most Viewed 30 Day",
+        //"${mainUrl}/top-porn-videos.html" to "Top Rated 30 Day",
+        //"${mainUrl}/tags/" to "TAGS",
         "${mainUrl}/anal/" to "Anal",
         "${mainUrl}/amateur/" to "Amateur",
         "${mainUrl}/anal-creampie/" to "Anal Creampie",

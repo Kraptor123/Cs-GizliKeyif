@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import org.json.JSONObject
 import org.jsoup.Jsoup
 
 class Javseen : MainAPI() {
@@ -99,35 +100,36 @@ class Javseen : MainAPI() {
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val link = this.selectFirst("a.thumbnail") ?: run {
-            Log.d("Ayzen", "Link: ${this.html()}")
-            return null
-        }
+        val link = this.selectFirst("a.thumbnail") ?: return null
         val title = link.selectFirst("span.video-title")?.text()?.trim() ?: link.attr("title")
-        val href = fixUrlNull(link.attr("href")) ?: run {
-            Log.d("Ayzen", "Href: ${link.html()}")
-            return null
-        }
+        val href = fixUrlNull(link.attr("href")) ?: return null
         val posterUrl = fixUrlNull(link.selectFirst("img")?.attr("src"))
-        Log.d("Ayzen", "Başlık: $title, Link: $href, Poster: $posterUrl")
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
 
-
-
     override suspend fun search(query: String, page: Int): SearchResponseList {
+        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+
         val url = if (page <= 1) {
-            "$mainUrl/search/video/?s=$query"
+            "$mainUrl/search/video/?ajax=search_results&s=$encodedQuery&o=recent"
         } else {
-            "$mainUrl/search/video/?s=$query&page=$page"
+            "$mainUrl/search/video/?ajax=search_results&s=$encodedQuery&o=recent&page=$page"
         }
-
-        val document = app.get(url).document
+        val response = app.get(url)
+        val document = if (url.contains("ajax")) {
+            try {
+                val json = JSONObject(response.text)
+                Jsoup.parse(json.optString("html"))
+            } catch (e: Exception) {
+                response.document
+            }
+        } else {
+            response.document
+        }
         val results = document.select("li[id^=video-]").mapNotNull { it.toMainPageResult() }
-
         return newSearchResponseList(results, hasNext = results.isNotEmpty())
     }
 

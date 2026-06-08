@@ -19,11 +19,11 @@ class İnfluencerChicks : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}"      to "Tüm Videolar",
+       // "${mainUrl}"      to "Tüm Videolar",
         "${mainUrl}/category/youtube-3"   to "Youtuber",
-        "${mainUrl}/category/celebrity-2" to "Ünlü",
+        "${mainUrl}/category/celebrity-2" to "Celebrity",
         "${mainUrl}/category/twitch-1"  to "Twitch",
-        "${mainUrl}/category/instagram-4"  to "İnstagram",
+        "${mainUrl}/category/instagram-4"  to "Instagram",
         "${mainUrl}/category/patreon-2"  to "Patreon",
         "${mainUrl}/category/twitch-1"  to "Twitch",
     )

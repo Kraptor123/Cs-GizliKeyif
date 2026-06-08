@@ -54,7 +54,7 @@ class EFukt : MainAPI() {
         "${mainUrl}/category/exhibition/"         to "Exhibition",
         "${mainUrl}/category/extreme/"            to "Extreme",
         "${mainUrl}/category/fail/"               to "Fail",
-        "${mainUrl}/category/fail-old/"           to "Fail-OLD",
+        //"${mainUrl}/category/fail-old/"           to "Fail-OLD",
         "${mainUrl}/category/famous/"             to "Famous",
         "${mainUrl}/category/fights/"             to "Fights",
         "${mainUrl}/category/fisting/"            to "Fisting",

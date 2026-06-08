@@ -1,8 +1,12 @@
 package com.byayzen
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class NoodleMagazine : MainAPI() {
@@ -21,15 +25,18 @@ class NoodleMagazine : MainAPI() {
                 tagsDoc.select("div.tags-scroll a").take(10).forEach { tag ->
                     val tagTitle = tag.text()
                     val tagHref = fixUrl(tag.attr("href"))
-                    val items = app.get(tagHref).document.select("div.item").mapNotNull { it.toRes() }
+                    val items =
+                        app.get(tagHref).document.select("div.item").mapNotNull { it.toRes() }
                     if (items.isNotEmpty()) pages.add(HomePageList(tagTitle, items))
                 }
-            } catch (e: Exception) { }
+            } catch (e: Exception) {
+            }
         }
 
         if (pages.isEmpty() || page > 1) {
             val latestUrl = if (page > 1) "$mainUrl/video/?p=${page - 1}" else "$mainUrl/video/"
-            val latestItems = app.get(latestUrl).document.select("div.item").mapNotNull { it.toRes() }
+            val latestItems =
+                app.get(latestUrl).document.select("div.item").mapNotNull { it.toRes() }
             pages.add(HomePageList("Latest Videos", latestItems))
         }
 
@@ -75,29 +82,38 @@ class NoodleMagazine : MainAPI() {
         cb: (ExtractorLink) -> Unit
     ): Boolean {
         val text = app.get(data).text
-        return Regex("""window\.playlist\s*=\s*(\{.*?\});""").find(text)?.let { m ->
-            runCatching {
-                Json { ignoreUnknownKeys = true }.decodeFromString<Playlist>(m.groupValues[1])
-            }.onSuccess { playlist ->
-                playlist.sources.forEach { s ->
-                    val videoQuality = s.label.filter { it.isDigit() }.toIntOrNull() ?: Qualities.Unknown.value
 
-                    cb(
-                        newExtractorLink(
-                            source = name,
-                            name = name,
-                            url = s.file,
-                            type = INFER_TYPE
-                        ) {
-                            this.referer = "$mainUrl/"
-                            this.quality = videoQuality
-                        }
-                    )
+        val jsonString = Regex(
+            """window\.playlist\s*=\s*(\{.*?\});""",
+            setOf(RegexOption.DOT_MATCHES_ALL)
+        ).find(text)?.groupValues?.get(1) ?: run {
+            Log.d(name, "playlist bulunamadı")
+            return false
+        }
+
+        val mapper = ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        val sources = mapper.readValue(jsonString, PlaylistData::class.java)?.sources ?: run {
+            Log.d(name, "parse başarısız")
+            return false
+        }
+
+        sources.forEach { s ->
+            val quality = s.label.filter { it.isDigit() }.toIntOrNull() ?: Qualities.Unknown.value
+            cb(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = s.file,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = mainUrl
+                    this.quality = quality
                 }
-            }.isSuccess
-        } ?: false
+            )
+        }
+        return true
     }
 
-    data class Playlist(val sources: List<VideoSource>)
-    data class VideoSource(val file: String, val label: String)
-}
+    data class PlaylistData(val sources: List<VideoSource> = emptyList())
+    data class VideoSource(val file: String = "", val label: String = "")
+    }

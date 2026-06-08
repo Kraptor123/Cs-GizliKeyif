@@ -26,7 +26,7 @@ class Rusporn : MainAPI() {
         "${mainUrl}/lesbiyanki/" to "Lesbians",
         "${mainUrl}/massazh/" to "Massage",
         "${mainUrl}/masturbatsiya/" to "Masturbation",
-        "${mainUrl}/zrelye/" to "Mature",
+      //  "${mainUrl}/zrelye/" to "Mature",
         "${mainUrl}/mamki/" to "MILF",
         "${mainUrl}/negry/" to "Blacked",
         "${mainUrl}/molodyye/" to "Teen"

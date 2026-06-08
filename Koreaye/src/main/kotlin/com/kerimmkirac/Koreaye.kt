@@ -27,7 +27,7 @@ class Koreaye : MainAPI() {
         "$mainUrl/kategori/uvey-anne/" to "Üvey Anne",
         "$mainUrl/kategori/milf/" to "Milf",
         "$mainUrl/kategori/olgun/" to "Olgun",
-        "$mainUrl/kategori/genç/" to "Genç",
+       // "$mainUrl/kategori/genç/" to "Genç",
         "$mainUrl/kategori/ensest/" to "Ensest",
         "$mainUrl/kategori/hizmetci/" to "Hizmetçi",
         "$mainUrl/kategori/asyali/" to "Asyalı",

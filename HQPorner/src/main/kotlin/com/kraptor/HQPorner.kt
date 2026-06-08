@@ -117,9 +117,10 @@ class HQPorner : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         val split = url.split("kraptor")
-        val url = split[0].trim()
-        val poster = "https://${split[1]}"
-        val document = app.get(url, referer = "${mainUrl}/").document
+        Log.d("kraptor_$name", "split = $split")
+        val currentUrl = split[0].trim()
+        val poster = split[1].trim()
+        val document = app.get(currentUrl, referer = "$mainUrl/").document
 
         val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
         val description     = document.selectFirst("meta[name=description]")?.attr("content")?.trim()
@@ -143,8 +144,12 @@ class HQPorner : MainAPI() {
         val recommendations = document.select("div.\\34 u section").mapNotNull { it.toMainPageResult() }
         val actors          = document.select("li.icon.fa-star-o a").map { Actor(it.text()) }
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        return newMovieLoadResponse(title, currentUrl, TvType.NSFW, currentUrl) {
             this.posterUrl       = poster
+            this.posterHeaders   = mapOf(
+                "Referer" to "$mainUrl/",
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            )
             this.plot            = description
             this.year            = year
             this.tags            = tags

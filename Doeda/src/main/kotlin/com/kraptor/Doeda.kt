@@ -21,7 +21,7 @@ class Doeda : MainAPI() {
         mainUrl to    "Ana Sayfa",
         "${mainUrl}/category/1080p-porno-one/"       to    "1080p",
         "${mainUrl}/category/turbanli-sex/"           to    "Türbanlı",
-        "${mainUrl}/category/turk-yerli-porno/"       to    "Türk",
+        //"${mainUrl}/category/turk-yerli-porno/"       to    "Türk",
         "${mainUrl}/category/turkce-altyazili-tr/"    to    "Türkçe Altyazılı",
         "${mainUrl}/category/aile-pornos/"            to    "Aile",
         "${mainUrl}/category/amator/"                 to    "Amatör",
