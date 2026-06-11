@@ -21,63 +21,63 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class WatchPorn(context: Context) : MainAPI() {
-    override var mainUrl              = "https://watchporn.to"
-    override var name                 = "WatchPorn"
-    override val hasMainPage          = true
-    override var lang                 = "en"
-    override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.NSFW)
+    override var mainUrl = "https://watchporn.to"
+    override var name = "WatchPorn"
+    override val hasMainPage = true
+    override var lang = "en"
+    override val hasQuickSearch = false
+    override val supportedTypes = setOf(TvType.NSFW)
 
     private val context = context
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/top-rated/"           to "Top Rated",
-        "${mainUrl}/most-popular/"                    to "Most Popular",
-        "${mainUrl}/categories/manyvids/"             to "ManyVids",
-        "${mainUrl}/categories/onlyfans/"             to "OnlyFans",
-        "${mainUrl}/categories/xvideosred/"           to "XVideosRed",
-        "${mainUrl}/categories/primalfetish/"         to "PrimalFetish",
-        "${mainUrl}/categories/brazzersexxtra/"       to "BrazzersExxtra",
-        "${mainUrl}/categories/julesjordan/"          to "JulesJordan",
-        "${mainUrl}/categories/pascalssubsluts/"      to "PascalsSubSluts",
-        "${mainUrl}/categories/tabooheat/"            to "TabooHeat",
-        "${mainUrl}/categories/evilangel/"            to "Evilangel",
-        "${mainUrl}/categories/outofthefamily/"       to "OutOfTheFamily",
-        "${mainUrl}/categories/missax/"               to "MissaX",
-        "${mainUrl}/categories/loveherfeet/"          to "LoveHerFeet",
-        "${mainUrl}/categories/mommyblowsbest/"       to "MommyBlowsBest",
-        "${mainUrl}/categories/alexlegend/"           to "AlexLegend",
-        "${mainUrl}/categories/analized/"             to "Analized",
-        "${mainUrl}/categories/analintroductions/"    to "AnalIntroductions",
-        "${mainUrl}/categories/blackedraw/"           to "BlackedRaw",
-        "${mainUrl}/categories/immeganlive/"          to "ImMeganLive",
-        "${mainUrl}/categories/vixen/"                to "Vixen",
-        "${mainUrl}/categories/rkprime/"              to "RKPrime",
-        "${mainUrl}/categories/puretaboo/"            to "PureTaboo",
-        "${mainUrl}/categories/deeper/"               to "Deeper",
-        "${mainUrl}/categories/tushy/"                to "Tushy",
-        "${mainUrl}/categories/mypervyfamily/"        to "MyPervyFamily",
-        "${mainUrl}/categories/familytherapy/"        to "FamilyTherapy",
-        "${mainUrl}/categories/hotwifexxx/"           to "HotwifeXXX",
-        "${mainUrl}/categories/sislovesme/"           to "SisLovesMe",
-        "${mainUrl}/categories/wcaproductions/"       to "WCAProductions",
-        "${mainUrl}/categories/jamieyoung/"           to "JamieYoung",
-        "${mainUrl}/categories/familystrokes/"        to "FamilyStrokes",
-        "${mainUrl}/categories/allherluv/"            to "AllHerLuv",
-        "${mainUrl}/categories/blacked/"              to "Blacked",
-        "${mainUrl}/categories/tightandteen/"         to "TightAndTeen",
-        "${mainUrl}/categories/nubiles/"              to "Nubiles",
-        "${mainUrl}/categories/tushyraw/"             to "TushyRaw",
-        "${mainUrl}/categories/dadcrush/"             to "DadCrush",
-        "${mainUrl}/categories/meana-wolf/"           to "Meana Wolf",
-        "${mainUrl}/categories/cosplay/"              to "Cosplay",
-        "${mainUrl}/categories/pervmom/"              to "PervMom",
-        "${mainUrl}/categories/willtilexxx/"          to "WillTileXXX",
-        "${mainUrl}/categories/bangbus/"              to "BangBus",
-        "${mainUrl}/categories/mylifeinmiami/"        to "MyLifeInMiami",
-        "${mainUrl}/categories/analvids/"             to "AnalVids",
-        "${mainUrl}/categories/pornworld/"            to "PornWorld",
-        "${mainUrl}/categories/brattysis/"            to "BrattySis",
+        "${mainUrl}/top-rated/" to "Top Rated",
+        "${mainUrl}/most-popular/" to "Most Popular",
+        "${mainUrl}/categories/manyvids/" to "ManyVids",
+        "${mainUrl}/categories/onlyfans/" to "OnlyFans",
+        "${mainUrl}/categories/xvideosred/" to "XVideosRed",
+        "${mainUrl}/categories/primalfetish/" to "PrimalFetish",
+        "${mainUrl}/categories/brazzersexxtra/" to "BrazzersExxtra",
+        "${mainUrl}/categories/julesjordan/" to "JulesJordan",
+        "${mainUrl}/categories/pascalssubsluts/" to "PascalsSubSluts",
+        "${mainUrl}/categories/tabooheat/" to "TabooHeat",
+        "${mainUrl}/categories/evilangel/" to "Evilangel",
+        "${mainUrl}/categories/outofthefamily/" to "OutOfTheFamily",
+        "${mainUrl}/categories/missax/" to "MissaX",
+        "${mainUrl}/categories/loveherfeet/" to "LoveHerFeet",
+        "${mainUrl}/categories/mommyblowsbest/" to "MommyBlowsBest",
+        "${mainUrl}/categories/alexlegend/" to "AlexLegend",
+        "${mainUrl}/categories/analized/" to "Analized",
+        "${mainUrl}/categories/analintroductions/" to "AnalIntroductions",
+        "${mainUrl}/categories/blackedraw/" to "BlackedRaw",
+        "${mainUrl}/categories/immeganlive/" to "ImMeganLive",
+        "${mainUrl}/categories/vixen/" to "Vixen",
+        "${mainUrl}/categories/rkprime/" to "RKPrime",
+        "${mainUrl}/categories/puretaboo/" to "PureTaboo",
+        "${mainUrl}/categories/deeper/" to "Deeper",
+        "${mainUrl}/categories/tushy/" to "Tushy",
+        "${mainUrl}/categories/mypervyfamily/" to "MyPervyFamily",
+        "${mainUrl}/categories/familytherapy/" to "FamilyTherapy",
+        "${mainUrl}/categories/hotwifexxx/" to "HotwifeXXX",
+        "${mainUrl}/categories/sislovesme/" to "SisLovesMe",
+        "${mainUrl}/categories/wcaproductions/" to "WCAProductions",
+        "${mainUrl}/categories/jamieyoung/" to "JamieYoung",
+        "${mainUrl}/categories/familystrokes/" to "FamilyStrokes",
+        "${mainUrl}/categories/allherluv/" to "AllHerLuv",
+        "${mainUrl}/categories/blacked/" to "Blacked",
+        "${mainUrl}/categories/tightandteen/" to "TightAndTeen",
+        "${mainUrl}/categories/nubiles/" to "Nubiles",
+        "${mainUrl}/categories/tushyraw/" to "TushyRaw",
+        "${mainUrl}/categories/dadcrush/" to "DadCrush",
+        "${mainUrl}/categories/meana-wolf/" to "Meana Wolf",
+        "${mainUrl}/categories/cosplay/" to "Cosplay",
+        "${mainUrl}/categories/pervmom/" to "PervMom",
+        "${mainUrl}/categories/willtilexxx/" to "WillTileXXX",
+        "${mainUrl}/categories/bangbus/" to "BangBus",
+        "${mainUrl}/categories/mylifeinmiami/" to "MyLifeInMiami",
+        "${mainUrl}/categories/analvids/" to "AnalVids",
+        "${mainUrl}/categories/pornworld/" to "PornWorld",
+        "${mainUrl}/categories/brattysis/" to "BrattySis",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {

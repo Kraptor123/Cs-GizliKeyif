@@ -50,7 +50,12 @@ class MissAV : MainAPI() {
             .mapNotNull { it.toMainPageResult() }
             .distinctBy { it.url }
 
-        return newHomePageResponse(request.name, home, hasNext = home.isNotEmpty())
+        return newHomePageResponse(
+            name = request.name,
+            list = home,
+            isHorizontalImages = true,
+            hasNext = home.isNotEmpty()
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
