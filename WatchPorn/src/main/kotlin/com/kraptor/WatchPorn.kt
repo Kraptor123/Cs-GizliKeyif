@@ -85,7 +85,15 @@ class WatchPorn(context: Context) : MainAPI() {
         val document = app.get(url).document
         val home = document.select("div.thumb.item").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = listOf(
+                HomePageList(
+                    name = request.name,
+                    list = home,
+                    isHorizontalImages = true
+                )
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
