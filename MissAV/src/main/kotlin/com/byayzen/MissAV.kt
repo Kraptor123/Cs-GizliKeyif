@@ -51,9 +51,13 @@ class MissAV : MainAPI() {
             .distinctBy { it.url }
 
         return newHomePageResponse(
-            name = request.name,
-            list = home,
-            isHorizontalImages = true,
+            list = listOf(
+                HomePageList(
+                    name = request.name,
+                    list = home,
+                    isHorizontalImages = true
+                )
+            ),
             hasNext = home.isNotEmpty()
         )
     }
