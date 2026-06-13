@@ -1,86 +1,110 @@
 package com.kraptor
 
 import android.annotation.SuppressLint
-import android.view.KeyEvent
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.view.View
+import android.view.VelocityTracker
+import android.view.ViewConfiguration
 import android.widget.ImageView
+import android.widget.OverScroller
 import kotlin.math.abs
 import kotlin.math.min
 
-/**
- * ZoomHelper — lightweight pinch-zoom + pan + double-tap + TV D-pad for ImageView.
- *
- * TV controls (when the item view has focus):
- *   DPAD_CENTER / ENTER → toggle between 1x and 2.5x
- *   DPAD_UP / DPAD_DOWN  → pan vertically when zoomed
- *   BACK                 → reset zoom (handled by fragment for dismiss)
- */
 @SuppressLint("ClickableViewAccessibility")
-class ZoomHelper(private val imageView: ImageView) {
+class ZoomHelper(
+    private val imageView: ImageView,
+    private val onSingleTap: (() -> Unit)? = null
+) {
 
-    private val matrix = android.graphics.Matrix()
     private var currentScale = 1f
     private var baseScale = 1f
-
     private val minScale = 1f
-    private val maxScale = 4f
+    private val maxScale = 5f
+
+    private var panX = 0f
+    private var panY = 0f
+
+    private val scroller = OverScroller(imageView.context)
+    private var velocityTracker: VelocityTracker? = null
+    private val flingRunnable = Runnable { flingStep() }
+
+    private val touchSlop = ViewConfiguration.get(imageView.context).scaledTouchSlop
+
+    private var isZooming = false
+    private var isDragging = false
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+    private var pointerId = -1
     private var isSetup = true
 
-    // ── Scale gesture ──────────────────────────────────────────
+    private val gestureDetector = GestureDetector(
+        imageView.context,
+        object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                onSingleTap?.invoke()
+                return true
+            }
+
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                isSetup = false
+                cancelFling()
+                if (currentScale > minScale * 1.5f) {
+                    animateReset()
+                } else {
+                    animateZoomTo(2.5f, e.x, e.y)
+                }
+                return true
+            }
+        }
+    )
 
     private val scaleDetector = ScaleGestureDetector(
         imageView.context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            override fun onScaleBegin(d: ScaleGestureDetector) = true
+            override fun onScaleBegin(d: ScaleGestureDetector): Boolean {
+                isZooming = true
+                cancelFling()
+                return true
+            }
+
             override fun onScale(d: ScaleGestureDetector): Boolean {
                 isSetup = false
                 val newScale = (currentScale * d.scaleFactor).coerceIn(minScale, maxScale)
                 val applied = newScale / currentScale
-                if (abs(newScale - currentScale) > 0.01f) {
-                    matrix.postScale(applied, applied, d.focusX, d.focusY)
+                if (abs(newScale - currentScale) > 0.001f) {
+                    val fx = d.focusX
+                    val fy = d.focusY
+                    panX = fx - applied * (fx - panX)
+                    panY = fy - applied * (fy - panY)
                     currentScale = newScale
-                    constrain()
-                    imageView.imageMatrix = matrix
+                    applyTransform()
                 }
                 return true
+            }
+
+            override fun onScaleEnd(d: ScaleGestureDetector) {
+                isZooming = false
+                if (currentScale < minScale * 1.05f) {
+                    animateReset()
+                }
             }
         }
     ).apply { isQuickScaleEnabled = false }
 
-    // ── Gesture (double-tap + scroll) ──────────────────────────
-
-    private val gestureDetector = android.view.GestureDetector(
-        imageView.context,
-        object : android.view.GestureDetector.SimpleOnGestureListener() {
-            override fun onDoubleTap(e: MotionEvent): Boolean {
-                isSetup = false
-                currentScale = if (currentScale > 1.5f) 1f else 2.5f
-                update(e.x, e.y)
-                return true
-            }
-
-            override fun onScroll(e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float): Boolean {
-                if (currentScale > 1.01f) {
-                    matrix.postTranslate(-dx, -dy)
-                    constrain()
-                    imageView.imageMatrix = matrix
-                    return true
-                }
-                return false
-            }
-        }
-    ).apply { setIsLongpressEnabled(false) }
-
-    // ── Touch listener ─────────────────────────────────────────
-
     init {
         imageView.scaleType = ImageView.ScaleType.MATRIX
-
         imageView.setOnTouchListener { _, event ->
-            scaleDetector.onTouchEvent(event)
             gestureDetector.onTouchEvent(event)
+            scaleDetector.onTouchEvent(event)
+
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> onTouchDown(event)
+                MotionEvent.ACTION_MOVE -> onTouchMove(event)
+                MotionEvent.ACTION_UP -> onTouchUp(event)
+                MotionEvent.ACTION_CANCEL -> onTouchCancel()
+                MotionEvent.ACTION_POINTER_UP -> onPointerUp(event)
+            }
             true
         }
 
@@ -91,96 +115,201 @@ class ZoomHelper(private val imageView: ImageView) {
         }
     }
 
-    // ── Public API ─────────────────────────────────────────────
+    private fun onTouchDown(event: MotionEvent) {
+        cancelFling()
+        pointerId = event.getPointerId(0)
+        lastTouchX = event.x
+        lastTouchY = event.y
+
+        if (velocityTracker == null) velocityTracker = VelocityTracker.obtain()
+        velocityTracker?.addMovement(event)
+    }
+
+    private fun onTouchMove(event: MotionEvent) {
+        velocityTracker?.addMovement(event)
+        if (isZooming) return
+
+        val pointerIndex = event.findPointerIndex(pointerId)
+        if (pointerIndex < 0) return
+
+        val x = event.getX(pointerIndex)
+        val y = event.getY(pointerIndex)
+        val dx = x - lastTouchX
+        val dy = y - lastTouchY
+
+        if (!isDragging && currentScale > minScale * 1.05f) {
+            if (abs(dx) > touchSlop || abs(dy) > touchSlop) isDragging = true
+        }
+
+        if (isDragging) {
+            isSetup = false
+            panX += dx
+            panY += dy
+            constrainPan()
+            applyTransform()
+        }
+        lastTouchX = x
+        lastTouchY = y
+    }
+
+    private fun onTouchUp(event: MotionEvent) {
+        if (isDragging && currentScale > minScale * 1.05f) {
+            velocityTracker?.addMovement(event)
+            velocityTracker?.computeCurrentVelocity(1000)
+            val vx = velocityTracker?.xVelocity ?: 0f
+            val vy = velocityTracker?.yVelocity ?: 0f
+            if (abs(vx) > 100 || abs(vy) > 100) startFling(-vx, -vy)
+        }
+        isDragging = false
+        velocityTracker?.recycle()
+        velocityTracker = null
+    }
+
+    private fun onTouchCancel() {
+        isDragging = false
+        velocityTracker?.recycle()
+        velocityTracker = null
+    }
+
+    private fun onPointerUp(event: MotionEvent) {
+        val newIndex = if (event.actionIndex == 0) 1 else 0
+        if (newIndex < event.pointerCount) {
+            pointerId = event.getPointerId(newIndex)
+            lastTouchX = event.getX(newIndex)
+            lastTouchY = event.getY(newIndex)
+        }
+    }
+
+    private fun startFling(vx: Float, vy: Float) {
+        val maxX = getMaxPanX(); val maxY = getMaxPanY()
+        scroller.fling(panX.toInt(), panY.toInt(), vx.toInt(), vy.toInt(),
+            -maxX.toInt(), maxX.toInt(), -maxY.toInt(), maxY.toInt(), 50, 50)
+        imageView.post(flingRunnable)
+    }
+
+    private fun flingStep() {
+        if (scroller.computeScrollOffset()) {
+            panX = scroller.currX.toFloat()
+            panY = scroller.currY.toFloat()
+            constrainPan(); applyTransform()
+            imageView.post(flingRunnable)
+        }
+    }
+
+    private fun cancelFling() {
+        scroller.forceFinished(true)
+        imageView.removeCallbacks(flingRunnable)
+    }
 
     fun resetBaseScale() {
         isSetup = false
-        calcBaseScale()
-        currentScale = 1f
-        update()
-    }
-
-    /** Toggle between fit and 2.5x — ideal for TV remote. */
-    fun toggleZoom() {
-        isSetup = false
-        currentScale = if (currentScale > 1.5f) 1f else 2.5f
-        update(imageView.width / 2f, imageView.height / 2f)
-    }
-
-    // ── Internal ───────────────────────────────────────────────
-
-    private fun calcBaseScale() {
         val d = imageView.drawable ?: return
-        val vw = imageView.width.toFloat()
-        val vh = imageView.height.toFloat()
-        if (vw <= 0f || vh <= 0f) { baseScale = 1f; return }
-        val dw = d.intrinsicWidth.toFloat()
-        val dh = d.intrinsicHeight.toFloat()
-        if (dw <= 0f || dh <= 0f) { baseScale = 1f; return }
-        baseScale = min(vw / dw, vh / dh)
-    }
-
-    private fun update(focusX: Float? = null, focusY: Float? = null) {
-        val d = imageView.drawable ?: return
-        val vw = imageView.width.toFloat()
-        val vh = imageView.height.toFloat()
+        val vw = imageView.width.toFloat(); val vh = imageView.height.toFloat()
         if (vw <= 0f || vh <= 0f) return
-        val dw = d.intrinsicWidth.toFloat()
-        val dh = d.intrinsicHeight.toFloat()
-        if (dw <= 0f || dh <= 0f) { matrix.reset(); imageView.imageMatrix = matrix; return }
+        val dw = d.intrinsicWidth.toFloat(); val dh = d.intrinsicHeight.toFloat()
+        if (dw <= 0f || dh <= 0f) return
 
-        val s = baseScale * currentScale
-        val w = dw * s
-        val h = dh * s
-        val tx = (vw - w) / 2f
-        val ty = (vh - h) / 2f
+        baseScale = min(vw / dw, vh / dh)
+        currentScale = 1f
+        panX = 0f; panY = 0f
+        applyTransform()
+    }
 
-        matrix.reset()
-        matrix.setScale(s, s)
+    fun isZoomed(): Boolean = currentScale > minScale * 1.1f
 
-        if (focusX != null && focusY != null) {
-            val dx = focusX - vw / 2f
-            val dy = focusY - vh / 2f
-            matrix.postTranslate(tx - dx * (s - baseScale) / s, ty - dy * (s - baseScale) / s)
+    fun toggleZoom() {
+        isSetup = false; cancelFling()
+        if (currentScale > minScale * 1.5f) animateReset()
+        else animateZoomTo(2.5f, imageView.width / 2f, imageView.height / 2f)
+    }
+
+    fun panByDirection(dx: Float, dy: Float): Boolean {
+        if (!isZoomed()) return false
+        panX += dx; panY += dy
+        constrainPan(); applyTransform()
+        return true
+    }
+
+    private val animateRunnable = Runnable { animateStep() }
+    private var animStartScale = 1f; private var animEndScale = 1f
+    private var animStartPanX = 0f; private var animStartPanY = 0f
+    private var animEndPanX = 0f; private var animEndPanY = 0f
+    private var animStartTime = 0L
+
+    private fun animateReset() { animateZoomTo(minScale, 0f, 0f, true) }
+
+    private fun animateZoomTo(targetScale: Float, focusX: Float, focusY: Float, resetPan: Boolean = false) {
+        cancelFling()
+        animStartScale = currentScale; animEndScale = targetScale
+        animStartPanX = panX; animStartPanY = panY
+
+        if (resetPan) {
+            animEndPanX = 0f; animEndPanY = 0f
         } else {
-            matrix.postTranslate(tx, ty)
+            val s = baseScale * targetScale
+            val d = imageView.drawable ?: return
+            val dw = d.intrinsicWidth * s; val dh = d.intrinsicHeight * s
+            val centerX = (imageView.width - dw) / 2f
+            val centerY = (imageView.height - dh) / 2f
+            animEndPanX = focusX - (focusX - centerX) * (targetScale / currentScale)
+            animEndPanY = focusY - (focusY - centerY) * (targetScale / currentScale)
         }
+        animStartTime = System.currentTimeMillis()
+        imageView.post(animateRunnable)
+    }
 
-        constrain()
+    private fun animateStep() {
+        val elapsed = System.currentTimeMillis() - animStartTime
+        val t = (elapsed.toFloat() / 250L).coerceIn(0f, 1f)
+        val ease = 1f - (1f - t) * (1f - t)
+
+        currentScale = animStartScale + (animEndScale - animStartScale) * ease
+        panX = animStartPanX + (animEndPanX - animStartPanX) * ease
+        panY = animStartPanY + (animEndPanY - animStartPanY) * ease
+        constrainPan(); applyTransform()
+
+        if (t < 1f) imageView.post(animateRunnable)
+        else if (currentScale <= minScale * 1.05f) {
+            currentScale = minScale; panX = 0f; panY = 0f; applyTransform()
+        }
+    }
+
+    private fun applyTransform() {
+        val d = imageView.drawable ?: return
+        val vw = imageView.width.toFloat(); val vh = imageView.height.toFloat()
+        val s = baseScale * currentScale
+        val dw = d.intrinsicWidth * s; val dh = d.intrinsicHeight * s
+        val matrix = android.graphics.Matrix()
+        matrix.setScale(s, s)
+        matrix.postTranslate((vw - dw) / 2f + panX, (vh - dh) / 2f + panY)
         imageView.imageMatrix = matrix
     }
 
-    private fun constrain() {
+    private fun constrainPan() {
         val d = imageView.drawable ?: return
-        val vw = imageView.width.toFloat()
-        val vh = imageView.height.toFloat()
-        if (vw <= 0f || vh <= 0f) return
+        val vw = imageView.width.toFloat(); val vh = imageView.height.toFloat()
+        val s = baseScale * currentScale
+        val dw = d.intrinsicWidth * s; val dh = d.intrinsicHeight * s
 
-        val v = FloatArray(9)
-        matrix.getValues(v)
-        val s = v[android.graphics.Matrix.MSCALE_X]
-        val dw = d.intrinsicWidth * s
-        val dh = d.intrinsicHeight * s
-        val tx = v[android.graphics.Matrix.MTRANS_X]
-        val ty = v[android.graphics.Matrix.MTRANS_Y]
-
-        var dx = 0f
-        var dy = 0f
-
-        if (dw < vw) dx = (vw - dw) / 2f - tx
-        else {
-            if (tx > 0f) dx = -tx
-            else if (tx + dw < vw) dx = vw - dw - tx
+        if (dw <= vw) panX = 0f else {
+            val maxPanX = (dw - vw) / 2f
+            panX = panX.coerceIn(-maxPanX, maxPanX)
         }
-
-        if (dh < vh) dy = (vh - dh) / 2f - ty
-        else {
-            if (ty > 0f) dy = -ty
-            else if (ty + dh < vh) dy = vh - dh - ty
+        if (dh <= vh) panY = 0f else {
+            val maxPanY = (dh - vh) / 2f
+            panY = panY.coerceIn(-maxPanY, maxPanY)
         }
+    }
 
-        if (abs(dx) > 0.1f || abs(dy) > 0.1f) {
-            matrix.postTranslate(dx, dy)
-        }
+    private fun getMaxPanX(): Float {
+        val d = imageView.drawable ?: return 0f
+        val dw = d.intrinsicWidth * baseScale * currentScale
+        return if (dw > imageView.width) (dw - imageView.width) / 2f else 0f
+    }
+
+    private fun getMaxPanY(): Float {
+        val d = imageView.drawable ?: return 0f
+        val dh = d.intrinsicHeight * baseScale * currentScale
+        return if (dh > imageView.height) (dh - imageView.height) / 2f else 0f
     }
 }

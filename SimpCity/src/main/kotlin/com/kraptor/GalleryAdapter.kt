@@ -2,17 +2,12 @@ package com.kraptor
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
-import androidx.collection.LruCache
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil3.BitmapImage
 import coil3.asDrawable
@@ -20,34 +15,27 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.Disposable
 import coil3.request.ImageRequest
-import coil3.request.SuccessResult
 import coil3.size.Scale
-import com.lagradost.api.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-// BuildConfig YOK — plugin.resPackageName kullanılıyor
 class GalleryAdapter(
     private val plugin: SimpCityPlugin,
     private val imageUrls: List<String>,
-    private val context: Context
-) : RecyclerView.Adapter<GalleryAdapter.ImageViewHolder>() {
+    private val context: Context,
+    private val onPageChanged: ((Int) -> Unit)? = null,
+    private val onImageClick: (() -> Unit)? = null
+) : RecyclerView.Adapter<GalleryAdapter.GalleryViewHolder>() {
 
     private val screenWidth: Int
     private val screenHeight: Int
-    private val viewHolders = mutableMapOf<Int, ImageViewHolder>()
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
-    private val cacheSize = maxMemory / 8
-    private val imageCache = object : LruCache<String, Bitmap>(cacheSize) {
-        override fun sizeOf(key: String, value: Bitmap): Int {
-            return value.allocationByteCount / 1024
-        }
-    }
+    var currentPosition: Int = 0
+        private set
 
     init {
         context.resources.displayMetrics.let {
@@ -61,69 +49,113 @@ class GalleryAdapter(
         coroutineScope.cancel()
     }
 
-    inner class ImageViewHolder(
+    inner class GalleryViewHolder(
         private val plugin: SimpCityPlugin,
-        view: View,
+        val containerView: View,
         private val adapter: GalleryAdapter
-    ) : RecyclerView.ViewHolder(view) {
-        val imageView: ImageView = view.findView("page")
-        private val zoomHelper = ZoomHelper(imageView)
-        private var currentRequestId: String? = null
+    ) : RecyclerView.ViewHolder(containerView) {
+
+        val imageView: ImageView
+        private val zoomHelper: ZoomHelper
+        private val pageLoading: View
+        private val pageError: View
+
         private var currentDisposable: Disposable? = null
+        private var currentUrl: String? = null
 
         init {
-            imageView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            imageView.scaleType = ImageView.ScaleType.MATRIX
-            imageView.setBackgroundColor(0xFF121212.toInt())
+            imageView = ImageView(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.MATRIX
+                setBackgroundColor(android.graphics.Color.BLACK)
+                isFocusable = true
+                isFocusableInTouchMode = true
+            }
+            
+            zoomHelper = ZoomHelper(imageView, onSingleTap = { 
+                onImageClick?.invoke()
+            })
 
-            view.isFocusable = true
-            view.setOnKeyListener { _, keyCode, event ->
+            val container = containerView.findViewById<ViewGroup>(
+                plugin.resources!!.getIdentifier("pageContainer", "id", plugin.resPackageName)
+            )
+            (container as? ViewGroup)?.addView(imageView, 0)
+
+            pageLoading = containerView.findView("pageLoading")
+            pageError = containerView.findView("pageError")
+
+            containerView.setOnKeyListener { _, keyCode, event ->
                 if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                        zoomHelper.toggleZoom()
-                        true
-                    }
-                    else -> false
+                handleDpadKey(keyCode)
+            }
+        }
+
+        private fun handleDpadKey(keyCode: Int): Boolean {
+            val step = imageView.width * 0.15f
+            return when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    zoomHelper.toggleZoom()
+                    true
                 }
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (zoomHelper.isZoomed()) {
+                        zoomHelper.panByDirection(step, 0f)
+                        true
+                    } else false
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (zoomHelper.isZoomed()) {
+                        zoomHelper.panByDirection(-step, 0f)
+                        true
+                    } else false
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (zoomHelper.isZoomed()) {
+                        zoomHelper.panByDirection(0f, step)
+                        true
+                    } else false
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (zoomHelper.isZoomed()) {
+                        zoomHelper.panByDirection(0f, -step)
+                        true
+                    } else false
+                }
+                else -> false
             }
         }
 
         fun loadImage(targetPosition: Int) {
             cancelLoad()
-
             if (targetPosition !in 0 until imageUrls.size) return
             val primaryUrl = imageUrls[targetPosition]
+            currentUrl = primaryUrl
 
-            val requestId = "$primaryUrl-$targetPosition-${System.currentTimeMillis()}"
-            currentRequestId = requestId
-            imageView.tag = requestId
+            val requestId = "$primaryUrl-$targetPosition"
+            containerView.tag = requestId
 
-            imageCache.get(primaryUrl)?.let { bitmap ->
-                if (imageView.tag == requestId) {
-                    imageView.setImageBitmap(bitmap)
-                    imageView.post { zoomHelper.resetBaseScale() }
-                }
-                return
-            }
-
-            imageView.setImageResource(android.R.drawable.progress_indeterminate_horizontal)
+            pageLoading.visibility = View.VISIBLE
+            pageError.visibility = View.GONE
+            imageView.setImageDrawable(null)
 
             enqueueImage(
                 url = primaryUrl,
                 requestId = requestId,
                 onSuccess = { drawable ->
-                    if (imageView.tag == requestId) {
-                        val bmp = drawableToBitmap(drawable)
-                        imageCache.put(primaryUrl, bmp)
-                        imageView.setImageBitmap(bmp)
+                    if (containerView.tag == requestId) {
+                        pageLoading.visibility = View.GONE
+                        pageError.visibility = View.GONE
+                        imageView.setImageDrawable(drawable)
                         imageView.post { zoomHelper.resetBaseScale() }
                     }
                 },
                 onError = {
-                    if (imageView.tag == requestId) {
-                        imageView.setImageResource(android.R.drawable.stat_notify_error)
-                        imageView.post { zoomHelper.resetBaseScale() }
+                    if (containerView.tag == requestId) {
+                        pageLoading.visibility = View.GONE
+                        pageError.visibility = View.VISIBLE
                     }
                 }
             )
@@ -132,7 +164,7 @@ class GalleryAdapter(
         private fun enqueueImage(
             url: String,
             requestId: String,
-            onSuccess: (Drawable) -> Unit,
+            onSuccess: (android.graphics.drawable.Drawable) -> Unit,
             onError: () -> Unit
         ) {
             try {
@@ -141,46 +173,35 @@ class GalleryAdapter(
                 val request = ImageRequest.Builder(context)
                     .data(url)
                     .size(screenWidth, screenHeight)
-                    .scale(Scale.FILL)
+                    .scale(Scale.FIT)
                     .httpHeaders(headers)
                     .target { resultImage ->
                         val drawable = when (resultImage) {
-                            is BitmapImage -> BitmapDrawable(context.resources, resultImage.bitmap)
+                            is BitmapImage -> android.graphics.drawable.BitmapDrawable(
+                                context.resources, resultImage.bitmap
+                            )
                             else -> resultImage.asDrawable(context.resources)
                         }
-                        if (imageView.tag == requestId) {
+                        if (containerView.tag == requestId) {
                             try { onSuccess(drawable) } catch (_: Throwable) {}
                         }
                     }
                     .listener(onError = { _, _ ->
-                        if (imageView.tag == requestId) onError()
+                        if (containerView.tag == requestId) onError()
                     })
                     .build()
 
                 currentDisposable = plugin.imageLoader.enqueue(request)
             } catch (e: Exception) {
-                imageView.post { if (imageView.tag == requestId) onError() }
+                containerView.post { if (containerView.tag == requestId) onError() }
             }
         }
 
         fun cancelLoad() {
-            currentRequestId = null
-            imageView.tag = null
+            containerView.tag = null
+            currentUrl = null
             try { currentDisposable?.dispose() } catch (_: Throwable) {}
             currentDisposable = null
-        }
-
-        private fun drawableToBitmap(drawable: Drawable): Bitmap {
-            if (drawable is BitmapDrawable) {
-                drawable.bitmap?.let { return it }
-            }
-            val width = drawable.intrinsicWidth.coerceAtLeast(1)
-            val height = drawable.intrinsicHeight.coerceAtLeast(1)
-            return androidx.core.graphics.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-                val canvas = Canvas(this)
-                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                drawable.draw(canvas)
-            }
         }
 
         @SuppressLint("DiscouragedApi")
@@ -192,47 +213,41 @@ class GalleryAdapter(
     }
 
     @SuppressLint("DiscouragedApi")
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
-        val layoutId = plugin.resources!!.getIdentifier("page", "layout", plugin.resPackageName)
-        require(layoutId != 0) { "Layout 'page' not found in ${plugin.resPackageName}" }
-
-        return ImageViewHolder(
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GalleryViewHolder {
+        val layoutId = plugin.resources!!.getIdentifier("gallery_page", "layout", plugin.resPackageName)
+        return GalleryViewHolder(
             plugin,
-            LayoutInflater.from(context).inflate(
-                plugin.resources!!.getLayout(layoutId),
-                parent,
-                false
-            ).apply {
-                layoutParams = ViewGroup.LayoutParams(screenWidth, ViewGroup.LayoutParams.MATCH_PARENT)
-            },
+            LayoutInflater.from(context).inflate(plugin.resources!!.getLayout(layoutId), parent, false),
             this
         )
     }
 
-    override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
-        viewHolders[position] = holder
+    override fun onBindViewHolder(holder: GalleryViewHolder, position: Int) {
         holder.loadImage(position)
-        if (position == 0) preloadAdjacent(holder.itemView.parent as? RecyclerView)
     }
 
-    override fun onViewRecycled(holder: ImageViewHolder) {
+    override fun onViewRecycled(holder: GalleryViewHolder) {
         super.onViewRecycled(holder)
         holder.cancelLoad()
-        val toRemove = viewHolders.entries.firstOrNull { it.value == holder }?.key
-        if (toRemove != null) viewHolders.remove(toRemove)
+        holder.imageView.setImageDrawable(null)
     }
 
-    fun preloadAdjacent(recyclerView: RecyclerView?) {
-        if (recyclerView == null || recyclerView.layoutManager !is LinearLayoutManager) return
-        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-        val firstVisible = layoutManager.findFirstVisibleItemPosition()
-        val lastVisible = layoutManager.findLastVisibleItemPosition()
-        if (firstVisible == RecyclerView.NO_POSITION || lastVisible == RecyclerView.NO_POSITION) return
+    override fun getItemCount() = imageUrls.size
 
-        val preloadRange = maxOf(0, firstVisible - 1)..minOf(itemCount - 1, lastVisible + 1)
+    fun onPageSelected(position: Int) {
+        currentPosition = position
+        onPageChanged?.invoke(position)
+        preloadAdjacent(position)
+    }
+
+    private fun preloadAdjacent(position: Int, preloadRange: Int = 2) {
+        val start = (position - preloadRange).coerceAtLeast(0)
+        val end = (position + preloadRange).coerceAtMost(imageUrls.lastIndex)
+
         coroutineScope.launch(Dispatchers.IO) {
-            preloadRange.forEach { position ->
-                preloadSingleImage(position)
+            for (i in start..end) {
+                if (i == position) continue
+                preloadSingleImage(i)
             }
         }
     }
@@ -240,53 +255,17 @@ class GalleryAdapter(
     private suspend fun preloadSingleImage(position: Int) {
         if (position !in 0 until imageUrls.size) return
         val url = imageUrls[position]
-        if (url.isEmpty() || imageCache.get(url) != null) return
-
         try {
-            val bitmap = fetchBitmap(url)
-            if (position in 0 until imageUrls.size && imageUrls[position] == url) {
-                imageCache.put(url, bitmap)
-            } else {
-                try { bitmap.recycle() } catch (_: Throwable) {}
-            }
+            val headers = getNetworkHeaders()
+            val request = ImageRequest.Builder(context)
+                .data(url)
+                .size(screenWidth, screenHeight)
+                .scale(Scale.FIT)
+                .httpHeaders(headers)
+                .build()
+            plugin.imageLoader.execute(request)
         } catch (_: Exception) {}
     }
-
-    private suspend fun fetchBitmap(url: String): Bitmap {
-        val headers = getNetworkHeaders()
-        val request = ImageRequest.Builder(context)
-            .data(url)
-            .size(screenWidth, screenHeight)
-            .scale(Scale.FILL)
-            .httpHeaders(headers)
-            .build()
-
-        val result = plugin.imageLoader.execute(request)
-        if (result is SuccessResult) {
-            val image = result.image
-            return when (image) {
-                is BitmapImage -> image.bitmap
-                else -> {
-                    val drawable = image.asDrawable(context.resources)
-                    if (drawable is BitmapDrawable) {
-                        drawable.bitmap
-                    } else {
-                        val width = drawable.intrinsicWidth.coerceAtLeast(1)
-                        val height = drawable.intrinsicHeight.coerceAtLeast(1)
-                        androidx.core.graphics.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-                            val canvas = Canvas(this)
-                            drawable.setBounds(0, 0, canvas.width, canvas.height)
-                            drawable.draw(canvas)
-                        }
-                    }
-                }
-            }
-        } else {
-            throw Exception("Image request failed for $url")
-        }
-    }
-
-    override fun getItemCount() = imageUrls.size
 }
 
 private fun getNetworkHeaders() = NetworkHeaders.Builder()

@@ -18,7 +18,6 @@ import coil3.network.httpHeaders
 import coil3.request.allowConversionToBitmap
 import coil3.request.maxBitmapSize
 import coil3.size.Size
-import com.lagradost.api.Log
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
@@ -34,7 +33,6 @@ class SimpCityPlugin : Plugin() {
     lateinit var imageLoader: ImageLoader
         private set
 
-    // BuildConfig YOK — runtime'da bulunuyor
     var resPackageName: String = "com.kraptor.simpcity"
         private set
 
@@ -43,23 +41,17 @@ class SimpCityPlugin : Plugin() {
         appContext = context
         activity = context as AppCompatActivity
 
-        // Resource package name'i kesin olarak bul
         try {
-            val testId = context.resources.getIdentifier("page_list", "id", "com.kraptor.simpcity")
+            val testId = context.resources.getIdentifier("galleryPager", "id", "com.kraptor.simpcity")
             if (testId != 0) {
                 resPackageName = "com.kraptor.simpcity"
-                Log.d("kraptor_SimpCity", "resPackageName = com.kraptor.simpcity (found page_list)")
             } else {
-                val testId2 = context.resources.getIdentifier("page_list", "id", "com.kraptor")
+                val testId2 = context.resources.getIdentifier("galleryPager", "id", "com.kraptor")
                 if (testId2 != 0) {
                     resPackageName = "com.kraptor"
-                    Log.d("kraptor_SimpCity", "resPackageName = com.kraptor (found page_list)")
-                } else {
-                    Log.e("kraptor_SimpCity", "page_list ID not found in any package!")
                 }
             }
         } catch (e: Exception) {
-            Log.e("kraptor_SimpCity", "resPackageName detection failed: ${e.message}")
         }
 
         val displayMetrics = context.resources.displayMetrics
@@ -103,33 +95,17 @@ class SimpCityPlugin : Plugin() {
         registerExtractorAPI(FiledItchFilesExtractor())
     }
 
-    fun loadGallery(images: List<String>) {
-        Log.d("kraptor_SimpCity", "loadGallery called with ${images.size} images")
-
-        if (images.isEmpty()) {
-            Log.e("kraptor_SimpCity", "loadGallery: images list is empty")
-            return
-        }
-
-        val act = activity
-        if (act == null) {
-            Log.e("kraptor_SimpCity", "loadGallery: activity is NULL!")
-            return
-        }
-
-        Log.d("kraptor_SimpCity", "loadGallery: activity exists, posting fragment to main thread")
+    fun loadGallery(title: String, images: List<String>) {
+        if (images.isEmpty()) return
+        val act = activity ?: return
 
         Handler(Looper.getMainLooper()).post {
             try {
-                Log.d("kraptor_SimpCity", "loadGallery: creating GalleryFragment")
-                val frag = GalleryFragment(this, images)
-                Log.d("kraptor_SimpCity", "loadGallery: calling frag.show()")
+                val frag = GalleryFragment(this, title, images)
                 frag.show(act.supportFragmentManager, "SimpGallery")
-                Log.d("kraptor_SimpCity", "loadGallery: frag.show() completed")
             } catch (e: Exception) {
-                Log.e("kraptor_SimpCity", "loadGallery: frag.show() FAILED: ${e.message}")
-                e.printStackTrace()
             }
         }
     }
+
 }
