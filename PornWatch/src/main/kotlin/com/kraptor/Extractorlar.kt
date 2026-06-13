@@ -298,10 +298,11 @@ open class Vidguardto : ExtractorApi() {
 
 }
 
-open class LuluBase : ExtractorApi() {
+
+open class LULUBASE : ExtractorApi() {
     override val name = "LuluStream"
-    override val mainUrl = "https://lulustream.com"
-    override val requiresReferer = false
+    override val mainUrl = "https://luluvid.com"
+    override val requiresReferer = true
 
     override suspend fun getUrl(
         url: String,
@@ -309,81 +310,84 @@ open class LuluBase : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        try {
-            val embedUrl = url.replace("/d/", "/e/")
+        Log.d("LULUSTREAM", "getUrl | $url | $referer")
 
-            val currentHost = try { URI(embedUrl).host } catch (e: Exception) { "lulustream.com" }
-            val currentOrigin = "https://$currentHost"
+        val response = app.get(url, referer = referer)
+        Log.d("LULUSTREAM", "response | ${response.code}")
 
-            val requestHeaders = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Referer" to (referer ?: embedUrl)
-            )
+        val doc = response.document
+        val scripts = doc.select("script").map { it.data() }
+        Log.d("LULUSTREAM", "scripts | ${scripts.size}")
 
-            val response = app.get(embedUrl, headers = requestHeaders)
-            val html = response.text
-            val m3u8Regex = """["']([^"']+\.m3u8[^"']*)["']""".toRegex()
-            val match = m3u8Regex.find(html)
-
-            if (match != null) {
-                val m3u8Url = match.groupValues[1]
-
-                val videoHeaders = mapOf(
-                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Referer" to embedUrl,
-                    "Origin" to currentOrigin,
-                    "Accept" to "*/*"
-                )
-
-                M3u8Helper.generateM3u8(
-                    source = this.name,
-                    streamUrl = m3u8Url,
-                    referer = embedUrl,
-                    headers = videoHeaders
-                ).forEach(callback)
-            }
-        } catch (e: Exception) {
+        val packed = scripts.firstOrNull {
+            it.contains("eval(function(p,a,c,k,e,d)") && it.contains("m3u8")
         }
+        Log.d("LULUSTREAM", "packed | ${packed != null}")
+
+        if (packed == null) return
+
+        val unpacked = JsUnpacker(packed).unpack()
+        Log.d("LULUSTREAM", "unpacked | ${unpacked != null} | ${unpacked?.take(200)}")
+
+        if (unpacked == null) return
+
+        val m3u8 = Regex("""file:\s*["'](https?://[^"']+\.m3u8[^"']*)["']""")
+            .find(unpacked)?.groupValues?.get(1)
+            ?: Regex("""(https?://[^\s"']+\.m3u8[^\s"']*)""")
+                .find(unpacked)?.groupValues?.get(1)
+
+        Log.d("LULUSTREAM", "m3u8 | $m3u8")
+
+        if (m3u8 == null) return
+
+        callback(
+            newExtractorLink(
+                name,
+                name,
+                m3u8
+            ) {
+                this.referer = mainUrl
+                this.quality = Qualities.P1080.value
+                this.headers = mapOf("Origin" to mainUrl)
+            }
+        )
+
+        Log.d("LULUSTREAM", "done")
     }
 }
 
-
-class LuluStream : LuluBase() {
+class LULUSTREAM : LULUBASE() {
     override val name = "LuluStream"
     override val mainUrl = "https://lulustream.com"
 }
 
-class LuluVid : LuluBase() {
-    override val name = "Lulustream"
-    override val mainUrl = "https://luluvid.com"
-}
 
-class LuluVdo : LuluBase() {
+class LULUVDO : LULUBASE() {
     override val name = "Lulustream"
     override val mainUrl = "https://luluvdo.com"
 }
 
-class LuluVdoo : LuluBase() {
+class LULUVDOO : LULUBASE() {
     override val name = "Lulustream"
     override val mainUrl = "https://luluvdoo.com"
 }
 
-class LuluPvp : LuluBase() {
+class LULUPVP : LULUBASE() {
     override val name = "Lulustream"
     override val mainUrl = "https://lulupvp.com"
 }
 
-class Luludlc : LuluBase() {
+class LULUDLC : LULUBASE() {
     override val name = "Lulustream"
     override val mainUrl = "https://lulu.dlc.ovh/"
 }
 
-class Lulu0 : LuluBase() {
+class LULU0 : LULUBASE() {
     override val name = "Lulustream"
     override val mainUrl = "https://lulu0.ovh/"
 }
 
-class Lulux08 : LuluBase() {
+class LULUX08 : LULUBASE() {
     override val name = "Lulustream"
     override val mainUrl = "https://x08.ovh/"
 }
@@ -552,16 +556,20 @@ open class Player4Me : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        Log.d("Player4Me", url)
         val id = url.substringAfter("#")
 
+        Log.d("Player4Me", id)
         val response = app.get("$mainUrl/api/v1/video?id=$id", referer = "${mainUrl}/", headers = mapOf(
             "Host" to mainUrl.substringAfter("://"),
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
             "Accept" to "*/*",
             "Cookie" to "popunderCount/=1",
         ))
+        Log.d("Player4Me", "${response.code}")
 
         val sifreliYanit = response.text.trim()
+        Log.d("Player4Me", sifreliYanit.take(50))
 
         if (sifreliYanit.startsWith("<html>")) {
             return
@@ -571,8 +579,10 @@ open class Player4Me : ExtractorApi() {
 
         val map = mapper.readValue<Yanit>(aesCoz)
         val videoUrl = map.source ?: map.hls ?: map.cf
+        Log.d("Player4Me", "$videoUrl")
 
         if (videoUrl != null) {
+            Log.d("Player4Me", videoUrl)
             callback.invoke(newExtractorLink(
                 this.name,
                 this.name,
@@ -582,9 +592,12 @@ open class Player4Me : ExtractorApi() {
                 this.referer = "${mainUrl}/"
                 this.headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0")
             })
+        } else {
+            Log.d("Player4Me", "Bitiş")
         }
     }
 }
+
 
 class Vip4me : Player4Me() {
     override var mainUrl = "https://vip.player4me.vip"
@@ -596,6 +609,30 @@ class RPMShare : Player4Me() {
     override var name = "Player4Me"
 }
 
+class UpnsOnline : Player4Me() {
+    override var mainUrl = "https://my.upns.online"
+    override var name = "Player4Me"
+}
+
+class EmbedSeek : Player4Me() {
+    override var mainUrl = "https://my.embedseek.online"
+    override var name = "Player4Me"
+}
+
+class VipSeekPlayer : Player4Me() {
+    override var mainUrl = "https://vip.seekplayer.vip"
+    override var name = "Player4Me"
+}
+
+class EasyVidPlayer : Player4Me() {
+    override var mainUrl = "https://p.easyvidplayer.com"
+    override var name = "Player4Me"
+}
+
+class VipEasyVidPlayer : Player4Me() {
+    override var mainUrl = "https://vip.easyvidplayer.com"
+    override var name = "Player4Me"
+}
 
 
 
