@@ -3,10 +3,7 @@ package com.kraptor
 
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.extractors.FileMoonSx
-import com.lagradost.cloudstream3.extractors.Maxstream
 import com.lagradost.cloudstream3.extractors.StreamTape
-import com.lagradost.cloudstream3.extractors.StreamTapeNet
-import com.lagradost.cloudstream3.extractors.StreamTapeXyz
 import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
@@ -33,6 +30,8 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(VidHidePro6())
         registerExtractorAPI(VidHidePro7())
         registerExtractorAPI(VidhideVIP())
+        registerExtractorAPI(CloudWish())
+        registerExtractorAPI(Dooood())
         registerExtractorAPI(Javlion())
         registerExtractorAPI(Dhcplay())
         registerExtractorAPI(Smoothpre())
@@ -52,18 +51,15 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(EmturbovidExtractor())
         registerExtractorAPI(FileMoonSx())
         registerExtractorAPI(DoodPmExtractor())
-        registerExtractorAPI(LuluStream())
         registerExtractorAPI(FileMoonIn())
-        registerExtractorAPI(LuluVdo())
-        registerExtractorAPI(LuluPvp())
-        registerExtractorAPI(LuluVid())
-        registerExtractorAPI(Luludlc())
-        registerExtractorAPI(Lulu0())
-        registerExtractorAPI(LuluVdoo())
         registerExtractorAPI(VidNest())
-        registerExtractorAPI(Lulux08())
         registerExtractorAPI(HgLink())
         registerExtractorAPI(RyderJet())
+        registerExtractorAPI(UpnsOnline())
+        registerExtractorAPI(EmbedSeek())
+        registerExtractorAPI(VipSeekPlayer())
+        registerExtractorAPI(EasyVidPlayer())
+        registerExtractorAPI(VipEasyVidPlayer())
         registerExtractorAPI(MyCloudZ())
         registerExtractorAPI(VidStack())
         registerExtractorAPI(StbP2P())
@@ -79,8 +75,6 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(Filemoonx08())
         registerExtractorAPI(Player4Me())
         registerExtractorAPI(Vip4me())
-        registerExtractorAPI(CloudWish())
-        registerExtractorAPI(Dooood())
         registerExtractorAPI(RPMShare())
         registerExtractorAPI(Playmogo())
         registerExtractorAPI(Voe())
@@ -90,5 +84,12 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(Watchadsontape())
         registerExtractorAPI(Lancewhoisdifficult())
         registerExtractorAPI(Javlesbians())
+        registerExtractorAPI(LULUSTREAM())
+        registerExtractorAPI(LULUVDO())
+        registerExtractorAPI(LULUVDOO())
+        registerExtractorAPI(LULUPVP())
+        registerExtractorAPI(LULUDLC())
+        registerExtractorAPI(LULU0())
+        registerExtractorAPI(LULUX08())
     }
 }

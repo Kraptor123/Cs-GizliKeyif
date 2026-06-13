@@ -178,23 +178,48 @@ class Mangoporn : MainAPI() {
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
-    ): Boolean = coroutineScope {
+    ): Boolean {
+        Log.d("MANGOPORN", "LoadlStart | $data | $isCasting")
+
         val response = app.get(data)
+        Log.d("MANGOPORN", "Res | ${response.code}")
+
         val document = response.document
         val tabs = document.select("div#pettabs > ul a")
-        val jobs = tabs.map { it.attr("href") }.filter { it.isNotEmpty() }.map { link ->
-            launch {
-                val fullUrl = fixUrl(link)
+        Log.d("MANGOPORN", "Sekme | ${tabs.size}")
 
-                loadExtractor(fullUrl, subtitleCallback) { extractorLink ->
-                    callback.invoke(extractorLink)
+        val links = tabs.map { it.attr("href") }.filter { it.isNotEmpty() }
+        Log.d("MANGOPORN", "Linkler | ${links.size} | $links")
+
+        return coroutineScope {
+            val jobs = links.mapIndexed { index, link ->
+                launch {
+                    val fullUrl = fixUrl(link)
+                    Log.d("MANGOPORN", "Çıkan link [$index] | $fullUrl")
+
+                    when {
+                        fullUrl.contains("my.player4me.online") -> {
+                            Player4Me().getUrl(fullUrl, mainUrl, subtitleCallback, callback)
+                        }
+
+                        fullUrl.contains("vip.player4me.vip") -> {
+                            Vip4me().getUrl(fullUrl, mainUrl, subtitleCallback, callback)
+                        }
+                        else -> {
+                            loadExtractor(fullUrl, subtitleCallback) { extractorLink ->
+                                Log.d(
+                                    "MANGOPORN",
+                                    "Başarı[$index] | ${extractorLink.name} | ${extractorLink.url} | ${extractorLink.quality}"
+                                )
+                                callback.invoke(extractorLink)
+                            }
+                        }
+                    }
                 }
             }
+            jobs.joinAll()
+            links.isNotEmpty()
         }
-
-        jobs.joinAll()
-        Log.d("Test", "All jobs finished")
-        true
     }
 
     private val igrencKelimeler = listOf(
