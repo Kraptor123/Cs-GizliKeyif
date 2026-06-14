@@ -90,6 +90,7 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                 settings.setSupportMultipleWindows(false)
                 settings.builtInZoomControls = true
                 settings.displayZoomControls = false
+                settings.setNeedInitialFocus(true)
                 isFocusable = true
                 isFocusableInTouchMode = true
                 setBackgroundColor(Color.BLACK)
@@ -143,7 +144,8 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                         *:focus { outline: 4px solid #FFD600 !important; outline-offset: 2px !important; box-shadow: 0 0 15px #FFD600 !important; }
                         input:focus, button:focus, a:focus, [tabindex]:focus { border-color: #FFD600 !important; }
                         
-                        /* Overlay & Captcha Scaling for TV */
+                        /* Overlay & Captcha Styling for TV */
+                        .captcha-widget, .captcha-container, .captcha-popup, .captcha-window,
                         div[style*="z-index"][style*="2147483647"], 
                         div[class*="captcha-challenge"],
                         #captcha-challenge,
@@ -162,6 +164,13 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                             background: #111 !important;
                             border: 2px solid #333 !important;
                             box-shadow: 0 0 50px rgba(0,0,0,0.9) !important;
+                            pointer-events: auto !important;
+                        }
+
+                        /* Ensure background is non-interactable when captcha is active */
+                        .captcha-active-trap {
+                            pointer-events: none !important;
+                            filter: blur(2px) grayscale(0.5) !important;
                         }
 
                         /* Ensure iframes are visible when focused */
@@ -202,39 +211,88 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                         if (p && !p.value) { p.value = '$safePass'; p.dispatchEvent(new Event('input', {bubbles:true})); }
                     }
 
+                    var captchaSelectors = [
+                        '.captcha-widget', '.captcha-container', '.captcha-popup', '.captcha-window',
+                        'div[style*="z-index"][style*="2147483647"]',
+                        'iframe[src*="turnstile"]',
+                        'iframe[src*="hcaptcha"]',
+                        '.h-captcha-challenge'
+                    ];
+
+                    function isCaptchaVisible() {
+                        for (var selector of captchaSelectors) {
+                            var el = document.querySelector(selector);
+                            if (el && el.offsetHeight > 0) return el;
+                        }
+                        return null;
+                    }
+
                     function makeEverythingFocusable() {
-                        var elements = document.querySelectorAll('input, button, a, [role="button"], [data-captcha-widget] img, .captcha-item, .selti-item, [tabindex], iframe');
+                        var captcha = isCaptchaVisible();
+                        var container = captcha || document;
+
+                        var elements = container.querySelectorAll('input, button, a, [role="button"], [data-captcha-widget] img, .captcha-item, .selti-item, [tabindex], iframe');
                         elements.forEach(function(el) {
                             if (!el.getAttribute('tabindex')) {
                                 el.setAttribute('tabindex', '0');
                             }
                         });
 
-                        // Check for popular verification overlays
-                        var overlays = [
-                            'div[style*="z-index"][style*="2147483647"]',
-                            'iframe[src*="turnstile"]',
-                            'iframe[src*="hcaptcha"]',
-                            '.h-captcha-challenge'
-                        ];
-                        
-                        for (var selector of overlays) {
-                            var overlay = document.querySelector(selector);
-                            if (overlay && overlay.style.display !== 'none' && overlay.style.visibility !== 'hidden') {
-                                if (!overlay.contains(document.activeElement)) {
-                                    overlay.focus();
-                                    var first = overlay.querySelector('input, button, [tabindex="0"], iframe');
-                                    if (first && first !== document.activeElement) first.focus();
+                        if (captcha) {
+                            // Focus Trap: Disable focus on everything outside captcha
+                            document.querySelectorAll('body > *:not(.captcha-trap-ignore)').forEach(function(el) {
+                                if (!el.contains(captcha)) {
+                                    el.classList.add('captcha-active-trap');
+                                    el.setAttribute('aria-hidden', 'true');
                                 }
-                                break;
+                            });
+                            captcha.classList.add('captcha-trap-ignore');
+                            
+                            if (!captcha.contains(document.activeElement)) {
+                                var first = captcha.querySelector('input, button, [tabindex="0"], iframe');
+                                if (first) first.focus();
+                                else captcha.focus();
                             }
+                        } else {
+                            // Cleanup trap if no captcha
+                            document.querySelectorAll('.captcha-active-trap').forEach(function(el) {
+                                el.classList.remove('captcha-active-trap');
+                                el.removeAttribute('aria-hidden');
+                            });
                         }
                     }
+
+                    // Watch for dynamic captcha creation
+                    var observer = new MutationObserver(function(mutations) {
+                        var found = false;
+                        mutations.forEach(function(mutation) {
+                            mutation.addedNodes.forEach(function(node) {
+                                if (node.nodeType === 1) {
+                                    for (var cls of ['captcha-widget', 'captcha-container', 'captcha-popup', 'captcha-window']) {
+                                        if (node.classList.contains(cls) || node.querySelector('.' + cls)) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                        if (found) makeEverythingFocusable();
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
 
                     setInterval(function() {
                         setupAutomation();
                         makeEverythingFocusable();
                     }, 1000);
+
+                    // Help DPAD enter iframes
+                    document.addEventListener('focusin', function(e) {
+                        if (e.target.tagName === 'IFRAME') {
+                            // Some TV browsers need a click to activate iframe spatial navigation
+                            simulateClick(e.target);
+                        }
+                    }, true);
 
                     document.addEventListener('keydown', function(e) {
                         if ((e.key === 'Enter' || e.keyCode === 13) && document.activeElement) {
