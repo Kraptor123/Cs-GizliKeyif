@@ -1,4 +1,4 @@
-version = 4
+version = 5
 
 dependencies {
     implementation("androidx.cardview:cardview:1.0.0")
@@ -8,10 +8,6 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.4.0")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
-    // NOT: io.getstream:photoview KALDIRILDI
-    // CloudStream plugin sistemi harici kütüphaneleri runtime'da yükleyemiyor.
-    // ZoomHelper.kt ile sıfır bağımlılık zoom çözümü kullanılıyor.
 }
 
 android {

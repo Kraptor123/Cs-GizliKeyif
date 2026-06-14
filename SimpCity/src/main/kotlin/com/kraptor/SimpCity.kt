@@ -15,7 +15,7 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
     private val username get() = Settings.getUsername(SimpCityPlugin.appContext)
     private val password get() = Settings.getPassword(SimpCityPlugin.appContext)
 
-    private val PAGES_TO_LOAD = 5
+    private val PAGES_TO_LOAD get() = Settings.getPages(SimpCityPlugin.appContext)
 
     override val mainPage = mainPageOf(
         "${mainUrl}/forums/onlyfans.8" to "OnlyFans",
