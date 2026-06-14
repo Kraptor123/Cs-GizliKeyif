@@ -15,6 +15,7 @@ class MissAV : MainAPI() {
     override var lang = "jp"
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
+    val subtitleCatUrl = "https://www.subtitlecat.com"
 
     override val mainPage = mainPageOf(
         "$mainUrl/dm169/en/weekly-hot?sort=weekly_views" to "Weekly Hot",
@@ -136,8 +137,8 @@ class MissAV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val response = app.get(data).text
-        getAndUnpack(response).let { unpacked ->
+        val response = app.get(data)
+        getAndUnpack(response.text).let { unpacked ->
             val playlistId = """/([a-f0-9\-]{36})/""".toRegex().find(unpacked)?.groupValues?.get(1)
 
             if (playlistId != null) {
@@ -154,6 +155,46 @@ class MissAV : MainAPI() {
                 )
             }
         }
+
+        try {
+            val doc = response.document
+            val title = doc.selectFirst("meta[property=og:title]")?.attr("content")?.trim().toString()
+            val javCode = "([a-zA-Z]+-\\d+)".toRegex().find(title)?.groups?.get(1)?.value
+            if(!javCode.isNullOrEmpty())
+            {
+                val query = "$subtitleCatUrl/index.php?search=$javCode"
+                val subDoc = app.get(query, timeout = 15).document
+                val subList = subDoc.select("td a")
+                for(item in subList)
+                {
+                    if(item.text().contains(javCode,ignoreCase = true))
+                    {
+                        val fullUrl = "$subtitleCatUrl/${item.attr("href")}"
+                        val pDoc = app.get(fullUrl, timeout = 10).document
+                        val sList = pDoc.select(".col-md-6.col-lg-4")
+                        for(item in sList)
+                        {
+                            try {
+                                val language = item.select(".sub-single span:nth-child(2)").text()
+                                val text = item.select(".sub-single span:nth-child(3) a")
+                                if(text != null && text.size > 0 && text[0].text() == "Download")
+                                {
+                                    val url = "$subtitleCatUrl${text[0].attr("href")}"
+                                    subtitleCallback.invoke(
+                                        SubtitleFile(
+                                            language.replace("\uD83D\uDC4D \uD83D\uDC4E",""),  // Use label for the name
+                                            url     // Use extracted URL
+                                        )
+                                    )
+                                }
+                            } catch (e: Exception) { }
+                        }
+
+                    }
+                }
+
+            }
+        } catch (e: Exception) { }
         return true
     }
 }
