@@ -75,8 +75,8 @@ class ZoomHelper(
                 if (abs(newScale - currentScale) > 0.001f) {
                     val fx = d.focusX
                     val fy = d.focusY
-                    panX = fx - applied * (fx - panX)
-                    panY = fy - applied * (fy - panY)
+                    panX = applied * panX + (1f - applied) * (fx - imageView.width / 2f)
+                    panY = applied * panY + (1f - applied) * (fy - imageView.height / 2f)
                     currentScale = newScale
                     applyTransform()
                 }
@@ -215,12 +215,17 @@ class ZoomHelper(
         applyTransform()
     }
 
-    fun isZoomed(): Boolean = currentScale > minScale * 1.1f
+    fun isZoomed(): Boolean = currentScale > minScale * 1.05f
 
-    fun toggleZoom() {
+    fun toggleZoom(focusX: Float? = null, focusY: Float? = null) {
         isSetup = false; cancelFling()
-        if (currentScale > minScale * 1.5f) animateReset()
-        else animateZoomTo(2.5f, imageView.width / 2f, imageView.height / 2f)
+        if (currentScale > minScale * 1.5f) {
+            animateReset()
+        } else {
+            val fx = focusX ?: (imageView.width / 2f)
+            val fy = focusY ?: (imageView.height / 2f)
+            animateZoomTo(2.5f, fx, fy)
+        }
     }
 
     fun panByDirection(dx: Float, dy: Float): Boolean {
@@ -236,24 +241,45 @@ class ZoomHelper(
     private var animEndPanX = 0f; private var animEndPanY = 0f
     private var animStartTime = 0L
 
-    private fun animateReset() { animateZoomTo(minScale, 0f, 0f, true) }
+    private fun animateReset() {
+        animateZoomTo(minScale, imageView.width / 2f, imageView.height / 2f, true)
+    }
 
-    private fun animateZoomTo(targetScale: Float, focusX: Float, focusY: Float, resetPan: Boolean = false) {
+    private fun animateZoomTo(targetScale: Float, focusX: Float, focusY: Float, isReset: Boolean = false) {
         cancelFling()
-        animStartScale = currentScale; animEndScale = targetScale
-        animStartPanX = panX; animStartPanY = panY
+        animStartScale = currentScale
+        animEndScale = targetScale
+        animStartPanX = panX
+        animStartPanY = panY
 
-        if (resetPan) {
-            animEndPanX = 0f; animEndPanY = 0f
+        if (isReset) {
+            animEndPanX = 0f
+            animEndPanY = 0f
         } else {
-            val s = baseScale * targetScale
-            val d = imageView.drawable ?: return
-            val dw = d.intrinsicWidth * s; val dh = d.intrinsicHeight * s
-            val centerX = (imageView.width - dw) / 2f
-            val centerY = (imageView.height - dh) / 2f
-            animEndPanX = focusX - (focusX - centerX) * (targetScale / currentScale)
-            animEndPanY = focusY - (focusY - centerY) * (targetScale / currentScale)
+            val applied = targetScale / currentScale
+            
+            // Correct math for pan offset from center:
+            // panX_new = applied * panX + (1 - applied) * (focusX - width/2)
+            animEndPanX = applied * panX + (1f - applied) * (focusX - imageView.width / 2f)
+            animEndPanY = applied * panY + (1f - applied) * (focusY - imageView.height / 2f)
+            
+            val oldScale = currentScale
+            val oldPanX = panX
+            val oldPanY = panY
+            
+            currentScale = targetScale
+            panX = animEndPanX
+            panY = animEndPanY
+            constrainPan()
+            
+            animEndPanX = panX
+            animEndPanY = panY
+            
+            currentScale = oldScale
+            panX = oldPanX
+            panY = oldPanY
         }
+
         animStartTime = System.currentTimeMillis()
         imageView.post(animateRunnable)
     }

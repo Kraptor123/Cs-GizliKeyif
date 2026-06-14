@@ -149,9 +149,10 @@ class GalleryFragment(
         val btnBg = { GradientDrawable().apply { cornerRadius = 8f * dp; setColor(Color.TRANSPARENT) } }
         val focusListener = { view: View ->
             view.setOnFocusChangeListener { v, hasFocus ->
+                if (hasFocus && !isChromeVisible) toggleChrome()
                 (v.background as? GradientDrawable)?.apply {
                     if (hasFocus) {
-                        setStroke((2 * dp).toInt(), Color.WHITE)
+                        setStroke((3 * dp).toInt(), 0xFFFFD600.toInt())
                         setColor(0x1AFFFFFF)
                     } else {
                         setStroke(0, Color.TRANSPARENT)
@@ -211,6 +212,15 @@ class GalleryFragment(
         viewPager?.apply {
             offscreenPageLimit = 2
             adapter = galleryAdapter
+            isFocusable = true
+            isFocusableInTouchMode = true
+            background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            (getChildAt(0) as? RecyclerView)?.apply {
+                isFocusable = true
+                isFocusableInTouchMode = true
+                background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+                overScrollMode = View.OVER_SCROLL_NEVER
+            }
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     super.onPageSelected(position)
@@ -280,19 +290,93 @@ class GalleryFragment(
         }
     }
 
+    private fun getCurrentViewHolder(): GalleryAdapter.GalleryViewHolder? {
+        val recyclerView = viewPager?.getChildAt(0) as? RecyclerView
+        return recyclerView?.findViewHolderForAdapterPosition(viewPager?.currentItem ?: -1) as? GalleryAdapter.GalleryViewHolder
+    }
+
     private fun setupGlobalKeyListener() {
         dialog?.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            
+            val focusedView = view?.findFocus()
+            val isFromBar = focusedView != null && (
+                focusedView == btnBack || focusedView == btnGrid || 
+                focusedView == btnDownload || focusedView == btnDownloadAll
+            )
+
+            if (isGridView) {
+                if (keyCode == KeyEvent.KEYCODE_BACK) {
+                    toggleGridView()
+                    return@setOnKeyListener true
+                }
+                return@setOnKeyListener false
+            }
+
+            // Handle jumps FROM bars
+            if (isFromBar) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        if (focusedView == btnBack || focusedView == btnGrid) {
+                            viewPager?.requestFocus()
+                            return@setOnKeyListener true
+                        }
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        if (focusedView == btnDownload || focusedView == btnDownloadAll) {
+                            viewPager?.requestFocus()
+                            return@setOnKeyListener true
+                        }
+                    }
+                    KeyEvent.KEYCODE_BACK -> {
+                        if (isChromeVisible) {
+                            toggleChrome()
+                            viewPager?.requestFocus()
+                            return@setOnKeyListener true
+                        }
+                    }
+                }
+                return@setOnKeyListener false // Let default focus system move between buttons
+            }
+
+            // If we are here, focus is on Gallery (middle area)
+            val holder = getCurrentViewHolder()
+            val handledByZoom = holder?.handleDpadKey(keyCode) == true
+
+            if (handledByZoom) return@setOnKeyListener true
+
             when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_MENU -> {
-                    if (!isGridView) toggleChrome()
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (!isChromeVisible) toggleChrome()
+                    btnBack?.requestFocus()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (!isChromeVisible) toggleChrome()
+                    btnDownload?.requestFocus()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    val current = viewPager?.currentItem ?: 0
+                    if (current > 0) {
+                        viewPager?.setCurrentItem(current - 1, true)
+                        true
+                    } else false
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    val current = viewPager?.currentItem ?: 0
+                    if (current < images.size - 1) {
+                        viewPager?.setCurrentItem(current + 1, true)
+                        true
+                    } else false
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    toggleChrome()
                     true
                 }
                 KeyEvent.KEYCODE_BACK -> {
-                    if (isGridView) {
-                        toggleGridView()
-                        true
-                    } else false
+                    dismiss()
+                    true
                 }
                 else -> false
             }

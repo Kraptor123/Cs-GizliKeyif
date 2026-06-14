@@ -64,6 +64,10 @@ class GalleryAdapter(
         private var currentUrl: String? = null
 
         init {
+            containerView.isFocusable = true
+            containerView.isFocusableInTouchMode = true
+            containerView.background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+
             imageView = ImageView(context).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -71,8 +75,10 @@ class GalleryAdapter(
                 )
                 scaleType = ImageView.ScaleType.MATRIX
                 setBackgroundColor(android.graphics.Color.BLACK)
-                isFocusable = true
-                isFocusableInTouchMode = true
+                isFocusable = false
+                isFocusableInTouchMode = false
+                colorFilter = null
+                background = null
             }
             
             zoomHelper = ZoomHelper(imageView, onSingleTap = { 
@@ -86,14 +92,9 @@ class GalleryAdapter(
 
             pageLoading = containerView.findView("pageLoading")
             pageError = containerView.findView("pageError")
-
-            containerView.setOnKeyListener { _, keyCode, event ->
-                if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                handleDpadKey(keyCode)
-            }
         }
 
-        private fun handleDpadKey(keyCode: Int): Boolean {
+        fun handleDpadKey(keyCode: Int): Boolean {
             val step = imageView.width * 0.15f
             return when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
