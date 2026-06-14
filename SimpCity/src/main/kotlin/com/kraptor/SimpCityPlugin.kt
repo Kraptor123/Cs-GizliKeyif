@@ -87,12 +87,22 @@ class SimpCityPlugin : Plugin() {
             }
             .build()
 
+        val sharedPref = context.getSharedPreferences(Settings.PREFS_NAME, Context.MODE_PRIVATE)
+
         registerMainAPI(SimpCity(this))
         registerExtractorAPI(TurboCr())
         registerExtractorAPI(BunkrCrExtractor())
         registerExtractorAPI(CDNBunkrExtractor())
         registerExtractorAPI(BunkrExtractor())
         registerExtractorAPI(FiledItchFilesExtractor())
+
+        this.openSettings = { ctx ->
+            val simpApi = SimpCity(this)
+            val dialog = SettingsDialog(ctx as AppCompatActivity) {
+                com.lagradost.cloudstream3.MainActivity.reloadHomeEvent.invoke(true)
+            }
+            dialog.show(simpApi.mainUrl)
+        }
     }
 
     fun loadGallery(title: String, images: List<String>) {

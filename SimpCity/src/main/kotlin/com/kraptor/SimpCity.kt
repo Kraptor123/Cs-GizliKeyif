@@ -12,8 +12,8 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
-    private val username = "ksbkb51102"
-    private val password = "ksbkb51102"
+    private val username get() = Settings.getUsername(SimpCityPlugin.appContext)
+    private val password get() = Settings.getPassword(SimpCityPlugin.appContext)
 
     private val PAGES_TO_LOAD = 5
 

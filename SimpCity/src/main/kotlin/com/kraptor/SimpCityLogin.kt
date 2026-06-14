@@ -26,9 +26,21 @@ fun getSimpCookie(): String {
         .getString("simpcity.cr", "") ?: ""
 }
 
-fun clearSimpCookie() {
+fun clearSimpCookie(baseUrl: String? = null) {
     SimpCityPlugin.appContext.getSharedPreferences("simp_cookies", Context.MODE_PRIVATE)
         .edit().remove("simpcity.cr").apply()
+
+    val cookieManager = CookieManager.getInstance()
+    val url = baseUrl ?: "https://simpcity.cr"
+    val cookies = cookieManager.getCookie(url)
+    if (cookies != null) {
+        val cookiePairs = cookies.split(";")
+        for (pair in cookiePairs) {
+            val name = pair.split("=")[0].trim()
+            cookieManager.setCookie(url, "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT")
+        }
+        cookieManager.flush()
+    }
 }
 
 @SuppressLint("SetJavaScriptEnabled")
