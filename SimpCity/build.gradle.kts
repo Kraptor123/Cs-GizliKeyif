@@ -1,4 +1,4 @@
-version = 6
+version = 7
 
 dependencies {
     implementation("androidx.cardview:cardview:1.0.0")

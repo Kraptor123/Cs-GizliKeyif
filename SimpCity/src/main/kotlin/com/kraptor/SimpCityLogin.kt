@@ -143,56 +143,6 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                     style.textContent = `
                         *:focus { outline: 4px solid #FFD600 !important; outline-offset: 2px !important; box-shadow: 0 0 15px #FFD600 !important; }
                         input:focus, button:focus, a:focus, [tabindex]:focus { border-color: #FFD600 !important; }
-                        
-                        /* Overlay & Captcha Styling for TV */
-                        .captcha-widget, .captcha-container, .captcha-popup, .captcha-window,
-                        div[style*="z-index"][style*="2147483647"], 
-                        div[class*="captcha-challenge"],
-                        #captcha-challenge,
-                        .h-captcha-challenge,
-                        iframe[src*="turnstile"],
-                        iframe[src*="hcaptcha"],
-                        iframe[src*="recaptcha"] {
-                            transform: scale(0.9) !important;
-                            transform-origin: center center !important;
-                            max-height: 95vh !important;
-                            position: fixed !important;
-                            top: 50% !important;
-                            left: 50% !important;
-                            translate: -50% -50% !important;
-                            z-index: 2147483647 !important;
-                            background: #111 !important;
-                            border: 2px solid #333 !important;
-                            box-shadow: 0 0 50px rgba(0,0,0,0.9) !important;
-                            pointer-events: auto !important;
-                        }
-
-                        /* Ensure background is non-interactable when captcha is active */
-                        .captcha-active-trap {
-                            pointer-events: none !important;
-                            filter: blur(2px) grayscale(0.5) !important;
-                        }
-
-                        /* Ensure iframes are visible when focused */
-                        iframe:focus {
-                            border: 4px solid #FFD600 !important;
-                        }
-
-                        [data-captcha-widget] img, .captcha-item, .selti-item, .challenge-image {
-                            cursor: pointer !important;
-                            border: 3px solid transparent !important;
-                        }
-                        
-                        [data-captcha-widget] img:focus, .captcha-item:focus, .selti-item:focus, .challenge-image:focus {
-                            border-color: #FFD600 !important;
-                            transform: scale(1.05) !important;
-                        }
-
-                        .button--primary, button[type="submit"], .verify-button, .button-submit {
-                            min-height: 55px !important;
-                            font-weight: bold !important;
-                            font-size: 1.1em !important;
-                        }
                     `;
                     document.head.appendChild(style);
 
@@ -204,20 +154,8 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                         el.dispatchEvent(new MouseEvent('click', opts));
                     }
 
-                    function setupAutomation() {
-                        var u = document.querySelector('input[name="login"]');
-                        var p = document.querySelector('input[name="password"]');
-                        if (u && !u.value) { u.value = '$safeUser'; u.dispatchEvent(new Event('input', {bubbles:true})); }
-                        if (p && !p.value) { p.value = '$safePass'; p.dispatchEvent(new Event('input', {bubbles:true})); }
-                    }
-
-                    var captchaSelectors = [
-                        '.captcha-widget', '.captcha-container', '.captcha-popup', '.captcha-window',
-                        'div[style*="z-index"][style*="2147483647"]',
-                        'iframe[src*="turnstile"]',
-                        'iframe[src*="hcaptcha"]',
-                        '.h-captcha-challenge'
-                    ];
+                    var captchaSelectors = ['.captcha-widget', '.captcha-container', '.captcha-popup', '.captcha-window'];
+                    var lastFocusedInternal = null;
 
                     function isCaptchaVisible() {
                         for (var selector of captchaSelectors) {
@@ -227,79 +165,45 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                         return null;
                     }
 
-                    function makeEverythingFocusable() {
+                    function syncFocusState() {
                         var captcha = isCaptchaVisible();
-                        var container = captcha || document;
-
-                        var elements = container.querySelectorAll('input, button, a, [role="button"], [data-captcha-widget] img, .captcha-item, .selti-item, [tabindex], iframe');
-                        elements.forEach(function(el) {
-                            if (!el.getAttribute('tabindex')) {
-                                el.setAttribute('tabindex', '0');
-                            }
-                        });
-
                         if (captcha) {
-                            // Focus Trap: Disable focus on everything outside captcha
-                            document.querySelectorAll('body > *:not(.captcha-trap-ignore)').forEach(function(el) {
-                                if (!el.contains(captcha)) {
-                                    el.classList.add('captcha-active-trap');
-                                    el.setAttribute('aria-hidden', 'true');
-                                }
+                            var internal = captcha.querySelectorAll('button, a, [tabindex], .captcha-tile, .captcha-primary, .captcha-header [role="button"]');
+                            internal.forEach(function(el) {
+                                if (el.getAttribute('tabindex') !== '0') el.setAttribute('tabindex', '0');
                             });
-                            captcha.classList.add('captcha-trap-ignore');
-                            
-                            if (!captcha.contains(document.activeElement)) {
-                                var first = captcha.querySelector('input, button, [tabindex="0"], iframe');
-                                if (first) first.focus();
-                                else captcha.focus();
+
+                            if (captcha.contains(document.activeElement)) {
+                                lastFocusedInternal = document.activeElement;
+                            } else {
+                                var target = lastFocusedInternal || captcha.querySelector('.captcha-tile, .captcha-primary, button');
+                                if (target && target !== document.activeElement) target.focus();
                             }
                         } else {
-                            // Cleanup trap if no captcha
-                            document.querySelectorAll('.captcha-active-trap').forEach(function(el) {
-                                el.classList.remove('captcha-active-trap');
-                                el.removeAttribute('aria-hidden');
-                            });
+                            lastFocusedInternal = null;
                         }
                     }
 
-                    // Watch for dynamic captcha creation
-                    var observer = new MutationObserver(function(mutations) {
-                        var found = false;
-                        mutations.forEach(function(mutation) {
-                            mutation.addedNodes.forEach(function(node) {
-                                if (node.nodeType === 1) {
-                                    for (var cls of ['captcha-widget', 'captcha-container', 'captcha-popup', 'captcha-window']) {
-                                        if (node.classList.contains(cls) || node.querySelector('.' + cls)) {
-                                            found = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            });
-                        });
-                        if (found) makeEverythingFocusable();
-                    });
+                    var observer = new MutationObserver(syncFocusState);
                     observer.observe(document.body, { childList: true, subtree: true });
 
                     setInterval(function() {
-                        setupAutomation();
-                        makeEverythingFocusable();
-                    }, 1000);
+                        var u = document.querySelector('input[name="login"]');
+                        var p = document.querySelector('input[name="password"]');
+                        if (u && !u.value) { u.value = '$safeUser'; u.dispatchEvent(new Event('input', {bubbles:true})); }
+                        if (p && !p.value) { p.value = '$safePass'; p.dispatchEvent(new Event('input', {bubbles:true})); }
+                        
+                        syncFocusState();
+                    }, 1500);
 
-                    // Help DPAD enter iframes
                     document.addEventListener('focusin', function(e) {
-                        if (e.target.tagName === 'IFRAME') {
-                            // Some TV browsers need a click to activate iframe spatial navigation
-                            simulateClick(e.target);
-                        }
+                        if (e.target.tagName === 'IFRAME') simulateClick(e.target);
                     }, true);
 
                     document.addEventListener('keydown', function(e) {
                         if ((e.key === 'Enter' || e.keyCode === 13) && document.activeElement) {
                             var el = document.activeElement;
-                            if (el.tagName === 'IFRAME') {
-                                // Let standard browser behavior handle Enter for iframes
-                            } else if (el.tagName !== 'INPUT' || el.type === 'checkbox' || el.type === 'submit') {
+                            if (el.tagName !== 'INPUT' || el.type === 'checkbox' || el.type === 'submit') {
                                 simulateClick(el);
                                 e.preventDefault();
                             }
