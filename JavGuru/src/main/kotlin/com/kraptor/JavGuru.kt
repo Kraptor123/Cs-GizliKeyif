@@ -80,7 +80,7 @@ class JavGuru : MainAPI() {
             list = HomePageList(
                 name = request.name,
                 list = home,
-                isHorizontalImages = request.horizontalImages
+                isHorizontalImages = true
             ),
             hasNext = hasNext
         )
