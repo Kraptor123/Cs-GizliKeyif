@@ -12,7 +12,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import org.json.JSONObject
 
 class ThaiPorn : MainAPI() {
-    override var mainUrl = "https://หนังโป้ป่ะ.com"
+    override var mainUrl = "https://xn--72c9aha0f8ad1l6bi.com"
     override var name = "ThaiPorn"
     override val hasMainPage = true
     override var lang = "th"
