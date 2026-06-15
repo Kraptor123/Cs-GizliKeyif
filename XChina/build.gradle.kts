@@ -1,9 +1,9 @@
 // ! Bu araç @ByAyzen tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 1
+version = 2
 
 cloudstream {
     authors     = listOf("ByAyzen")
-    language    = "en"
+    language    = "zh"
     description = "xChina is one of the biggest porn websites (NSFW) in the world, it collects all kinds of high-definition sexy photo sets, nude photography, adult novels, erotic videos and other adult content. Everything is free here."
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")

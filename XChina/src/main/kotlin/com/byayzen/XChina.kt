@@ -12,7 +12,7 @@ class XChina : MainAPI() {
     override var mainUrl = "https://en.xchina.co"
     override var name = "XChina"
     override val hasMainPage = true
-    override var lang = "en"
+    override var lang = "zh"
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
