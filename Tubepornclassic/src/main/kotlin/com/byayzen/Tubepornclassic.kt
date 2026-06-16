@@ -89,7 +89,14 @@ class Tubepornclassic : MainAPI() {
                 this.posterUrl = video.scr ?: "https://tn.tubepornclassic.com/contents/videos_screenshots/$binid/${video.video_id}/240x180/2.jpg"
             }
         } ?: emptyList()
-        return newHomePageResponse(request.name, home, true)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {

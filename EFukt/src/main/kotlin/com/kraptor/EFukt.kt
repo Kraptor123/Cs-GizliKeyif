@@ -91,14 +91,20 @@ class EFukt : MainAPI() {
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
         )
         initSession()
-        val document =  if (page == 1) {
+        val document = if (page == 1) {
             app.get("${request.data}", headers, cookies = sessionCookies!!).document
-        }else{
+        } else {
             app.get("${request.data}$page/", headers, cookies = sessionCookies!!).document
         }
-        val home     = document.select("div.col div.tile").mapNotNull { it.toMainPageResult() }
+        val home = document.select("div.col div.tile").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

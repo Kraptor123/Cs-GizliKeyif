@@ -36,20 +36,24 @@ class Kalite18 : MainAPI() {
     "${mainUrl}/kategori/uvey-kardes-porno" to "Üvey Kardeş"
 )
 
-override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = if (request.data.startsWith("?")) {
-        
-        "${mainUrl}/page/$page${request.data}"
-    } else {
-        
-        "${request.data}/page/$page/"
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (request.data.startsWith("?")) {
+            "${mainUrl}/page/$page${request.data}"
+        } else {
+            "${request.data}/page/$page/"
+        }
+
+        val document = app.get(url).document
+        val home = document.select("article").mapNotNull { it.toMainPageResult() }
+
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
-    
-    val document = app.get(url).document
-    val home = document.select("article").mapNotNull { it.toMainPageResult() }
-    
-    return newHomePageResponse(request.name, home)
-}
 
     private fun Element.toMainPageResult(): SearchResponse? {
     val title     = this.selectFirst("header.entry-header span")?.text() ?: return null

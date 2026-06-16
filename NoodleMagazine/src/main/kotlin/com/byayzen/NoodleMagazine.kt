@@ -27,7 +27,7 @@ class NoodleMagazine : MainAPI() {
                     val tagHref = fixUrl(tag.attr("href"))
                     val items =
                         app.get(tagHref).document.select("div.item").mapNotNull { it.toRes() }
-                    if (items.isNotEmpty()) pages.add(HomePageList(tagTitle, items))
+                    if (items.isNotEmpty()) pages.add(HomePageList(tagTitle, items, isHorizontalImages = true))
                 }
             } catch (e: Exception) {
             }
@@ -37,7 +37,7 @@ class NoodleMagazine : MainAPI() {
             val latestUrl = if (page > 1) "$mainUrl/video/?p=${page - 1}" else "$mainUrl/video/"
             val latestItems =
                 app.get(latestUrl).document.select("div.item").mapNotNull { it.toRes() }
-            pages.add(HomePageList("Latest Videos", latestItems))
+            pages.add(HomePageList("Latest Videos", latestItems, isHorizontalImages = true))
         }
 
         return newHomePageResponse(pages, true)

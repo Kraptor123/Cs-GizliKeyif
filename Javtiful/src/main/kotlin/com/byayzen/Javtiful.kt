@@ -58,7 +58,14 @@ class Javtiful : MainAPI() {
             it.mainPageResults()
         }
         val hasNext = res.selectFirst("a.front-pagination-link:contains(Next)") != null
-        return newHomePageResponse(request.name, home, hasNext)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = hasNext
+        )
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {

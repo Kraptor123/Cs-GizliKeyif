@@ -124,7 +124,14 @@ class OnScreens : MainAPI() {
             } ?: emptyList()
         }
 
-        return newHomePageResponse(request.name, home, hasNext = home.isNotEmpty())
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = home.isNotEmpty()
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

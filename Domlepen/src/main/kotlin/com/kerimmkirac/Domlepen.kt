@@ -38,9 +38,14 @@ class Domlepen : MainAPI() {
         val document = app.get("${request.data}/page/$page").document
         val home = document.select("article.item-list").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
-
     private fun Element.toMainPageResult(): SearchResponse? {
         val title = this.selectFirst("span.post-box-title a")?.text()?.trim() ?: return null
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null

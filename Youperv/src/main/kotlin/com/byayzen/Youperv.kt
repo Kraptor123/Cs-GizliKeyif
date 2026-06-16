@@ -68,7 +68,13 @@ class Youperv : MainAPI() {
         val document = app.get(url).document
         val home = document.select("div.items div.item").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

@@ -53,7 +53,14 @@ class Redgifs : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val apiurl = if (request.data.contains("?")) "${request.data}&page=$page" else "${request.data}?page=$page"
         val data = coresearch(apiurl)
-        return newHomePageResponse(request.name, data?.gifs?.mapNotNull { it.toSearchResponse() } ?: emptyList(), true)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = data?.gifs?.mapNotNull { it.toSearchResponse() } ?: emptyList(),
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     private fun Gif.toSearchResponse(): SearchResponse? {

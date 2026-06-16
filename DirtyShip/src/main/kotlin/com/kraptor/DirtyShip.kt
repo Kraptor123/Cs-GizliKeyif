@@ -51,12 +51,18 @@ class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = if (page == 1) {
             app.get(request.data).document
-        }else{
+        } else {
             app.get("${request.data}page/$page/").document
         }
-        val home     = document.select("li.thumi").mapNotNull { it.toMainPageResult() }
+        val home = document.select("li.thumi").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

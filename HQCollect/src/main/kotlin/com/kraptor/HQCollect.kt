@@ -29,7 +29,13 @@ class HQCollect : MainAPI() {
         val document = app.get("${request.data}page/$page/").document
         val home = document.select("div.col-xs-6").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

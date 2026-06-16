@@ -86,7 +86,13 @@ class Vsex : MainAPI() {
         val belge = app.get(sayfaadresi).document
         val anasayfaicerikleri = belge.select("div.thumb").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, anasayfaicerikleri)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = anasayfaicerikleri,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

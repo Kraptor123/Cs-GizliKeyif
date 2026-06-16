@@ -110,9 +110,14 @@ class LiveCamRips : MainAPI() {
         val document = response.document
         val items = document.select("div.col-xl-3").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, items)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = items,
+                isHorizontalImages = true
+            )
+        )
     }
-
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("span.tm-text-gray-light")?.text() ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null

@@ -33,7 +33,13 @@ class CamWh : MainAPI() {
 
         val items = document.select("div.item").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, items)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = items,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

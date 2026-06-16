@@ -52,10 +52,17 @@ class TurkIfsalar : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}").document
+        val document = app.get(request.data).document
         val home     = document.select("a.video-card-hover").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home, false)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = false
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

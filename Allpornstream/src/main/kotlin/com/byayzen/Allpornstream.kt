@@ -78,9 +78,15 @@ class Allpornstream : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val res = app.get(request.data, headers = appHeaders)
         val results = nextiparseet(res.text)
-        return newHomePageResponse(request.name, results, hasNext = false)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = results,
+                isHorizontalImages = true
+            ),
+            hasNext = false
+        )
     }
-
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "${mainUrl.removeSuffix("/")}/?search=${
             withContext(Dispatchers.IO) {

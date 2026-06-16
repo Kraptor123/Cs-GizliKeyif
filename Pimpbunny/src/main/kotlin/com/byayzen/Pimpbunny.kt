@@ -77,7 +77,14 @@ class Pimpbunny : MainAPI() {
             it.toSearchResult(isModel)
         }.distinctBy { it.url }
 
-        return newHomePageResponse(request.name, home, hasNext = home.isNotEmpty())
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = home.isNotEmpty()
+        )
     }
 
     private fun Element.toSearchResult(isModel: Boolean = true): SearchResponse? {

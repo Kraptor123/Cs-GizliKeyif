@@ -68,7 +68,14 @@ class XMoviesForYou : MainAPI() {
         val sayfa = app.get(link).document
         val icerik = sayfa.select("a.group.flex.flex-col").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, icerik, hasNext = true)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = icerik,
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

@@ -25,7 +25,14 @@ class Wumaobi : MainAPI() {
         val document = app.get(url, cookies = mapOf("sort" to request.data)).document
         val home = document.select(".card").mapNotNull { it.toSearchResult() }
 
-        return newHomePageResponse(request.name, home, hasNext = home.isNotEmpty())
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = home.isNotEmpty()
+        )
     }
 
     private fun Element.toSearchResult(): SearchResponse? {

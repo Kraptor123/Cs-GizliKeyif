@@ -29,11 +29,17 @@ class İnfluencerChicks : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val document = app.get("${request.data}/page/$page").document
-    val home = document.select("ul.g1-collection-items li.g1-collection-item").mapNotNull { it.toMainPageResult() }
+        val document = app.get("${request.data}/page/$page").document
+        val home = document.select("ul.g1-collection-items li.g1-collection-item").mapNotNull { it.toMainPageResult() }
 
-    return newHomePageResponse(request.name, home)
-}
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
+    }
 
 private fun Element.toMainPageResult(): SearchResponse? {
     val href = fixUrlNull(this.selectFirst("article .entry-featured-media a")?.attr("href")) ?: return null

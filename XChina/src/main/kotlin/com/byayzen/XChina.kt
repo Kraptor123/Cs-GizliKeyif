@@ -37,7 +37,14 @@ class XChina : MainAPI() {
         val url = if (page <= 1) request.data else request.data.replace(".html", "/$page.html")
         val document = app.get(url).document
         val home = document.select("div.item.video").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(request.name, home, true)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     private fun Element.toSearchResult(): SearchResponse? {

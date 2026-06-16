@@ -62,14 +62,20 @@ class EroThots : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = if (page == 1){
+        val document = if (page == 1) {
             app.get("${request.data}", referer = "${mainUrl}/").document
         } else {
             app.get("${request.data}?p=${page - 1}", referer = "${mainUrl}/").document
         }
-        val home     = document.select("div.videos a").mapNotNull { it.toMainPageResult() }
+        val home = document.select("div.videos a").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

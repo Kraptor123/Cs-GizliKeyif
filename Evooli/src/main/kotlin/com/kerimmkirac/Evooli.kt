@@ -18,7 +18,7 @@ class Evooli : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}"      to "Tüm videolar",
+        mainUrl to "Tüm videolar",
         "${mainUrl}/amator-porno-o/"           to "Amatör",
         "${mainUrl}/anal-o/"         to "Anal",
         "${mainUrl}/anime-o/"         to "Anime",
@@ -49,9 +49,15 @@ class Evooli : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}/page/$page").document
-        val home     = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
+        val home = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

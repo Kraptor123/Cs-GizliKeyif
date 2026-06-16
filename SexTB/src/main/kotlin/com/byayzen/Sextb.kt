@@ -69,7 +69,11 @@ class Sextb : MainAPI() {
         }
 
         return newHomePageResponse(
-            listOf(HomePageList(request.name, items)),
+            listOf(HomePageList(
+                name = request.name,
+                list = items,
+                isHorizontalImages = true
+            )),
             hasNext = items.isNotEmpty()
         )
     }

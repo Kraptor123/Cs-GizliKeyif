@@ -30,7 +30,13 @@ class HdAbla : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val doc = app.get("${request.data}/page/$page").document
         val items = doc.select("div.item-video").mapNotNull { it.toMainPageResult() }
-        return newHomePageResponse(request.name, items)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = items,
+                isHorizontalImages = true
+            )
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

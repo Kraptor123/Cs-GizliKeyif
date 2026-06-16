@@ -68,7 +68,14 @@ class Turkifsahub : MainAPI() {
         val url = if (page <= 1) request.data else "${request.data}?page=$page"
         val response = app.get(url, headers = AnaHeaderlar).text
         val home = Jsoup.parse(response).select("article[itemtype*=VideoObject]").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(request.name, home, hasNext = true)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {

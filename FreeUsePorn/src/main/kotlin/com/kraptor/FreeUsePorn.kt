@@ -33,7 +33,14 @@ class FreeUsePorn : MainAPI() {
         val home = document.select("div#videos-list a.group").mapNotNull {
             it.toMainPageResult()
         }
-        return newHomePageResponse(request.name, home, true)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
