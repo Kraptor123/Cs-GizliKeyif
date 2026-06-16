@@ -55,42 +55,32 @@ class FreePornVideos : MainAPI() {
     )
 }
 
-private fun Element.toSearchResult(): SearchResponse? {
-    try {
-        val titleElement = this.select("strong.title").first()
-        val title = titleElement?.text()?.takeIf { it.isNotBlank() } ?: return null
-        
-        val linkElement = this.selectFirst("a[href]")
-        val href = linkElement?.attr("href")?.takeIf { it.isNotBlank() } ?: return null
-        
-       
-        val imgElements = this.select("img.thumb")
-        var posterUrl: String? = null
-        
-        for (img in imgElements) {
-            
-            val dataSrc = img.attr("data-src")?.takeIf { it.isNotBlank() }
-            if (dataSrc != null) {
-                posterUrl = dataSrc
-                break
+    private fun Element.toSearchResult(): SearchResponse? {
+        try {
+            if (selectFirst("div.img iframe") != null) return null
+
+            val linkElement = selectFirst("a.thumb_title") ?: return null
+            val href = linkElement.attr("href").takeIf { it.isNotBlank() } ?: return null
+            val title = linkElement.selectFirst("strong.title")?.text()?.takeIf { it.isNotBlank() } ?: return null
+
+            var posterUrl: String? = null
+            for (img in select("img.thumb")) {
+                img.attr("data-src").takeIf { it.isNotBlank() }?.let {
+                    posterUrl = it; break
+                }
+                img.attr("src").takeIf { it.isNotBlank() && !it.contains("data:image") }?.let {
+                    posterUrl = it; break
+                }
             }
-            
-            
-            val src = img.attr("src")?.takeIf { it.isNotBlank() }
-            if (src != null && !src.contains("data:image")) { 
-                posterUrl = src
-                break
+            if (posterUrl == null) return null
+            return newMovieSearchResponse(title, href, TvType.NSFW) {
+                this.posterUrl = posterUrl
             }
+        } catch (e: Exception) {
+            Log.d("FPV", "Error in toSearchResult: ${e.message}")
+            return null
         }
-        
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    } catch (e: Exception) {
-        Log.d("FPV", "Error in toSearchResult: ${e.message}")
-        return null
     }
-}
 
     fun String?.createSlug(): String? {
         return this?.filter { it.isWhitespace() || it.isLetterOrDigit() }

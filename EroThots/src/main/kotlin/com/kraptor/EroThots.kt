@@ -63,24 +63,24 @@ class EroThots : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = if (page == 1) {
-            app.get("${request.data}", referer = "${mainUrl}/").document
+            app.get(request.data, referer = "${mainUrl}/").document
         } else {
             app.get("${request.data}?p=${page - 1}", referer = "${mainUrl}/").document
         }
-        val home = document.select("div.videos a").mapNotNull { it.toMainPageResult() }
+        val home = document.select("div.videos a.video-media").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,
                 list = home,
-                isHorizontalImages = true
+                isHorizontalImages = false
             )
         )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("h3")?.text() ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
+        val title     = this.selectFirst(".title, h3")?.text() ?: return null
+        val href      = fixUrlNull(this.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
 
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
@@ -93,7 +93,7 @@ class EroThots : MainAPI() {
             app.get("${mainUrl}/videos/$query?p=1", referer = "${mainUrl}/").document
         }
 
-        val aramaCevap = document.select("div.videos a").mapNotNull { it.toMainPageResult() }
+        val aramaCevap = document.select("div.videos a.video-media").mapNotNull { it.toMainPageResult() }
 
         return newSearchResponseList(aramaCevap, hasNext = true)
     }
@@ -118,9 +118,9 @@ class EroThots : MainAPI() {
         val tags            = document.select("div.scroll-box div.scroll a").map { it.text() }
         val score           = document.selectFirst("span.dt_rating_vgs")?.text()?.trim()
         val duration        = document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
-        val recommendations = document.select("div.videos a").mapNotNull { it.toMainPageResult() }
+        val recommendations = document.select("div.videos a.video-media").mapNotNull { it.toMainPageResult() }
         val actors          = document.select("span.valor a").map { Actor(it.text()) }
-        val trailer         = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
+        val trailer         = Regex("""embed/(.*)\?rel""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl       = poster
