@@ -53,7 +53,10 @@ class TurkHub : MainAPI() {
         val entrytitle = this.selectFirst("h2.entry-title a")
         val title      = entrytitle?.text()?.trim() ?: return null
         val href       = fixUrlNull(entrytitle.attr("href")) ?: return null
-        val posterurl  = fixUrlNull(this.selectFirst("img.post-thumbnail-image")?.attr("src"))
+        val posterurl  = fixUrlNull(
+            this.selectFirst("figure.post-thumbnail img")?.attr("src")
+                ?: this.selectFirst("img.wp-post-image")?.attr("src")
+        )
 
         return newMovieSearchResponse(title, "$href|$posterurl", TvType.NSFW) {
             this.posterUrl = posterurl
