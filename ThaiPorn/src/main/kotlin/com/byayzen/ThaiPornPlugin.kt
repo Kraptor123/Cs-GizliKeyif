@@ -9,5 +9,6 @@ import android.content.Context
 class ThaiPornPlugin: Plugin() {
     override fun load() {
         registerMainAPI(ThaiPorn())
+        registerExtractorAPI(xVideosExtractor())
     }
 }

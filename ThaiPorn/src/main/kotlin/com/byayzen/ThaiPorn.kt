@@ -96,37 +96,62 @@ class ThaiPorn : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
         Log.d("Ayzen", "data = $data")
         val document = app.get(data).document
-        val duPhpSrc = document.selectFirst("iframe[src*=/lib/du.php]")?.attr("src") ?: return false
-        val duPhpUrl = fixUrl(duPhpSrc)
-        Log.d("Ayzen", "duPhpUrl = $duPhpUrl")
+        val duPhpSrc = document.selectFirst("iframe[src*=/lib/du.php]")?.attr("src")
+        if (duPhpSrc != null) {
+            val duPhpUrl = fixUrl(duPhpSrc)
+            Log.d("Ayzen", "duPhpUrl = $duPhpUrl")
 
-        val duDoc = app.get(duPhpUrl, referer = data).document
-        val playerSrc = duDoc.selectFirst("iframe[src*=player.hlsbroadcast.com]")?.attr("src") ?: return false
-        Log.d("Ayzen", "playerSrc = $playerSrc")
+            val duDoc = app.get(duPhpUrl, referer = data).document
+            val hlsPlayerSrc = duDoc.selectFirst("iframe[src*=player.hlsbroadcast.com]")?.attr("src")
+            if (hlsPlayerSrc != null) {
+                Log.d("Ayzen", "hlsPlayerSrc = $hlsPlayerSrc")
 
-        val sParam = Uri.parse(playerSrc).getQueryParameter("s") ?: return false
-        val jsonUrl = "https://codeview.hlsbroadcast.com/$sParam.json"
-        Log.d("Ayzen", "jsonUrl = $jsonUrl")
+                val sParam = Uri.parse(hlsPlayerSrc).getQueryParameter("s")
+                if (sParam != null) {
+                    val jsonUrl = "https://codeview.hlsbroadcast.com/$sParam.json"
+                    Log.d("Ayzen", "jsonUrl = $jsonUrl")
 
-        val jsonRes = app.get(jsonUrl, referer = playerSrc).text
-        val jsonObj = JSONObject(jsonRes)
-        val m3u8Url = jsonObj.getString("r2_url")
-        Log.d("Ayzen", "m3u8Url = $m3u8Url")
+                    val jsonRes = app.get(jsonUrl, referer = hlsPlayerSrc).text
+                    val jsonObj = JSONObject(jsonRes)
+                    val m3u8Url = jsonObj.getString("r2_url")
+                    Log.d("Ayzen", "m3u8Url = $m3u8Url")
 
-        callback.invoke(
-            newExtractorLink(
-                source = name,
-                name = "ThaiPorn",
-                url = m3u8Url,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = playerSrc
-                this.quality = Qualities.Unknown.value
+                    callback.invoke(
+                        newExtractorLink(
+                            source = name,
+                            name = "ThaiPorn",
+                            url = m3u8Url,
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = hlsPlayerSrc
+                            this.quality = Qualities.Unknown.value
+                        }
+                    )
+                    return true
+                }
             }
-        )
+
+            duDoc.select("iframe").map { it.attr("src") }.filter { it.isNotBlank() }.forEach { iframeSrc ->
+                val iframeUrl = fixUrl(iframeSrc)
+                Log.d("Ayzen", "duDoc loadExtractor = $iframeUrl")
+                loadExtractor(iframeUrl, duPhpUrl, subtitleCallback, callback)
+            }
+        }
+
+        document.select("iframe").map { it.attr("src") }.filter { it.isNotBlank() && !it.contains("/lib/du.php") }.forEach { iframeSrc ->
+            val iframeUrl = fixUrl(iframeSrc)
+            Log.d("Ayzen", "mainDoc loadExtractor = $iframeUrl")
+            loadExtractor(iframeUrl, data, subtitleCallback, callback)
+        }
+
         return true
     }
 }
