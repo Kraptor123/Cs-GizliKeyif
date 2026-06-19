@@ -27,18 +27,14 @@ class Allpornstream : MainAPI() {
 
     override val mainPage = mainPageOf(
         "${mainUrl}/categories/brunette" to "Brunette",
-        "${mainUrl}/categories/1080-p" to "1080 P",
         "${mainUrl}/categories/shaved-pussy" to "Shaved Pussy",
         "${mainUrl}/categories/anal" to "Anal",
         "${mainUrl}/categories/interracial" to "Interracial",
         "${mainUrl}/categories/small-tits" to "Small Tits",
-        "${mainUrl}/categories/60-fps" to "60 Fps",
         "${mainUrl}/categories/latina" to "Latina",
         "${mainUrl}/categories/pov" to "Pov",
         "${mainUrl}/categories/asian" to "Asian",
         "${mainUrl}/categories/masturbation" to "Masturbation",
-        "${mainUrl}/categories/ebony" to "Ebony",
-        "${mainUrl}/categories/bisexual" to "Bisexual",
         "${mainUrl}/categories/naughtyamerica" to "Naughtyamerica",
         "${mainUrl}/categories/casting" to "Casting"
     )

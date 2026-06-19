@@ -197,8 +197,7 @@ class Aki : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         Log.d("Aki", data)
-        val res = app.get(data)
-        val doc = res.document
+        val doc = app.get(data).document
 
         doc.select("div.item.server-item[data-type=dl] a.btn").forEach { el ->
             val link = el.attr("href")
@@ -226,18 +225,12 @@ class Aki : MainAPI() {
 
                 val playurl = fdoc.select("script").mapNotNull { s ->
                     val h = s.html()
-                    when {
-                        h.contains("streaming.aki.today/playback/") -> {
-                            Regex("""src\s*=\s*"(https://streaming\.aki\.today/playback/[^"]+)"""").find(h)?.groupValues?.get(1)
-                                ?: Regex("""iframe src="(https://streaming\.aki\.today/playback/[^"]+)"""").find(h)?.groupValues?.get(1)
-                        }
-                        else -> null
-                    }
+                    if (h.contains("streaming.aki.today/playback/")) Regex("""src\s*=\s*"(https://streaming\.aki\.today/playback/[^"]+)"""").find(h)?.groupValues?.get(1) ?: Regex("""iframe src="(https://streaming\.aki\.today/playback/[^"]+)"""").find(h)?.groupValues?.get(1) else null
                 }.firstOrNull()
 
                 playurl?.let { purl ->
                     Log.d("Aki", purl)
-                    val pdoc = app.get(purl, referer = furl).document
+                    val pdoc = app.get(purl, headers = mapOf("Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")).document
                     val source = pdoc.selectFirst("iframe.embed-responsive-item")?.attr("src")
                     Log.d("Aki", source ?: "")
 
@@ -247,39 +240,19 @@ class Aki : MainAPI() {
                             val m3u8 = "https://aki-h.stream/file/$sid/"
                             Log.d("Aki", m3u8)
 
-                            val content = app.get(
-                                m3u8,
-                                referer = surl,
-                                headers = mapOf("Accept" to "*/*")
-                            ).text
-
-                            val master = Regex("""RESOLUTION=\d+x(\d+).*?\n(.*)""")
-                            master.findAll(content).forEach { m ->
-                                val resnum = m.groupValues[1]
-                                val stream = m.groupValues[2].trim()
-                                Log.d("Aki", stream)
-
-                                val q = when {
-                                    resnum.contains("1080") -> Qualities.P1080.value
-                                    resnum.contains("720") -> Qualities.P720.value
-                                    resnum.contains("480") -> Qualities.P480.value
-                                    resnum.contains("360") -> Qualities.P360.value
-                                    else -> Qualities.Unknown.value
+                            callback.invoke(
+                                newExtractorLink(
+                                    this.name,
+                                    this.name,
+                                    m3u8,
+                                    ExtractorLinkType.M3U8
+                                ) {
+                                    this.referer = "https://aki-h.stream/v/$sid"
+                                    this.headers = mapOf(
+                                        "Accept" to "*/*",
+                                    )
                                 }
-
-                                callback.invoke(
-                                    newExtractorLink(
-                                        this.name,
-                                        this.name,
-                                        stream,
-                                        ExtractorLinkType.M3U8
-                                    ) {
-                                        this.quality = q
-                                        this.referer = surl
-                                        this.headers = mapOf("Accept" to "*/*")
-                                    }
-                                )
-                            }
+                            )
                         }
                     }
                 }
