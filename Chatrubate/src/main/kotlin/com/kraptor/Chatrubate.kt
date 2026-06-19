@@ -41,17 +41,19 @@ class Chatrubate : MainAPI() {
             offset = 90 * (page - 1)
         }
         val responseList =
-            app.get("$mainUrl${request.data}&offset=$offset").parsedSafe<Response>()!!.rooms.map { room ->
-                newLiveSearchResponse(
-                    name = room.username,
-                    url = "$mainUrl/${room.username}",
-                    type = TvType.Live,
-                    fix = false
-                ) {
-                    posterUrl = room.img
-                    lang = null
+            app.get("$mainUrl${request.data}&offset=$offset").parsedSafe<Response>()!!.rooms
+                .filter { it.gender != "s" && it.gender != "m" }
+                .map { room ->
+                    newLiveSearchResponse(
+                        name = room.username,
+                        url = "$mainUrl/${room.username}",
+                        type = TvType.Live,
+                        fix = false
+                    ) {
+                        posterUrl = room.img
+                        lang = null
+                    }
                 }
-            }
         return newHomePageResponse(HomePageList(request.name, responseList, isHorizontalImages = true), hasNext = true)
 
     }
@@ -59,7 +61,9 @@ class Chatrubate : MainAPI() {
     override suspend fun search(query: String, page: Int): SearchResponseList {
 
         val aramaCevap = app.get("$mainUrl/api/ts/roomlist/room-list/?keywords=$query&limit=90&offset=${page}", referer = "${mainUrl}/", headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
-            .parsedSafe<Response>()!!.rooms.map { room -> newLiveSearchResponse(
+            .parsedSafe<Response>()!!.rooms
+            .filter { it.gender != "s" && it.gender != "m" }
+            .map { room -> newLiveSearchResponse(
                 name = room.username,
                 url = "$mainUrl/${room.username}",
                 type = TvType.Live,
@@ -92,8 +96,6 @@ class Chatrubate : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("kraptor_$name", data)
-
         val username = data.split("/").last { it.isNotEmpty() }
         val apiUrl = "https://chaturbate.com/api/chatvideocontext/$username/"
 
@@ -106,25 +108,14 @@ class Chatrubate : MainAPI() {
             )
         )
 
-        Log.d("kraptor_$name", "durum = ${response.code}")
-        Log.d("kraptor_$name", "içerik = ${response.text}")
+        val parsedResponse = response.parsedSafe<ChatResponse>()
+        val m3u8Url = parsedResponse?.hlsSource ?: return false
 
-        val parsedResponse = response.parsed<ChatResponse>()
-        val m3u8Url = parsedResponse.hlsSource
-
-        if (!m3u8Url.isNullOrEmpty()) {
-            callback.invoke(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = m3u8Url,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    this.referer = ""
-                    this.quality = Qualities.Unknown.value
-                }
-            )
-        }
+        M3u8Helper.generateM3u8(
+            name,
+            m3u8Url,
+            mainUrl
+        ).forEach(callback)
 
         return true
     }
@@ -138,6 +129,7 @@ class Chatrubate : MainAPI() {
         @JsonProperty("img") val img: String = "",
         @JsonProperty("username") val username: String = "",
         @JsonProperty("subject") val subject: String = "",
+        @JsonProperty("gender") val gender: String = "",
         @JsonProperty("tags") val tags: List<String> = arrayListOf()
     )
 
@@ -149,6 +141,3 @@ class Chatrubate : MainAPI() {
     )
 }
 
-fun String.unescapeUnicode() = replace("\\\\u([0-9A-Fa-f]{4})".toRegex()) {
-    String(Character.toChars(it.groupValues[1].toInt(radix = 16)))
-}
