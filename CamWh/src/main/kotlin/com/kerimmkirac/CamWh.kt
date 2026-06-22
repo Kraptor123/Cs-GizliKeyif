@@ -9,8 +9,6 @@ import kotlinx.serialization.json.jsonObject
 import org.json.JSONObject
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.network.WebViewResolver
 
 class CamWh : MainAPI() {
     override var mainUrl = "https://camwh.com"
@@ -123,58 +121,29 @@ class CamWh : MainAPI() {
 
     override suspend fun loadLinks(
         data: String,
-        iscasting: Boolean,
-        subtitlecallback: (SubtitleFile) -> Unit,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val webview = WebViewResolver(
-            interceptUrl = Regex(".*/get_file/.*"),
-            userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
-            useOkhttp = false
-        )
+        val response = app.get(data).text
+        val regex = Regex("""contentUrl"\s*:\s*"([^"]+)""")
+        val match = regex.find(response)
+        val url = match?.groupValues?.get(1)?.replace("\\/", "/")
 
-        var yakalanandosyaurl = ""
-
-        webview.resolveUsingWebView(
-            url = data,
-            referer = "$mainUrl/",
-            requestCallBack = { request ->
-                val adres = request.url.toString()
-
-                if (adres.contains("/get_file/")) {
-                    yakalanandosyaurl = adres
-                    true
-                } else {
-                    false
-                }
-            }
-        )
-
-        if (yakalanandosyaurl.isNotEmpty()) {
-            val response = app.get(
-                yakalanandosyaurl,
-                headers = mapOf(
-                    "Referer" to data,
-                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0"
-                ),
-                allowRedirects = false
-            )
-
-            val yonlendirmeurl = response.headers["Location"] ?: yakalanandosyaurl
-
+        if (url != null) {
             callback.invoke(
                 newExtractorLink(
-                    this.name,
-                    this.name,
-                    yonlendirmeurl,
-                    type = INFER_TYPE
+                    source = name,
+                    name = name,
+                    url = url,
+                    type = ExtractorLinkType.VIDEO
                 ) {
                     this.referer = "$mainUrl/"
                     this.quality = Qualities.Unknown.value
                 }
             )
+            return true
         }
-
-        return true
+        return false
     }
 }

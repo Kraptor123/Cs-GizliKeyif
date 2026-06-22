@@ -4,11 +4,11 @@ package com.byayzen
 
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import java.net.URI
+import android.util.Base64
 import com.lagradost.cloudstream3.amap
 import kotlinx.serialization.json.jsonObject
 
@@ -128,6 +128,23 @@ class Sxyprn : MainAPI() {
     }
 
 
+    private fun ssut51coz(arg: String): Int {
+        var sum = 0
+        for (char in arg) {
+            if (char.isDigit()) {
+                sum += char.toString().toInt()
+            }
+        }
+        return sum
+    }
+
+    private fun boocoz(ss: Int, host: String, es: Int): String {
+        val rawStr = "$ss-$host-$es"
+        val bytes = rawStr.toByteArray()
+        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        return base64.replace('+', '-').replace('/', '_').replace('=', '.')
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -135,63 +152,61 @@ class Sxyprn : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val url = fixUrl(data)
-        var videoFound = false
+        var videofound = false
 
-        val targetRegex = """https?://.*(?:/cdn8/|\.vid).*""".toRegex()
-
-        val resolver = WebViewResolver(
-            interceptUrl = targetRegex,
-            userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            useOkhttp = true
-        )
-
-        val capturedResponse = app.get(url, interceptor = resolver)
-        val capturedUrl = capturedResponse.url
-
-        val finalUrl = if (capturedUrl.contains("trafficdeposit.com")) {
-            capturedUrl
-        } else {
-            val redirectResp = app.get(
-                capturedUrl,
-                headers = mapOf(
-                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Referer" to url
-                ),
-                allowRedirects = false
-            )
-            redirectResp.headers["Location"] ?: redirectResp.headers["location"] ?: capturedUrl
-        }
-
-        if (finalUrl.contains(".vid") || finalUrl.contains("/cdn8/")) {
-            callback.invoke(
-                newExtractorLink(
-                    name = "SxyPrn",
-                    source = name,
-                    url = finalUrl,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = url
-                }
-            )
-            videoFound = true
-        }
+        val host = URI(url).host ?: "sxyprn.com"
 
         val doc = app.get(url).document
-        val mainContainer = doc.selectFirst("div.post_text")
 
-        if (mainContainer != null) {
-            val externalLinks = mainContainer.select("a.extlink_icon.extlink")
-                .mapNotNull { it.attr("href") }
-                .distinctBy {
-                    URI(it).host.replace("www.", "")
+        val datavnfo = doc.selectFirst(".vidsnfo")?.attr("data-vnfo")
+        if (datavnfo != null) {
+            val json = JSONObject(datavnfo)
+            for (key in json.keys()) {
+                val relativepath = json.getString(key)
+                val pathparts = relativepath.split("/").toMutableList()
+                if (pathparts.size >= 8) {
+                    val segmentsix = ssut51coz(pathparts[6])
+                    val segmentseven = ssut51coz(pathparts[7])
+                    val token = boocoz(segmentsix, host, segmentseven)
+
+                    pathparts[1] = pathparts[1] + "8/" + token
+
+                    val timestampraw = pathparts[5].toIntOrNull()
+                    if (timestampraw != null) {
+                        pathparts[5] = (timestampraw - (segmentsix + segmentseven)).toString()
+                    }
+
+                    val cdn8path = pathparts.joinToString("/")
+                    val cdn8url = "https://$host$cdn8path"
+
+                    val redirectresp = app.get(
+                        cdn8url,
+                        headers = mapOf(
+                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            "Referer" to url
+                        ),
+                        allowRedirects = false
+                    )
+
+                    val locationheader = redirectresp.headers["Location"] ?: redirectresp.headers["location"]
+                    if (locationheader != null) {
+                        val finalurl = if (locationheader.startsWith("//")) "https:$locationheader" else locationheader
+                        callback.invoke(
+                            newExtractorLink(
+                                name = "SxyPrn",
+                                source = name,
+                                url = finalurl,
+                                type = ExtractorLinkType.VIDEO
+                            ) {
+                                this.referer = url
+                            }
+                        )
+                        videofound = true
+                    }
                 }
-
-            externalLinks.forEach { link ->
-                loadExtractor(link, url, subtitleCallback, callback)
-                videoFound = true
             }
         }
 
-        return videoFound
+        return videofound
     }
 }
