@@ -191,29 +191,40 @@ class Mangoporn : MainAPI() {
         val links = tabs.map { it.attr("href") }.filter { it.isNotEmpty() }
         Log.d("MANGOPORN", "Linkler | ${links.size} | $links")
 
+        val blockedHosts = listOf("rapidgator.net", "nitroflare.com", "uploaded.net", "filefactory.com")
+
         return coroutineScope {
             val jobs = links.mapIndexed { index, link ->
                 launch {
-                    val fullUrl = fixUrl(link)
-                    Log.d("MANGOPORN", "Çıkan link [$index] | $fullUrl")
+                    try {
+                        val fullUrl = fixUrl(link)
+                        Log.d("MANGOPORN", "Çıkan link [$index] | $fullUrl")
 
-                    when {
-                        fullUrl.contains("my.player4me.online") -> {
-                            Player4Me().getUrl(fullUrl, mainUrl, subtitleCallback, callback)
+                        val isBlocked = blockedHosts.any { fullUrl.contains(it) }
+                        if (isBlocked) {
+                            Log.d("MANGOPORN", "Atlandı [$index] | Dosya indirme sitesi")
+                            return@launch
                         }
 
-                        fullUrl.contains("vip.player4me.vip") -> {
-                            Vip4me().getUrl(fullUrl, mainUrl, subtitleCallback, callback)
-                        }
-                        else -> {
-                            loadExtractor(fullUrl, subtitleCallback) { extractorLink ->
-                                Log.d(
-                                    "MANGOPORN",
-                                    "Başarı[$index] | ${extractorLink.name} | ${extractorLink.url} | ${extractorLink.quality}"
-                                )
-                                callback.invoke(extractorLink)
+                        when {
+                            fullUrl.contains("my.player4me.online") -> {
+                                Player4Me().getUrl(fullUrl, mainUrl, subtitleCallback, callback)
+                            }
+                            fullUrl.contains("vip.player4me.vip") -> {
+                                Vip4me().getUrl(fullUrl, mainUrl, subtitleCallback, callback)
+                            }
+                            else -> {
+                                loadExtractor(fullUrl, subtitleCallback) { extractorLink ->
+                                    Log.d(
+                                        "MANGOPORN",
+                                        "Başarı[$index] | ${extractorLink.name} | ${extractorLink.url} | ${extractorLink.quality}"
+                                    )
+                                    callback.invoke(extractorLink)
+                                }
                             }
                         }
+                    } catch (e: Exception) {
+                        Log.d("MANGOPORN", "Hata [$index] | ${e.message}")
                     }
                 }
             }
