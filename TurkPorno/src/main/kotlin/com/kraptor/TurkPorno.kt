@@ -161,15 +161,17 @@ class TurkPorno : MainAPI() {
 
         val videocuklar = mutableListOf<String>()
 
-        val videolar = document.selectFirst("iframe")?.let {
-            val src = it.attr("src")
-            if (src.isBlank() || src.contains("about:blank")) it.attr("data-src") else src
-        } ?: ""
+        val videolar = document.selectFirst("iframe[data-src]")?.attr("data-src")
+            ?: document.selectFirst("meta[itemprop=\"embedURL\"]")?.attr("content")
+            ?: document.selectFirst("iframe")?.let {
+                val src = it.attr("src")
+                if (src.isBlank() || src.contains("about:blank")) it.attr("data-src") else src
+            } ?: ""
         Log.d("kraptor_$name", "videolar = ${videolar}")
 
         if (videolar.contains("player.php")){
-           val video1 = videolar.substringAfter("url1=").substringBefore("&")
-           val video2 = videolar.substringAfter("url2=")
+            val video1 = videolar.substringAfter("url1=").substringBefore("&")
+            val video2 = videolar.substringAfter("url2=")
             videocuklar.add(video1)
             videocuklar.add(video2)
         } else {
