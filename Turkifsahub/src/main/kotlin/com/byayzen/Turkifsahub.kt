@@ -38,11 +38,9 @@ class Turkifsahub : MainAPI() {
         "${mainUrl}/kategoriler/lezbiyen" to "Lezbiyen",
         "${mainUrl}/kategoriler/mastürbasyon" to "Mastürbasyon",
         "${mainUrl}/kategoriler/milf" to "Milf",
-        "${mainUrl}/kategoriler/sahibe" to "Sahibe",
-        "${mainUrl}/kategoriler/şişman" to "Şişman",
     //    "${mainUrl}/kategoriler/tango" to "Tango",
         "${mainUrl}/kategoriler/türbanlı" to "Türbanlı",
-        "${mainUrl}/kategoriler/vip" to "Vip",
+        "${mainUrl}/vip" to "Vip",
         "${mainUrl}/kategoriler/zenci" to "Zenci"
     )
 
@@ -50,8 +48,24 @@ class Turkifsahub : MainAPI() {
         return fixUrlNull(this)?.substringBefore("?")
     }
 
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (page <= 1) request.data else "${request.data}?page=$page"
+        val response = app.get(url, headers = AnaHeaderlar).text
+        val document = Jsoup.parse(response)
+        val home = document.select("article[itemtype*=VideoObject]").mapNotNull { it.toSearchResult() }
+        val hasNextPage = document.selectFirst("button[aria-label=\"Sonraki sayfa\"]")?.hasAttr("disabled") == false
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = hasNextPage
+        )
+    }
+
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h1[itemprop=name], h3[itemprop=name]")?.text()
+        val title = this.selectFirst("h1[itemprop=name], h3[itemprop=name], h2[itemprop=name]")?.text()
             ?: this.selectFirst("meta[itemprop=name]")?.attr("content") ?: return null
 
         val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null).replace("/v/", "/")
@@ -64,19 +78,7 @@ class Turkifsahub : MainAPI() {
         }
     }
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page <= 1) request.data else "${request.data}?page=$page"
-        val response = app.get(url, headers = AnaHeaderlar).text
-        val home = Jsoup.parse(response).select("article[itemtype*=VideoObject]").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = true
-        )
-    }
+
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val apiUrl = "https://api.turkifsahub.com/ifsa-videos/client/search?searchTerm=$query&page=$page&limit=30"
