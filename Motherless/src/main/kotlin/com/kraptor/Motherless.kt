@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class Motherless : MainAPI() {
-    override var mainUrl              = "https://motherless.com"
+    override var mainUrl              = "https://motherless.xxx"
     override var name                 = "Motherless"
     override val hasMainPage          = true
     override var lang                 = "en"
