@@ -93,45 +93,36 @@ class Hanime : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = "$mainUrl/browse/tags/${request.data}?page=$page"
-        val html = app.get(url).text
-        val nuxtStart = html.indexOf("window.__NUXT__=")
-        if (nuxtStart < 0) return newHomePageResponse(request.name, emptyList(), false)
+        val url      = "$mainUrl/browse/tags/${request.data}?page=$page"
+        val document = app.get(url).document
 
-        val scriptEnd = html.indexOf("</script>", nuxtStart)
-        val nuxtData = html.substring(nuxtStart, if (scriptEnd > nuxtStart) scriptEnd else html.length)
+        val home = document.select("div.grid.grid-cols-2 a[href^=/videos/hentai/]").mapNotNull {
+            val href   = it.attr("href")
+            val name   = it.selectFirst("h3")?.text() ?: return@mapNotNull null
+            val poster = it.selectFirst("img")?.attr("abs:src") ?: return@mapNotNull null
+            if (name.isBlank() || href.isBlank()) return@mapNotNull null
 
-        val videoRegex = """\{id:\d+,name:"([^"]*)",slug:"([^"]*)",.*?poster_url:"([^"]*?)"""".toRegex(RegexOption.DOT_MATCHES_ALL)
-        val matches = videoRegex.findAll(nuxtData).toList()
-
-        val home = matches.mapNotNull { match ->
-            val name = match.groupValues[1]
-            val slug = match.groupValues[2]
-            val posterUrl = match.groupValues[3].replace("\\u002F", "/")
-            if (name.isBlank() || slug.isBlank()) return@mapNotNull null
             newAnimeSearchResponse(
                 name = name,
-                url = "/videos/hentai/$slug",
+                url  = href,
                 type = TvType.NSFW
             ) {
-                this.posterUrl = posterUrl
+                this.posterUrl     = poster
                 this.posterHeaders = mapOf("Referer" to "$mainUrl/")
             }
         }
 
-        val toplamsayfa = """\bnumber_of_pages:(\d+)""".toRegex().find(nuxtData)?.groupValues?.get(1)?.toIntOrNull() ?: 1
-
-        Log.d("HanimeTV", "getMainPage tag=${request.data} page=$page items=${home.size} totalPages=$toplamsayfa")
+        Log.d("HanimeTV", "getMainPage tag=${request.data} page=$page items=${home.size}")
 
         return newHomePageResponse(
             listOf(
                 HomePageList(
-                    name = request.name,
-                    list = home,
+                    name               = request.name,
+                    list               = home,
                     isHorizontalImages = true
                 )
             ),
-            hasNext = toplamsayfa > page
+            hasNext = home.isNotEmpty()
         )
     }
 
@@ -154,15 +145,19 @@ class Hanime : MainAPI() {
         val endIndex = minOf(startIndex + pageSize, filtered.size)
         val pageItems = if (startIndex < filtered.size) filtered.subList(startIndex, endIndex) else emptyList()
 
-        Log.d("HanimeTV", "search query=$q page=$page total=${filtered.size} showing=${pageItems.size}")
+        Log.d("HanimeTV", "search q=$q page=$page total=${filtered.size} showing=${pageItems.size}")
 
         val results = pageItems.mapNotNull { v ->
             if (v.slug.isBlank()) return@mapNotNull null
+            Log.d("HanimeTV", "poster ${v.name}: ${v.posterUrl}")
             newMovieSearchResponse(
                 name = v.name,
                 url = "/videos/hentai/${v.slug}",
                 type = TvType.NSFW
-            ) { this.posterUrl = v.posterUrl }
+            ) {
+                this.posterUrl = v.posterUrl
+                this.posterHeaders = mapOf("Referer" to "$mainUrl/")
+            }
         }
 
         return newSearchResponseList(results, hasNext = endIndex < filtered.size)
@@ -177,10 +172,13 @@ class Hanime : MainAPI() {
             return it
         }
         return runCatching {
-            app.get(SEARCH_API, headers = mapOf("Origin" to mainUrl)).text.let {
-                parseJson<List<HvsVideo>>(it)
-            }.also {
+            val response = app.get(SEARCH_API, headers = mapOf("Origin" to mainUrl)).text
+            Log.d("HanimeTV", "HAM JSON (ilk 1000 karakter): ${response.take(1000)}")
+            parseJson<List<HvsVideo>>(response).also {
                 Log.d("HanimeTV", "API'den ${it.size} video çekildi.")
+                it.firstOrNull()?.let { first ->
+                    Log.d("HanimeTV", "İlk öğe: name=${first.name}, posterUrl=${first.posterUrl}, coverUrl=${first.coverUrl}")
+                }
                 AramaOnbellegi = it
                 cacheSuresi = simdi
             }
@@ -351,28 +349,36 @@ class Hanime : MainAPI() {
     data class HvsVideo(
         val id: Int = 0,
         val name: String = "",
+        @JsonProperty("search_titles")
         @SerialName("search_titles")
         val searchTitles: String = "",
         val slug: String = "",
         val description: String = "",
         val views: Int = 0,
+        @JsonProperty("cover_url")
         @SerialName("cover_url")
         val coverUrl: String = "",
+        @JsonProperty("poster_url")
         @SerialName("poster_url")
         val posterUrl: String = "",
         val brand: String = "",
+        @JsonProperty("brand_id")
         @SerialName("brand_id")
         val brandId: Int = 0,
         val likes: Int = 0,
         val dislikes: Int = 0,
         val downloads: Int = 0,
         val tags: List<String> = emptyList(),
+        @JsonProperty("created_at_unix")
         @SerialName("created_at_unix")
         val createdAtUnix: Long = 0,
+        @JsonProperty("released_at_unix")
         @SerialName("released_at_unix")
         val releasedAtUnix: Long = 0,
+        @JsonProperty("created_at")
         @SerialName("created_at")
         val createdAt: String = "",
+        @JsonProperty("released_at")
         @SerialName("released_at")
         val releasedAt: String = "",
     )
