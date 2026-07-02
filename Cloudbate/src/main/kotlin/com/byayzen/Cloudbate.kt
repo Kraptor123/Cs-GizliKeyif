@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class Cloudbate : MainAPI() {
-    override var mainUrl = "https://cloudbate.com"
+    override var mainUrl = "https://www.cloudbate.com"
     override var name = "Cloudbate"
     override val hasMainPage = true
     override var lang = "en"
