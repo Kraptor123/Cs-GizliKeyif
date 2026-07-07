@@ -2,7 +2,7 @@
 version = 0
 
 cloudstream {
-    authors     = listOf("byayzen")
+    authors     = listOf("kraptor")
     language    = "en"
     description = "porn"
 
