@@ -25,7 +25,6 @@ class SxyprnPlugin: Plugin() {
         registerExtractorAPI(LuluVdo())
         registerExtractorAPI(VidNest())
         registerExtractorAPI(LuluPvp())
-        registerExtractorAPI(Streamup())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(StreamTapeNet())
         registerExtractorAPI(StreamTapeXyz())
