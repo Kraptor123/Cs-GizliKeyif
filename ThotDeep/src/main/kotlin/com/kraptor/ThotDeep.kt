@@ -26,26 +26,25 @@ class ThotDeep : MainAPI() {
         "${mainUrl}/popular" to "Popular",
         "${mainUrl}/tags/actress" to "Actress",
         "${mainUrl}/categories/tv-personalities" to "Tv Personalities",
-        "${mainUrl}/celebrities" to "Celebrities",
+        "${mainUrl}/categories/casting" to "Casting",
+        "${mainUrl}/categories/asian" to "Asian",
     )
-
-    private var cookie = mapOf("" to "")
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}?page=$page").document
-
-        val home = document.select("div.post, div.model-card").mapNotNull { it.toMainPageResult() }
+        val home     = document.select("div.post").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(HomePageList(request.name, home, true))
-
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("h3 a, h3.model-card-name")?.text() ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img[loading=lazy]")?.attr("src"))
+        val title     = this.selectFirst("div.con h3")?.text() ?: return null
+        val href      = fixUrlNull(this.selectFirst("a.post-thumb")?.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("img.thumb")?.attr("src"))
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
