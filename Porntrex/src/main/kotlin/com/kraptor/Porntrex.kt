@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
 class Porntrex : MainAPI() {
-    override var mainUrl = "https://porntrex.com"
+    override var mainUrl = "https://www.porntrex.com"
     override var name = "Porntrex"
     override val hasMainPage = true
     override var lang = "en"

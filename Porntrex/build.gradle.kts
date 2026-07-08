@@ -1,5 +1,5 @@
 // ! This Extension Made By @ByAyzen for GizliKeyif
-version = 1
+version = 2
 
 cloudstream {
     authors     = listOf("ByAyzen")
@@ -9,6 +9,6 @@ cloudstream {
     tvTypes = listOf("NSFW")
 
     val domainIcon = "porntrex.com"
-    iconUrl = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://$domainIcon&size=128"
+    iconUrl = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://www.porntrex.com&size=128"
 
 }
