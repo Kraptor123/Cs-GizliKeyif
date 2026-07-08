@@ -18,14 +18,14 @@ class New : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
+    private val tag = "gizlikeyif_${name}"
+
     override val mainPage = mainPageOf(
         "${mainUrl}/" to "",
         "${mainUrl}/adult" to "Adult",
         "${mainUrl}/videos" to "Videos",
         "${mainUrl}/gizlikeyif" to "GizliKeyif"
     )
-
-    private val tag = "gizlikeyif_${name}"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}").document
@@ -74,7 +74,7 @@ class New : MainAPI() {
         val actors          = document.select("span.valor a").map { Actor(it.text()) }
         val trailer         = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
             this.year = year
@@ -94,9 +94,9 @@ class New : MainAPI() {
         val isTvSeries = this.selectFirst(".type, .episodios, .serie-tag") != null
 
         return if (isTvSeries) {
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) { this.posterUrl = posterUrl }
+            newTvSeriesSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
         } else {
-            newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = posterUrl }
+            newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
         }
     }
 
