@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
 class HentaiCity : MainAPI() {
-    override var mainUrl              = "https://hentaicity.com/"
+    override var mainUrl              = "https://www.defendonlineprivacy.com"
     override var name                 = "HentaiCity"
     override val hasMainPage          = true
     override var lang                 = "en"
