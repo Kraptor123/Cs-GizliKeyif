@@ -7,14 +7,10 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
-import org.jsoup.nodes.Document
-import java.security.MessageDigest
-import java.time.Instant
-import java.time.ZoneId
 
 class Hanime : MainAPI() {
     override var mainUrl              = "https://hanime.tv"
@@ -29,8 +25,9 @@ class Hanime : MainAPI() {
         private var AramaOnbellegi: List<HvsVideo>? = null
         private var cacheSuresi: Long = 0L
         private const val CACHE_TTL = 3_600_000L
-        private const val FAHApi = "https://cached.freeanimehentai.net"
-        private const val SEARCH_API = "$FAHApi/api/v10/search_hvs"
+        private const val FAHApi = "https://guest.freeanimehentai.net"
+        private const val SEARCH_API = "$FAHApi/api/v11/search_hvs"
+        private const val authApi = "https://auth.hanime.tv"
     }
 
     override val mainPage = mainPageOf(
@@ -51,7 +48,6 @@ class Hanime : MainAPI() {
         "fantasy" to "Fantasy",
         "filmed" to "Filmed",
         "foot%20job" to "Foot Job",
-        "futanari" to "Futanari",
         "gangbang" to "Gangbang",
         "glasses" to "Glasses",
         "hand%20job" to "Hand Job",
@@ -66,7 +62,6 @@ class Hanime : MainAPI() {
         "milf" to "Milf",
         "mind%20break" to "Mind Break",
         "mind%20control" to "Mind Control",
-        "monster" to "Monster",
         "nekomimi" to "Nekomimi",
         "ntr" to "NTR",
         "nurse" to "Nurse",
@@ -84,7 +79,6 @@ class Hanime : MainAPI() {
         "threesome" to "Threesome",
         "toys" to "Toys",
         "tsundere" to "Tsundere",
-        "ugly%20bastard" to "Ugly Bastard",
         "uncensored" to "Uncensored",
         "vanilla" to "Vanilla",
         "virgin" to "Virgin",
@@ -172,7 +166,7 @@ class Hanime : MainAPI() {
             return it
         }
         return runCatching {
-            val response = app.get(SEARCH_API, headers = mapOf("Origin" to mainUrl)).text
+            val response = app.get(SEARCH_API, headers = HeaderAl()).text
             Log.d("HanimeTV", "HAM JSON (ilk 1000 karakter): ${response.take(1000)}")
             parseJson<List<HvsVideo>>(response).also {
                 Log.d("HanimeTV", "API'den ${it.size} video çekildi.")
@@ -185,11 +179,9 @@ class Hanime : MainAPI() {
         }.getOrNull() ?: AramaOnbellegi ?: emptyList()
     }
 
-
-
     private fun HeaderAl(): Map<String, String> {
         val time = (System.currentTimeMillis() / 1000).toString()
-        val signature = SignatureCek(time)
+        val signature = Hanimecozucu.signatureCek(time, mainUrl)
         return mapOf(
             "Origin" to mainUrl,
             "Referer" to "$mainUrl/",
@@ -201,41 +193,44 @@ class Hanime : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val slug = url.substringAfterLast("/")
-        val apiPath = "/api/v8/video?id=$slug&"
+        val doc   = app.get(url, headers = HeaderAl()).document
+        val title = doc.selectFirst("section#VideoDetails h1")?.text() ?: return null
+        val slug  = url.substringAfterLast("/")
 
-        val apiResponse = app.get(
-            "$FAHApi$apiPath",
-            headers = HeaderAl()
-        ).parsed<VideoApiResponse>()
+        val poster = doc.selectFirst("img[src*='/images/covers/']")?.attr("abs:src")
 
-        val video = apiResponse.hanimeVideo
-        val yil = video.releasedAtUnix?.let { Instant.ofEpochSecond(it).atZone(ZoneId.of("UTC")).year }
-        val durationMin = video.durationInMs?.div(60000)?.toInt()
-        val score = video.rating?.let { Score.from10(it) }
+        val durationText = doc.select("section#VideoDetails span.badge").firstOrNull {
+            it.text().contains("min", ignoreCase = true)
+        }?.text()
+        val duration = durationText?.let { Regex("(\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() }
 
-        Log.d("HanimeTV", "load slug=$slug title=${video.name} year=$yil duration=$durationMin")
+        val tags = doc.select("a[href^=\"/browse/tags/\"]").map { it.text() }
 
-        return newMovieLoadResponse(video.name, url, TvType.NSFW, video.id.toString()) {
-            this.posterUrl = video.posterUrl
-            this.posterHeaders = mapOf("Referer" to "$mainUrl/")
-            this.plot = video.description
-            this.year = yil
-            this.tags = video.hanimeTags?.map { it.text } ?: emptyList()
-            this.duration = durationMin
-            this.score = score
-            this.recommendations = Onerilenler(apiResponse.hanimeFranchiseHanimeVideos)
-        }
-    }
+        val plot = doc.select("h2:contains(Synopsis)").first()?.parent()?.selectFirst("div[data-expand-content]")?.text()
 
-    private fun Onerilenler(videos: List<HanimeVideo>?): List<SearchResponse> {
-        return videos?.mapNotNull { v ->
-            if (v.posterUrl.isNullOrBlank())
-                return@mapNotNull null
-            newMovieSearchResponse(v.name, "/videos/hentai/${v.slug}", TvType.NSFW) {
-                this.posterUrl = v.posterUrl
+        val yearText = doc.select("button[data-tip]").firstOrNull()?.attr("data-tip")
+        val year     = yearText?.let { Regex("(\\d{4})").find(it)?.groupValues?.get(1)?.toIntOrNull() }
+
+        val recommendations = doc.select("section#NextVideoSection a[href]").mapNotNull { a ->
+            val recTitle  = a.selectFirst("span.line-clamp-2")?.text() ?: a.selectFirst("span.text-white:not(.bg-base-300\\/55)")?.text() ?: return@mapNotNull null
+            val recPoster = fixUrlNull(a.selectFirst("img.aspect-video")?.attr("src")) ?: return@mapNotNull null
+            val recUrl    = fixUrl(a.attr("href"))
+            newMovieSearchResponse(recTitle, recUrl, TvType.NSFW) {
+                this.posterUrl = recPoster
             }
-        } ?: emptyList()
+        }
+
+        Log.d("HanimeTV", "title=$title year=$year duration=$duration")
+
+        return newMovieLoadResponse(title, url, TvType.NSFW, slug) {
+            this.posterUrl       = poster
+            this.posterHeaders   = mapOf("Referer" to "$mainUrl/")
+            this.plot            = plot
+            this.year            = year
+            this.tags            = tags
+            this.duration        = duration
+            this.recommendations = recommendations
+        }
     }
 
     override suspend fun loadLinks(
@@ -246,104 +241,103 @@ class Hanime : MainAPI() {
     ): Boolean {
         if (data.isBlank()) return false
 
-        val path = "/api/v8/guest/videos/$data/manifest"
+        val time = (System.currentTimeMillis() / 1000).toString()
+        val signature = Hanimecozucu.signatureCek(time, mainUrl)
 
-        val manifestResponse = runCatching {
-            app.get(
-                "$FAHApi$path",
-                headers = HeaderAl()
-            ).parsed<VideoManifestResponse>()
-        }.getOrNull() ?: return false
+        Log.d("HanimeTV", "slug=$data time=$time")
 
-        val servers = manifestResponse.videosManifest.servers
-        Log.d("HanimeTV", "loadLinks id=$data servers=${servers.size}")
+        val payloadJson = buildJsonObject {
+            put("timestamp_unix", time.toLong())
+            put("directive", "htv_player_handshake")
+            put("slug", data)
+        }.toString()
 
-        for (server in servers) {
-            for (stream in server.streams) {
-                if (stream.isGuestAllowed == false) continue
-                val qualityInt = stream.height.toIntOrNull() ?: 0
-                Log.d("HanimeTV", "stream server=${server.name} height=${stream.height} url=${stream.url}")
-                callback(
-                    newExtractorLink(
-                        source = "HanimeTV - ${server.name}",
-                        name = "Hanime",
-                        url = stream.url,
-                        type = ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "$mainUrl/"
-                        this.quality = qualityInt
-                    }
-                )
+        val encryptedToken = runCatching {
+            Hanimecozucu.encryptHandshakeToken(payloadJson)
+        }.getOrNull() ?: run {
+            Log.e("HanimeTV", "token encrypt fail")
+            return false
+        }
+
+        val handshakeHeaders = mapOf(
+            "accept" to "application/json",
+            "content-type" to "application/json",
+            "x-signature-version" to "web2",
+            "x-signature" to signature,
+            "x-time" to time,
+            "x-csrf-token" to "null",
+            "origin" to mainUrl,
+            "referer" to "$mainUrl/"
+        )
+
+        val jsonBody = buildJsonObject {
+            put("token", encryptedToken)
+        }
+
+        val response = runCatching {
+            app.post(
+                "$authApi/api/v11/handshake",
+                headers = handshakeHeaders,
+                json = jsonBody,
+                allowRedirects = true
+            )
+        }.getOrNull() ?: run {
+            Log.e("HanimeTV", "handshake request fail")
+            return false
+        }
+
+        if (!response.isSuccessful) {
+            Log.e("HanimeTV", "handshake fail code=${response.code}")
+            return false
+        }
+
+        val xToken = response.headers["x-token"] ?: response.headers["X-Token"] ?: run {
+            Log.e("HanimeTV", "x-token missing")
+            return false
+        }
+
+        val decryptedJson = runCatching { Hanimecozucu.decryptXToken(xToken) }.getOrNull() ?: run {
+            Log.e("HanimeTV", "x-token decrypt fail")
+            return false
+        }
+
+        val handshakeResponse = try {
+            parseJson<Hanimecozucu.HandshakeResponse>(decryptedJson)
+        } catch (e: Exception) {
+            Log.e("HanimeTV", "parse fail: ${e.message}")
+            return false
+        }
+
+        Log.d("HanimeTV", "sources=${handshakeResponse.sources.size}")
+
+        for (source in handshakeResponse.sources) {
+            if (source.kind != "normal" || source.src.isBlank()) {
+                Log.d("HanimeTV", "skip kind=${source.kind} label=${source.label}")
+                continue
             }
+
+            val fullUrl = if (source.src.startsWith("http")) source.src else "$mainUrl${source.src}"
+
+            Log.d("HanimeTV", "label=${source.label} height=${source.height} url=$fullUrl")
+
+            callback(
+                newExtractorLink(
+                    source = "HanimeTV",
+                    name = "Hanime - ${source.label.ifBlank { "${source.height}p" }}",
+                    url = fullUrl,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = source.height
+                }
+            )
         }
         return true
     }
 
 
 
-    private fun SignatureCek(time: String): String {
-        val message = "$time,Xkdi29,$mainUrl,mn2,$time"
-        val bytes = MessageDigest.getInstance("SHA-256").digest(message.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
 
-    @Serializable
-    data class VideoApiResponse(
-        @JsonProperty("hentai_video")
-        @SerialName("hentai_video")
-        val hanimeVideo: HanimeVideo,
-        @JsonProperty("hentai_franchise_hentai_videos")
-        @SerialName("hentai_franchise_hentai_videos")
-        val hanimeFranchiseHanimeVideos: List<HanimeVideo>? = null,
-        @JsonProperty("hentai_franchise")
-        @SerialName("hentai_franchise")
-        val hanimeFranchise: HanimeFranchise? = null,
-        @JsonProperty("videos_manifest")
-        @SerialName("videos_manifest")
-        val videosManifest: VideosManifest? = null
-    )
-
-    @Serializable
-    data class HanimeVideo(
-        val id: Int,
-        val name: String,
-        val slug: String,
-        val description: String? = null,
-        @JsonProperty("poster_url")
-        @SerialName("poster_url")
-        val posterUrl: String? = null,
-        val brand: String? = null,
-        val likes: Int? = null,
-        val dislikes: Int? = null,
-        val views: Int? = null,
-        @JsonProperty("duration_in_ms")
-        @SerialName("duration_in_ms")
-        val durationInMs: Long? = null,
-        @JsonProperty("is_censored")
-        @SerialName("is_censored")
-        val isCensored: Boolean? = null,
-        val rating: Double? = null,
-        @JsonProperty("hentai_tags")
-        @SerialName("hentai_tags")
-        val hanimeTags: List<HanimeTag>? = null,
-        @JsonProperty("released_at_unix")
-        @SerialName("released_at_unix")
-        val releasedAtUnix: Long? = null,
-        @JsonProperty("created_at_unix")
-        @SerialName("created_at_unix")
-        val createdAtUnix: Long? = null
-    )
-
-    @Serializable
-    data class HanimeTag(val text: String)
-
-    @Serializable
-    data class HanimeFranchise(
-        val id: Int,
-        val name: String,
-        val slug: String,
-        val title: String?
-    )
 
     @Serializable
     data class HvsVideo(
@@ -382,26 +376,5 @@ class Hanime : MainAPI() {
         @SerialName("released_at")
         val releasedAt: String = "",
     )
-
-    data class VideoManifestResponse(
-        @param:JsonProperty("videos_manifest") val videosManifest: VideosManifest
-    )
-
-    data class VideosManifest(
-        val servers: List<VideoServer>
-    )
-
-    data class VideoServer(
-        val id: Int,
-        val name: String,
-        val streams: List<VideoStream>
-    )
-
-    data class VideoStream(
-        val id: Int,
-        val url: String,
-        val kind: String,
-        val height: String,
-        @param:JsonProperty("is_guest_allowed") val isGuestAllowed: Boolean? = null
-    )
 }
+
