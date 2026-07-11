@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class TemelPlugin: Plugin() {
+class NewPlugin: Plugin() {
     override fun load() {
         registerMainAPI(New())
     }
