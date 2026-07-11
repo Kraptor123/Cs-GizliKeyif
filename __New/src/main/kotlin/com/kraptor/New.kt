@@ -69,7 +69,18 @@ class New : MainAPI() {
         val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
         val tags            = document.select("div.sgeneros a").map { it.text() }
         val scoreText       = document.selectFirst("span.dt_rating_vgs")?.text()?.trim()
-        val duration        = document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
+        val duration        = document.selectFirst("span.video-length")
+            ?.text()
+            ?.split(":")
+            ?.mapNotNull { it.trim().toIntOrNull() }
+            ?.let { parts ->
+                val size = parts.size
+                val seconds = if (size >= 1) parts[size - 1] else 0
+                val minutes = if (size >= 2) parts[size - 2] else 0
+                val hours   = if (size >= 3) parts[size - 3] else 0
+
+                hours * 60 + minutes + if (seconds >= 30) 1 else 0
+            }
         val recommendations = document.select("div.srelacionados article").mapNotNull { it.toRecommendationResult() }
         val actors          = document.select("span.valor a").map { Actor(it.text()) }
         val trailer         = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
