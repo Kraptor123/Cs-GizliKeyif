@@ -31,7 +31,7 @@ class New : MainAPI() {
         val document = app.get("${request.data}").document
         val home     = document.select("div.items article").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(list = HomePageList(request.name, home, true))
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
