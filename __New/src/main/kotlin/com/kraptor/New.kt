@@ -111,26 +111,28 @@ class New : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d(tag, "data = ${data}")
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        Log.d("Plugin", "data = $data")
         val document = app.get(data).document
 
-        // TODO:
-        // loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
+        // TODO: loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
 
-       /*
-
-       callback.invoke(newExtractorLink(
-            source = this.name,
-            name   = this.name,
-            url = "",
-            type = INFER_TYPE,
-            initializer = {
-                this.referer = "${mainUrl}/"
-            }
-        ))
-
-        */
+        /*
+    callback.invoke(newExtractorLink(
+        source = this.name,
+        name   = this.name,
+        url = "",
+        type = INFER_TYPE,
+        initializer = {
+            this.referer = "$mainUrl/"
+        }
+    ))
+    */
 
         return true
     }

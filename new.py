@@ -1,112 +1,209 @@
-import os
-import sys
-import re
+import os, shutil, re, sys
+
+VARS_TEMPLATE = r"""
+        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val description     = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
+        val tags            = document.select("div.sgeneros a").map { it.text() }
+        val scoreText       = document.selectFirst("span.dt_rating_vgs")?.text()?.trim()
+        val duration        = document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
+        val recommendations = document.select("div.srelacionados article").mapNotNull { it.toRecommendationResult() }
+        val actors          = document.select("span.valor a").map { Actor(it.text()) }
+        val trailer         = Regex(""" + '"""embed\\/(.*)\\?rel"""' + r""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
+"""
+
+LOAD_MOVIE = """
+    override suspend fun load(url: String): LoadResponse? {
+        Log.d(name, "Load aşaması: $url")
+        val document = app.get(url).document
+        {vars}
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl       = poster
+            this.plot            = description
+            this.year            = year
+            this.tags            = tags
+            this.score           = Score.from10(scoreText)
+            this.duration        = duration
+            this.recommendations = recommendations
+            addActors(actors)
+            addTrailer(trailer)
+        }
+    }
+
+    private fun Element.toRecommendationResult(): SearchResponse? {
+        val title     = this.selectFirst("a img")?.attr("alt") ?: return null
+        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+        }
+    }
+
+"""
+
+LOAD_TV = """
+    override suspend fun load(url: String): LoadResponse? {
+        Log.d(name, "Load aşaması: $url")
+        val document = app.get(url).document
+        {vars}
+        val episodes = document.select("div.episodios li a, div.season-list a").mapNotNull { ep ->
+            val epUrl = fixUrlNull(ep.attr("href")) ?: return@mapNotNull null
+            newEpisode(epUrl) {
+                this.name = ep.text()?.trim() ?: "Bölüm"
+                this.season = ep.selectFirst(".se-t, .season")?.text()?.trim()?.toIntOrNull() ?: 1
+                this.episode = ep.selectFirst(".num-ep, .episode")?.text()?.trim()?.toIntOrNull() ?: 1
+            }
+        }
+        return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            this.posterUrl       = poster
+            this.plot            = description
+            this.year            = year
+            this.tags            = tags
+            this.score           = Score.from10(scoreText)
+            this.duration        = duration
+            this.recommendations = recommendations
+            addActors(actors)
+            addTrailer(trailer)
+        }
+    }
+
+    private fun Element.toRecommendationResult(): SearchResponse? {
+        val title     = this.selectFirst("a img")?.attr("alt") ?: return null
+        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
+        return newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+            this.posterUrl = posterUrl
+        }
+    }
+
+"""
+
+LOAD_BOTH = """
+    override suspend fun load(url: String): LoadResponse? {
+        Log.d(name, "Load aşaması: $url")
+        val document = app.get(url).document
+        {vars}
+        val isTv = document.select("div.episodios li, div.season-list, table.episodes").isNotEmpty()
+        if (isTv) {
+            val episodes = document.select("div.episodios li a, div.season-list a").mapNotNull { ep ->
+                val epUrl = fixUrlNull(ep.attr("href")) ?: return@mapNotNull null
+                newEpisode(epUrl) {
+                    this.name = ep.text()?.trim()
+                    this.season = ep.selectFirst(".se-t")?.text()?.toIntOrNull() ?: 1
+                    this.episode = ep.selectFirst(".num-ep")?.text()?.toIntOrNull() ?: 1
+                }
+            }
+            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl       = poster
+                this.plot            = description
+                this.year            = year
+                this.tags            = tags
+                this.score           = Score.from10(scoreText)
+                this.duration        = duration
+                this.recommendations = recommendations
+                addActors(actors)
+                addTrailer(trailer)
+            }
+        } else {
+            return newMovieLoadResponse(title, url, TvType.Movie, url) {
+                this.posterUrl       = poster
+                this.plot            = description
+                this.year            = year
+                this.tags            = tags
+                this.score           = Score.from10(scoreText)
+                this.duration        = duration
+                this.recommendations = recommendations
+                addActors(actors)
+                addTrailer(trailer)
+            }
+        }
+    }
+
+    private fun Element.toRecommendationResult(): SearchResponse? {
+        val title     = this.selectFirst("a img")?.attr("alt") ?: return null
+        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
+        val isTv = this.selectFirst(".type, .episodios, .serie-tag") != null
+        return if (isTv) {
+            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+                this.posterUrl = posterUrl
+            }
+        } else {
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = posterUrl
+            }
+        }
+    }
+
+"""
 
 def main():
-    # En azından eklenti adı girilmiş mi kontrol et
-    if len(sys.argv) < 2:
-        print("Kullanım: python new.py <EklentiAdı> [SiteAdresi]")
-        print("Örnek 1: python new.py YeniEklenti")
-        print("Örnek 2: python new.py YeniEklenti google.com")
-        print("Örnek 3: python new.py -YeniEklenti -https://google.com")
-        return
+    print("\n" + "Cloudstream Eklenti Kitapçığı".center(50))
+    print("-" * 50)
 
-    target_name = sys.argv[1]
+    name = (sys.argv[1] if len(sys.argv) > 1 else input("Ad: ")).strip().replace("-", "")
+    if not name: return
+    url = (sys.argv[2] if len(sys.argv) > 2 else input("URL (Varsayılan: https://ornek.com): ")).strip() or "https://ornek.com"
+    if url and not url.startswith("http"): url = "https://" + url
+    pkg = input(f"Paket: ").strip() or f"com.kraptor"
+    user = input("Yazar: ").strip() or "kraptor"
+    lang = input("Dil: ").strip() or "tr"
+    desc = input("Açıklama: ").strip() or f"{name} eklentisi."
+    icon = input("Favicon: ").strip() or (f"https://www.google.com/s2/favicons?sz=64&domain={url}" if url else "https://")
+    typ = input("Tür (1:Film, 2:TV, 3:Both): ").strip() or "3"
+    is_search_same = input("Arama ile ana menü eşit mi? (Evet/Hayır): ").strip().lower() == "evet"
 
-    # 2. argüman olarak URL girilmişse al, yoksa None yap
-    target_url = sys.argv[2] if len(sys.argv) > 2 else None
+    base = os.getcwd()
+    src, dst = os.path.join(base, "__New"), os.path.join(base, name)
 
-    # Argümanların başındaki tire (-) işaretlerini temizle
-    if target_name.startswith('-'):
-        target_name = target_name[1:]
+    if os.path.exists(dst):
+        if input(f"'{name}' silinsin mi? (y/n): ").lower() == 'y': shutil.rmtree(dst)
+        else: return
+    shutil.copytree(src, dst)
 
-    if target_url and target_url.startswith('-'):
-        target_url = target_url[1:]
+    root = os.path.join(dst, "src", "main", "kotlin")
+    o_pkg, n_pkg = os.path.join(root, "com", "kraptor"), os.path.join(root, *pkg.split('.'))
+    tmp_pkg = os.path.join(dst, "tmp_pkg_move")
 
-    if target_name == "__New":
-        print("Hata: __New şablon klasörünü değiştiremezsiniz!")
-        return
+    if os.path.exists(o_pkg):
+        os.makedirs(tmp_pkg, exist_ok=True)
+        for i in os.listdir(o_pkg): shutil.move(os.path.join(o_pkg, i), tmp_pkg)
+        shutil.rmtree(os.path.join(root, "com"))
+        os.makedirs(n_pkg, exist_ok=True)
+        for i in os.listdir(tmp_pkg): shutil.move(os.path.join(tmp_pkg, i), n_pkg)
+        shutil.rmtree(tmp_pkg)
 
-    target_dir = os.path.join(os.getcwd(), target_name)
+    types = {"1": "TvType.Movie", "2": "TvType.TvSeries", "3": "TvType.Movie"}
+    sets = {"1": "setOf(TvType.Movie)", "2": "setOf(TvType.TvSeries)", "3": "setOf(TvType.Movie, TvType.TvSeries)"}
+    loads = {"1": LOAD_MOVIE, "2": LOAD_TV, "3": LOAD_BOTH}
 
-    if not os.path.exists(target_dir):
-        print(f"Hata: '{target_name}' adında bir klasör bulunamadı.")
-        print(f"Lütfen önce terminalde 'cp -r __New {target_name}' komutunu çalıştırın.")
-        return
-
-    print(f"'{target_name}' klasöründeki dosyalar güncelleniyor...")
-
-    # URL'leri formatla
-    main_url_val = None
-    icon_url_val = None
-    if target_url:
-        # Eğer adres http veya https ile başlamıyorsa, https:// ekle
-        if not target_url.startswith("http://") and not target_url.startswith("https://"):
-            target_url = "https://" + target_url
-
-        main_url_val = target_url
-        icon_url_val = f"https://www.google.com/s2/favicons?sz=64&domain={target_url}"
-
-    # 1. Dosya ve klasör isimlerini değiştir
-    for root, dirs, files in os.walk(target_dir, topdown=False):
-        for file_name in files:
-            if "New" in file_name:
-                old_file_path = os.path.join(root, file_name)
-                new_file_name = file_name.replace("New", target_name)
-                new_file_path = os.path.join(root, new_file_name)
-                os.rename(old_file_path, new_file_path)
-
-        for dir_name in dirs:
-            if "New" in dir_name:
-                old_dir_path = os.path.join(root, dir_name)
-                new_dir_name = dir_name.replace("New", target_name)
-                new_dir_path = os.path.join(root, new_dir_name)
-                os.rename(old_dir_path, new_dir_path)
-
-    # 2. Dosya içeriklerini güncelle (İsim ve URL'ler)
-    for root, dirs, files in os.walk(target_dir):
-        for file_name in files:
-            file_path = os.path.join(root, file_name)
-
+    for r, ds, fs in os.walk(dst, topdown=False):
+        for f in fs:
+            p = os.path.join(r, f)
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+                with open(p, 'r', encoding='utf-8') as fl: c = fl.read()
+                c = c.replace("@Kraptor123", f"@{user}").replace("New", name)
+                c = re.sub(r'package\s+[\w.]+', f'package {pkg}', c)
+                c = re.sub(r'authors\s*=\s*listOf\(.*?\)', f'authors     = listOf("{user}")', c)
+                c = re.sub(r'language\s*=\s*".*?"', f'language    = "{lang}"', c)
+                c = re.sub(r'description\s*=\s*".*?"', f'description = "{desc}"', c)
+                c = re.sub(r'override var lang\s*=\s*".*?"', f'override var lang                 = "{lang}"', c)
+                if url:
+                    c = re.sub(r'(mainUrl\s*=\s*)".*?"', f'\\1"{url}"', c)
+                    c = re.sub(r'(iconUrl\s*=\s*)".*?"', f'\\1"{icon}"', c)
+                if f.endswith(".kt") and "Plugin" not in f:
+                    c = c.replace("TvType.NSFW", types[typ]).replace("setOf(TvType.Movie)", sets[typ])
+                    l_code = loads[typ].replace("{vars}", VARS_TEMPLATE)
+                    c = re.sub(r'override suspend fun load\(url: String\): LoadResponse\? \{.*?(?=override suspend fun loadLinks)', l_code, c, flags=re.DOTALL)
+                    if is_search_same:
+                        c = c.replace("it.toSearchResult()", "it.toMainPageResult()")
+                        c = re.sub(r'private fun Element\.toSearchResult\(\): SearchResponse\? \{.*?\}\n    \}', '', c, flags=re.DOTALL)
+                with open(p, 'w', encoding='utf-8') as fl: fl.write(c)
+            except: pass
+            if "New" in f: os.rename(p, os.path.join(r, f.replace("New", name)))
+        for d in ds:
+            if "New" in d: os.rename(os.path.join(r, d), os.path.join(r, d.replace("New", name)))
+    print(f"\n✅ '{name}' tamamlandı.")
 
-                new_content = content
-                content_changed = False
-
-                # "New" isimlerini değiştir
-                if "New" in new_content:
-                    new_content = new_content.replace("New", target_name)
-                    content_changed = True
-
-                # URL'ler verilmişse Regex ile değiştir
-                if main_url_val:
-                    # mainUrl = "..." kısmını bul ve içini yeni URL ile değiştir
-                    replaced_content = re.sub(r'(mainUrl\s*=\s*)".*?"', rf'\g<1>"{main_url_val}"', new_content)
-                    if replaced_content != new_content:
-                        new_content = replaced_content
-                        content_changed = True
-
-                    # iconUrl = "..." kısmını bul ve içini yeni ikon URL'si ile değiştir
-                    replaced_content = re.sub(r'(iconUrl\s*=\s*)".*?"', rf'\g<1>"{icon_url_val}"', new_content)
-                    if replaced_content != new_content:
-                        new_content = replaced_content
-                        content_changed = True
-
-                # Sadece bir değişiklik yapıldıysa dosyayı kaydet
-                if content_changed:
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(new_content)
-                    print(f"Güncellendi: {os.path.basename(file_path)}")
-
-            except Exception as e:
-                pass
-
-    print(f"\nBaşarılı! Eklenti '{target_name}' olarak ayarlandı.")
-    if main_url_val:
-        print(f"Ana URL: {main_url_val}")
-        print(f"İkon URL: {icon_url_val}")
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
