@@ -146,7 +146,8 @@ def main():
     if not name: return
     url = (sys.argv[2] if len(sys.argv) > 2 else input("URL (Varsayılan: https://ornek.com): ")).strip() or "https://ornek.com"
     if url and not url.startswith("http"): url = "https://" + url
-    pkg = input(f"Paket: ").strip() or f"com.kraptor"
+    pkg = input(f"Paket: ").strip() or "com.kraptor"
+    if not pkg.startswith("com."): pkg = f"com.{pkg}"
     user = input("Yazar: ").strip() or "kraptor"
     lang = input("Dil: ").strip() or "tr"
     desc = input("Açıklama: ").strip() or f"{name} eklentisi."
@@ -198,7 +199,7 @@ def main():
                     c = re.sub(r'override suspend fun load\(url: String\): LoadResponse\? \{.*?(?=override suspend fun loadLinks)', l_code, c, flags=re.DOTALL)
                     if is_search_same:
                         c = c.replace("it.toSearchResult()", "it.toMainPageResult()")
-                        c = re.sub(r'private fun Element\.toSearchResult\(\): SearchResponse\? \{.*?\}\n    \}', '', c, flags=re.DOTALL)
+                        c = re.sub(r'private fun Element\.toSearchResult\(\): SearchResponse\? \{.*?\}\s*\}', '', c, flags=re.DOTALL)
                 with open(p, 'w', encoding='utf-8') as fl: fl.write(c)
             except: pass
             if "New" in f: os.rename(p, os.path.join(r, f.replace("New", name)))
