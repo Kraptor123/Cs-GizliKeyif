@@ -16,7 +16,7 @@ class WatchHentai : MainAPI() {
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasQuickSearch       = false
-    override val supportedTypes       = setOf(TvType.Movie, TvType.TvSeries)
+    override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     private val tag = "gizlikeyif_${name}"
@@ -121,7 +121,7 @@ class WatchHentai : MainAPI() {
         val title     = this.selectFirst("a img")?.attr("alt") ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
-        return newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+        return newTvSeriesSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
