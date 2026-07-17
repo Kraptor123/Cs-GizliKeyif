@@ -109,6 +109,9 @@ class AllClassicPorn(context: Context) : MainAPI() {
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("div.th-description")?.text() ?: return null
+        if (title.contains("Debbie Does Dallas", ignoreCase = true) || title.contains("Private Teacher", ignoreCase = true)) {
+            return null
+        }
         val href      = fixUrlNull(this.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
         val puan = this.selectFirst("span.th-rating")?.text()?.replace("%","")
@@ -128,6 +131,9 @@ class AllClassicPorn(context: Context) : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val title     = this.selectFirst("div.th-description")?.text() ?: return null
+        if (title.contains("Debbie Does Dallas", ignoreCase = true) || title.contains("Private Teacher", ignoreCase = true)) {
+            return null
+        }
         val href      = fixUrlNull(this.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
         val puan = this.selectFirst("span.th-rating")?.text()?.replace("%","")

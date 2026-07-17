@@ -1,4 +1,4 @@
-version = 7
+version = 8
 
 dependencies {
     implementation("androidx.cardview:cardview:1.0.0")
@@ -20,14 +20,6 @@ cloudstream {
     authors     = listOf("kraptor")
     language    = "en"
     description = "SimpCity: supports photos and videos with gallery"
-
-    /**
-     * Status int as the following:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
-    **/
     status  = 1
     tvTypes = listOf("NSFW")
     iconUrl = "http://www.google.com/s2/favicons?domain=https://simpcity.cr/"

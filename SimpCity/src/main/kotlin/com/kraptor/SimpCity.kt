@@ -8,7 +8,7 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
     override var name                 = "SimpCity"
     override val hasMainPage          = true
     override var lang                 = "en"
-    override val hasQuickSearch       = false
+    override val hasQuickSearch       = true
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
@@ -108,7 +108,8 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
-    override suspend fun search(query: String, page: Int): SearchResponseList {
+    override suspend fun search(query: String, page: Int): SearchResponseList? {
+        if (!getSimpCookie().contains("_user=")) return null
         val searchId = getSearchId(query)
         val searchUrl = if (page == 1) {
             "${mainUrl}/search/$searchId/?q=$query&o=date"
@@ -132,7 +133,10 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse>? {
+        if (!getSimpCookie().contains("_user=")) return null
+        return search(query, 1)?.items
+    }
 
     private val imageExtRegex = Regex("""\.(jpe?g|png|gif|webp)(\?[^"\s<>]*)?$""", RegexOption.IGNORE_CASE)
     private val videoExtRegex = Regex("""\.(mp4|m4v|m3u8)(\?[^"\s<>]*)?$""", RegexOption.IGNORE_CASE)

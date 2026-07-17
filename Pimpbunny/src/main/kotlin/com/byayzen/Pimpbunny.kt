@@ -20,6 +20,7 @@ class Pimpbunny : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
+        "${mainUrl}/videos" to "Newest Videos",
         "${mainUrl}/" to "Featured Videos",
         "${mainUrl}/onlyfans-creators/?models_per_page=30" to "Newest Models",
         "${mainUrl}/categories/4k/" to "4K",
