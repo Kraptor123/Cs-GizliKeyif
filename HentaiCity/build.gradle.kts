@@ -1,5 +1,5 @@
 // ! This Extension Made By @ByAyzen for GizliKeyif
-version = 2
+version = 3
 
 cloudstream {
     authors     = listOf("kraptor")

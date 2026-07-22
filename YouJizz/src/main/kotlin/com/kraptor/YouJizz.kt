@@ -30,7 +30,14 @@ class YouJizz : MainAPI() {
         val document = app.get("${request.data}/$page.html").document
         val home     = document.select("div.video-thumb").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

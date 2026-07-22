@@ -23,7 +23,6 @@ class Kopeda : MainAPI() {
         "${mainUrl}/porno/esmer" to "Esmer",
         "${mainUrl}/porno/ensest"  to "Ensest",
         "${mainUrl}/porno/konulu"  to "Konulu",
-        "${mainUrl}/porno/hd"  to "HD 1080P ",
         "${mainUrl}/porno/milf"  to "Milf",
         "${mainUrl}/porno/latin"  to "Latin",
         "${mainUrl}/porno/asyali"  to "Asyalı",

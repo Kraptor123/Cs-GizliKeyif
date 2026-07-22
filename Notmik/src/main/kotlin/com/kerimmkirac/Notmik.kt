@@ -23,7 +23,6 @@ class Notmik : MainAPI() {
         "${mainUrl}/porno/esmer" to "Esmer",
         "${mainUrl}/porno/ensest"  to "Ensest",
         "${mainUrl}/porno/konulu"  to "Konulu",
-        "${mainUrl}/porno/hd"  to "HD 1080P ",
         "${mainUrl}/porno/milf"  to "Milf",
         "${mainUrl}/porno/latin"  to "Latin",
         "${mainUrl}/porno/asyali"  to "Asyalı",
@@ -98,87 +97,62 @@ class Notmik : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
         Log.d("Notmik", "loadLinks başladı - data: $data")
-
         try {
             val (url, _) = data.split("|").let {
                 it[0] to it.getOrNull(1)
             }
-
-
             Log.d("Notmik", "URL çıkarıldı - url: $url")
-
             val document = app.get(url).document
-
             Log.d("Notmik", "Sayfa yüklendi")
-
-            val iframe = document.selectFirst("div.screen.fluid-width-video-wrapper.player iframe")?.attr("src")
-
+            val iframe = document.selectFirst("div.screen.fluid-width-video-wrapper.player iframe")
+                ?.attr("src")
             Log.d("Notmik", "iframe bulundu - iframe: $iframe")
-
             if (iframe.isNullOrEmpty()) {
 
                 Log.d("Notmik", "iframe boş!")
                 return false
             }
-
             val idRegex = Regex("pornolar/([^.]+)\\.html")
             val matchResult = idRegex.find(iframe)
             val videoId = matchResult?.groups?.get(1)?.value
-
-
             Log.d("Notmik", "videoId çıkarıldı - videoId: $videoId")
-
             if (videoId.isNullOrEmpty()) {
 
                 Log.d("Notmik", "videoId boş!")
                 return false
             }
-
             val apiUrl = "https://api.reqcdn.com/url.php?id=$videoId&siteid=3"
-
             Log.d("Notmik", "API çağrısı yapılıyor - apiUrl: $apiUrl")
-
             val apiResponse = app.get(apiUrl).text
-
             Log.d("Notmik", "API yanıtı - apiResponse: $apiResponse")
-
             val urlRegex = Regex("\"url\":\"([^\"]+)\"")
             val urlMatch = urlRegex.find(apiResponse)
             val videoUrl = urlMatch?.groups?.get(1)?.value?.replace("\\/", "/")
-
-
-
-
             if (!videoUrl.isNullOrEmpty()) {
-
-
-
                 callback.invoke(
                     newExtractorLink(
                         name = name,
                         source = name,
                         url = videoUrl,
                         type = if (videoUrl.contains(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
-                    ){
+                    ) {
                         this.referer = "https://www.notmik.com"
                         this.quality = Qualities.Unknown.value
                     }
                 )
-
-
                 Log.d("Notmik", "ExtractorLink başarıyla oluşturuldu")
             } else {
-
                 Log.d("Notmik", "videoUrl boş!")
             }
-
             return true
-
         } catch (e: Exception) {
-
             Log.e("Notmik", "Hata oluştu")
             return false
         }

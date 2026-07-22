@@ -21,8 +21,8 @@ class RoshyTv : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/category/english-sub-3/?sort_by=new" to "Subtitles - New",
-        "$mainUrl/category/english-sub-3/?sort_by=most_viewed" to "Subtitles - Most Viewed",
+        "$mainUrl/category/english-sub-4/?sort_by=new" to "Subtitles - New",
+        "$mainUrl/category/english-sub-4/?sort_by=most_viewed" to "Subtitles - Most Viewed",
         "$mainUrl/category/decensored-4/?sort_by=new" to "Decensored - New",
         "$mainUrl/category/decensored-4/?sort_by=most_viewed" to "Decensored - Most Viewed"
     )
@@ -39,7 +39,7 @@ class RoshyTv : MainAPI() {
             list = HomePageList(
                 name = request.name,
                 list = home,
-                isHorizontalImages = true
+                isHorizontalImages = false
             )
         )
     }

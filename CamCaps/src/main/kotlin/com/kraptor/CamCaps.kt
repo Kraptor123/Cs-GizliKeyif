@@ -87,7 +87,7 @@ class CamCaps : MainAPI() {
         val trailer = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)
             ?.let { "https://www.youtube.com/embed/$it" }
 
-       return newMovieLoadResponse(title, url, TvType.Movie, url) {
+       return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
             this.year = year
@@ -109,9 +109,11 @@ class CamCaps : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
 
-        val iframe = document.selectFirst("iframe")?.attr("src").toString()
+        val iframe = document.selectFirst("div.video-embedded iframe")?.attr("src") ?: return false
 
-        loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
+        val redirectedUrl = app.get(iframe).url
+
+        loadExtractor(redirectedUrl, "${mainUrl}/", subtitleCallback, callback)
 
         return true
     }

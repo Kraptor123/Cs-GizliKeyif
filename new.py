@@ -94,7 +94,7 @@ LOAD_BOTH = """
                     this.episode = ep.selectFirst(".num-ep")?.text()?.toIntOrNull() ?: 1
                 }
             }
-            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            return newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
                 this.posterUrl       = poster
                 this.plot            = description
                 this.year            = year
@@ -106,7 +106,7 @@ LOAD_BOTH = """
                 addTrailer(trailer)
             }
         } else {
-            return newMovieLoadResponse(title, url, TvType.Movie, url) {
+            return newMovieLoadResponse(title, url, TvType.NSFW, url) {
                 this.posterUrl       = poster
                 this.plot            = description
                 this.year            = year
@@ -126,11 +126,11 @@ LOAD_BOTH = """
         val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
         val isTv = this.selectFirst(".type, .episodios, .serie-tag") != null
         return if (isTv) {
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+            newTvSeriesSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = posterUrl
             }
         } else {
-            newMovieSearchResponse(title, href, TvType.Movie) {
+            newMovieSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = posterUrl
             }
         }

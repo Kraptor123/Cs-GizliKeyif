@@ -26,7 +26,12 @@ class HQCollect : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}page/$page/").document
+        val url = if (page == 1) {
+            request.data
+        } else {
+            "${request.data}page/$page/"
+        }
+        val document = app.get(url).document
         val home = document.select("div.col-xs-6").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
