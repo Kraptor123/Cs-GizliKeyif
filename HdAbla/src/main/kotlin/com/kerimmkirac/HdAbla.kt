@@ -117,34 +117,41 @@ class HdAbla : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val iframeUrl = app.get(data).document.selectFirst("div.screen iframe")?.attr("src") ?: return false
-        val scriptBody = app.get(fixUrl(iframeUrl), referer = data).text
 
-        """(?:file|source)\s*:\s*["']([^"']+)["']|["'](http[^"']*\.(?:m3u8|mp4)[^"']*)["']""".toRegex()
-            .findAll(scriptBody).forEach { match ->
-                val videoUrl = (match.groupValues[1].takeIf { it.isNotBlank() } ?: match.groupValues[2]).replace("\\/", "/")
-                val isMp4 = videoUrl.contains(".mp4")
-                val host = videoUrl.substringAfter("//").substringBefore("/")
+        val iframeUrl = app.get(data).document.selectFirst("div.screen iframe")?.attr("src")
+            ?.ifEmpty { return false } ?: return false
+        val fixedIframeUrl = fixUrl(iframeUrl)
+        val iframeResponse = app.get(fixUrl(iframeUrl), referer = data)
+        val scriptBody = iframeResponse.text
+        val videoRegex = """["'](https?://[^"']*\.(?:m3u8|mp4)[^"']*)["']""".toRegex()
+        val matches = videoRegex.findAll(scriptBody).toList()
+        if (matches.isEmpty()) return false
 
-                callback.invoke(
-                    newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = videoUrl,
-                        type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                    ) {
-                        this.quality = getQualityFromUrl(videoUrl)
-                        this.referer = if (isMp4) "https://wai.moonfast.site/" else iframeUrl
-                        this.headers = mapOf(
-                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
-                            "Referer" to (this.referer ?: ""),
-                            "Host" to host,
-                            "Accept" to "*/*",
-                            "Connection" to "keep-alive"
-                        )
-                    }
-                )
-            }
+        matches.forEach { match ->
+            val videoUrl = match.groupValues[1].replace("\\/", "/")
+            val host = videoUrl.substringAfter("//").substringBefore("/")
+            val refererUrl = fixedIframeUrl.substringBefore("/").let { "$it/" }
+
+            callback(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = videoUrl,
+                    type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                ) {
+                    this.quality = getQualityFromUrl(videoUrl)
+                    this.referer = refererUrl
+                    this.headers = mapOf(
+                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+                        "Referer" to refererUrl,
+                        "Host" to host,
+                        "Accept" to "*/*",
+                        "Connection" to "keep-alive"
+                    )
+                }
+            )
+            Log.d("HdAbla", "Callback invoked for: $videoUrl")
+        }
         return true
     }
 
@@ -156,4 +163,4 @@ class HdAbla : MainAPI() {
             else -> Qualities.P720.value
         }
     }
-    }
+}
