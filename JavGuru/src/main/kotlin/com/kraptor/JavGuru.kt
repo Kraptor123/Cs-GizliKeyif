@@ -10,6 +10,7 @@ import android.util.Base64
 import android.util.Log
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import org.jsoup.Jsoup
+import java.net.URI
 
 
 class JavGuru : MainAPI() {
@@ -170,6 +171,50 @@ class JavGuru : MainAPI() {
         }
     }
 
+    private suspend fun followRedirects(url: String, sourceName: String): String {
+        var currentUrl = url
+        var redirectCount = 0
+
+        fun resolveUrl(base: String, path: String): String {
+            return if (path.startsWith("/")) {
+                val uri = URI(base)
+                "${uri.scheme}://${uri.host}$path"
+            } else path
+        }
+
+        while (redirectCount < 10) {
+            val res = app.get(currentUrl, headers = mainHeaders, allowRedirects = false)
+            val location =
+                res.headers["location"] ?: res.headers["Location"] ?: res.headers["LOCATION"]
+
+            if (location != null) {
+                val nextUrl = resolveUrl(currentUrl, location)
+                if (nextUrl == currentUrl) break
+                currentUrl = nextUrl
+                Log.d("kraptor_$name", "[$sourceName] HTTP Redirect: $currentUrl")
+                redirectCount++
+                continue
+            }
+
+            if (res.code == 200) {
+                val jsRedirect =
+                    Regex("window\\.location\\.href\\s*=\\s*['\"]([^'\"]+)['\"]").find(res.text)?.groupValues?.get(
+                        1
+                    )
+                if (jsRedirect != null) {
+                    val nextUrl = resolveUrl(currentUrl, jsRedirect)
+                    if (nextUrl == currentUrl) break
+                    currentUrl = nextUrl
+                    Log.d("kraptor_$name", "[$sourceName] JS Redirect: $currentUrl")
+                    redirectCount++
+                    continue
+                }
+            }
+            break
+        }
+        return currentUrl
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -197,6 +242,8 @@ class JavGuru : MainAPI() {
 
                 val encodedUrl = match.groupValues[1]
                 val decodedUrl = base64Decode(encodedUrl)
+
+                Log.d("kraptor_$name", "[$sourceName] Iframe URL: $decodedUrl")
 
                 val iframeRes = app.get(decodedUrl, mainHeaders)
                 val iframeHtml = iframeRes.text
@@ -229,42 +276,49 @@ class JavGuru : MainAPI() {
                 val cleanBase = cfgBase.trimEnd('/')
                 val finalUrl = "$cleanBase/?${cfgRtype}r=$reversed"
 
-                val redirectRes = app.get(finalUrl, mainHeaders, allowRedirects = false)
-                val location = redirectRes.headers["location"]
-                    ?: redirectRes.headers["Location"]
-                    ?: redirectRes.headers["LOCATION"]
-
-                if (location != null) {
-                    Log.d("kraptor_$name", "[$sourceName] Embed URL: $location")
-
-                    if (location.contains("/searcho/")) {
-                        loadExtractor(location, data, subtitleCallback, callback)
-                        continue
-                    }
-
-                    val playerRes = app.get(location, mainHeaders)
-                    val playerHtml = playerRes.text
-
-                    val hlsRegex = Regex("[\"'](https?://[^\"']+\\.m3u8[^\"']*)[\"']")
-                    val hlsFound = hlsRegex.find(playerHtml)?.groupValues?.get(1)
-
-                    if (hlsFound != null && !processedUrls.contains(hlsFound)) {
-                        processedUrls.add(hlsFound)
-                        callback.invoke(
-                            newExtractorLink(
-                                source = "$name $sourceName",
-                                name = sourceName,
-                                url = hlsFound,
-                                type = ExtractorLinkType.M3U8
-                            ) {
-                                this.referer = "$cleanBase/"
-                            }
-                        )
-                    } else {
-                        loadExtractor(location, data, subtitleCallback, callback)
-                    }
+                val currentEmbedUrl = if (finalUrl.contains("javlesbians.com")) {
+                    Log.d("kraptor_$name", "[$sourceName] Processing javlesbians: $finalUrl")
+                    followRedirects(finalUrl, sourceName)
                 } else {
-                    loadExtractor(finalUrl, data, subtitleCallback, callback)
+                    val redirectRes = app.get(finalUrl, mainHeaders, allowRedirects = false)
+                    val location =
+                        redirectRes.headers["location"] ?: redirectRes.headers["Location"]
+                        ?: redirectRes.headers["LOCATION"]
+                    if (location != null && location.contains("javlesbians.com")) {
+                        followRedirects(location, sourceName)
+                    } else {
+                        location ?: finalUrl
+                    }
+                }
+
+                Log.d("kraptor_$name", "[$sourceName] Final Embed: $currentEmbedUrl")
+
+                if (currentEmbedUrl.contains("/searcho/")) {
+                    loadExtractor(currentEmbedUrl, data, subtitleCallback, callback)
+                    continue
+                }
+
+                val playerRes = app.get(currentEmbedUrl, mainHeaders)
+                val playerHtml = playerRes.text
+
+                val hlsRegex = Regex("[\"'](https?://[^\"']+\\.m3u8[^\"']*)[\"']")
+                val hlsFound = hlsRegex.find(playerHtml)?.groupValues?.get(1)
+
+                if (hlsFound != null && !processedUrls.contains(hlsFound)) {
+                    Log.d("kraptor_$name", "[$sourceName] HLS: $hlsFound")
+                    processedUrls.add(hlsFound)
+                    callback.invoke(
+                        newExtractorLink(
+                            source = "$name $sourceName",
+                            name = sourceName,
+                            url = hlsFound,
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = "$cleanBase/"
+                        }
+                    )
+                } else {
+                    loadExtractor(currentEmbedUrl, data, subtitleCallback, callback)
                 }
 
             } catch (e: Exception) {

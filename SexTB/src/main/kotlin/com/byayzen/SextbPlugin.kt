@@ -4,6 +4,28 @@ package com.byayzen
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
+import com.kraptor.*
+import com.kraptor.DoodStream
+import com.kraptor.Turboplayers
+import com.kraptor.StreamTapeNet
+import com.kraptor.StreamTapeXyz
+import com.kraptor.VidHidePro
+import com.kraptor.VidHidePro1
+import com.kraptor.VidHidePro2
+import com.kraptor.VidHidePro3
+import com.kraptor.VidHidePro4
+import com.kraptor.VidHidePro6
+import com.kraptor.Dooood
+import com.kraptor.Dhcplay
+import com.kraptor.Smoothpre
+import com.kraptor.Dhtpre
+import com.kraptor.Peytonepre
+import com.kraptor.DoodPmExtractor
+import com.kraptor.FileMoonIn
+import com.kraptor.VidNest
+import com.kraptor.Playmogo
+import com.kraptor.ShaveTape
+import com.kraptor.Watchadsontape
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.extractors.FileMoonSx
 
@@ -64,7 +86,6 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(Playerupnone())
         registerExtractorAPI(Turtleviplay())
         registerExtractorAPI(Turboviplay())
-        registerExtractorAPI(Vidguardto())
         registerExtractorAPI(MixDropAG())
         registerExtractorAPI(MixDropMy())
         registerExtractorAPI(FileMoon2())

@@ -46,7 +46,6 @@ class JavGuruPlugin: BasePlugin() {
         registerExtractorAPI(Javmoon())
         registerExtractorAPI(MixDropis())
         registerExtractorAPI(Javclan())
-        registerExtractorAPI(Maxstream())
         registerExtractorAPI(Javggvideo())
         registerExtractorAPI(EmturbovidExtractor())
         registerExtractorAPI(FileMoonSx())
@@ -91,5 +90,7 @@ class JavGuruPlugin: BasePlugin() {
         registerExtractorAPI(LULUDLC())
         registerExtractorAPI(LULU0())
         registerExtractorAPI(LULUX08())
+        registerExtractorAPI(javclan())
+        registerExtractorAPI(Stevenfamilyedge())
     }
 }

@@ -1,6 +1,7 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 package com.byayzen
 
+import com.kraptor.*
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.extractors.FileMoonSx
 import com.lagradost.cloudstream3.extractors.StreamTape
@@ -46,7 +47,6 @@ class JavseenPlugin: Plugin() {
         registerExtractorAPI(Javmoon())
         registerExtractorAPI(MixDropis())
         registerExtractorAPI(Javclan())
-        registerExtractorAPI(Maxstream())
         registerExtractorAPI(Javggvideo())
         registerExtractorAPI(EmturbovidExtractor())
         registerExtractorAPI(FileMoonSx())

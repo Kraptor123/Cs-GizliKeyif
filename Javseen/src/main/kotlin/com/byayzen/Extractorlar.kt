@@ -1,4 +1,4 @@
-package com.byayzen
+package com.kraptor
 
 import android.annotation.SuppressLint
 import android.util.Log
@@ -752,42 +752,6 @@ class javclan : ExtractorApi() {
     }
 }
 
-open class Maxstream : ExtractorApi() {
-    override var name = "Maxstream"
-    override var mainUrl = "https://maxstream.org"
-    override val requiresReferer = true
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val response = app.get(url).document
-        val extractedpack = response.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data().toString()
-        JsUnpacker(extractedpack).unpack()?.let { unPacked ->
-            Regex("file:\"(.*?)\"").find(unPacked)?.groupValues?.get(1)?.let { link ->
-                return listOf(
-                    newExtractorLink(
-                        source = this.name,
-                        name = this.name,
-                        url = link,
-                        type = INFER_TYPE
-                    ) {
-                        this.quality = Qualities.Unknown.value
-                        this.referer = "$mainUrl/"
-                        this.headers = mapOf(
-                            "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
-                            "Origin" to mainUrl
-                        )
-                    }
-                )
-            }
-        }
-        return null
-    }
-}
-
-
-
-
-
-
 open class StreamTAPE : ExtractorApi() {
     override val name = "Streamtape"
     override val mainUrl = "https://streamtape.com"
@@ -911,6 +875,10 @@ class Lancewhoisdifficult: Voe() {
 
 class Javlesbians: Voe() {
     override var mainUrl = "https://javlesbians.com"
+}
+
+class Stevenfamilyedge : Voe() {
+    override var mainUrl = "https://stevenfamilyedge.com"
 }
 
 
