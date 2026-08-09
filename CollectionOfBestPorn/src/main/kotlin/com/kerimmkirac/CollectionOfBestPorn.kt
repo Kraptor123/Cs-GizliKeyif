@@ -31,8 +31,10 @@ class CollectionOfBestPorn : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}/page/$page").document
+        document.selectFirst("main p")?.text()?.trim()?.let {
+            throw ErrorLoadingException(it)
+        }
         val home = document.select("div.video-item").mapNotNull { it.toMainPageResult() }
-
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,

@@ -1,5 +1,6 @@
+
 // ! Bu araç @ByAyzen tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 2
+version = 3
 
 cloudstream {
     authors     = listOf("ByAyzen")

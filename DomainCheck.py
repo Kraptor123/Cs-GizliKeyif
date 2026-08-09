@@ -140,6 +140,9 @@ class MainUrlUpdater:
             mainurl_temiz = self._sadece_domain_al(mainurl)
             if not mainurl_temiz: continue
 
+            if "defendonlineprivacy.com" in mainurl_temiz:
+                continue
+
             try:
                 istek = self.oturum.get(mainurl_temiz, allow_redirects=True, timeout=15)
                 final_url = istek.url.rstrip('/')
