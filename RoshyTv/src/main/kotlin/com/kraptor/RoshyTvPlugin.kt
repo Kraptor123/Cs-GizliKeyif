@@ -10,5 +10,9 @@ class RoshyTvPlugin: Plugin() {
         registerMainAPI(RoshyTv())
         registerExtractorAPI(Turtleviplay())
         registerExtractorAPI(Turboviplay())
+        registerExtractorAPI(Kamehamehaa())
+        registerExtractorAPI(Cherrycams())
+        registerExtractorAPI(Kamehaus())
+        registerExtractorAPI(Mxdrop())
     }
 }

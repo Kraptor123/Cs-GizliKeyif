@@ -2,6 +2,9 @@ package com.kraptor
 
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.extractors.MixDrop
+import com.lagradost.cloudstream3.extractors.VidHidePro
+import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -21,7 +24,6 @@ open class Turtleviplay : ExtractorApi() {
     ) {
         val res = app.get(url, referer = referer).document
         val m3u8 = res.selectFirst("#video_player")?.attr("data-hash") ?: return
-
         callback.invoke(
             newExtractorLink(
                 source = name,
@@ -32,7 +34,7 @@ open class Turtleviplay : ExtractorApi() {
                 this.referer = url
                 this.quality = Qualities.Unknown.value
                 this.headers = mapOf(
-                    "Origin" to "https://turtleviplay.xyz",
+                    "Origin" to mainUrl,
                     "Accept" to "*/*",
                 )
             }
@@ -44,3 +46,26 @@ class Turboviplay : Turtleviplay() {
     override var name = "Turboviplay"
     override var mainUrl = "https://turboviplay.com"
 }
+
+class Cherrycams : VidStack() {
+    override var name = "VidStack"
+    override var mainUrl = "https://cherrycams.xyz"
+}
+
+class Kamehamehaa : VidHidePro() {
+    override var name = "VidHide"
+    override var mainUrl = "https://kamehamehaa.xyz"
+}
+
+class Kamehaus : VidHidePro() {
+    override var name = "VidHide"
+    override var mainUrl = "https://kamehaus.net"
+}
+
+class Mxdrop : MixDrop() {
+    override var name = "MixDrop"
+    override var mainUrl = "https://mxdrop.to"
+}
+
+
+
