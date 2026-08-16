@@ -27,6 +27,11 @@ class Pinkueiga : MainAPI() {
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
 
+    override val mainPage = mainPageOf(
+        "${mainUrl}/movies/" to "Movies",
+        "${mainUrl}/tv-series/" to "TV Series",
+    )
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         Log.d(this.name, "getMainPage: page=$page, name=${request.name}")
 
@@ -41,7 +46,7 @@ class Pinkueiga : MainAPI() {
             it.toMainPageResult()
         }
 
-        return newHomePageResponse(request.name, home)
+        return newHomePageResponse(request.name, home, true)
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {

@@ -234,12 +234,17 @@ class Pimpbunny : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val response = app.get(data).text
-        val regex = Regex("""contentUrl"\s*:\s*"([^"]+)""")
-        val match = regex.find(response)
-        val url = match?.groupValues?.get(1)?.replace("\\/", "/")
+        val response = app.get(data, interceptor = CloudflareKiller()).text
+        
+        val urls = Regex("""(video_(?:alt_)?url\d*):\s*['"]([^'"]+)['"]""").findAll(response)
+            .associate { it.groupValues[1] to it.groupValues[2] }
+        val texts = Regex("""(video_(?:alt_)?url\d*_text):\s*['"]([^'"]+)['"]""").findAll(response)
+            .associate { it.groupValues[1].removeSuffix("_text") to it.groupValues[2] }
 
-        if (url != null) {
+        if (urls.isEmpty()) return false
+
+        urls.forEach { (key, url) ->
+            val quality = texts[key] ?: "360p"
             callback.invoke(
                 newExtractorLink(
                     source = name,
@@ -247,11 +252,13 @@ class Pimpbunny : MainAPI() {
                     url = url,
                     type = ExtractorLinkType.VIDEO
                 ) {
+                    this.quality = getQualityFromName(quality)
                     this.referer = data
+                    this.headers = mapOf("Referer" to data)
                 }
             )
-            return true
         }
-        return false
+
+        return true
     }
 }

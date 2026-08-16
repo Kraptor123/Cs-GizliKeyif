@@ -156,91 +156,41 @@ class NetFapX : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        try {
-            val document = app.get(data).document
+        val document = app.get(data).document
+        val scriptContent = document.selectFirst("script#wp-postviews-cache-js-extra")?.data()
+            ?: return false
 
-            val scriptElement =
-                document.selectFirst("script#wp-postviews-cache-js-extra") ?: return false
-            val scriptContent = scriptElement.data()
+        val postId = "\"postId\":\"(\\d+)\"".toRegex().find(scriptContent)?.groupValues?.get(1)
+            ?: return false
 
-            val postIdPattern = "\"post_id\":\"(\\d+)\"".toRegex()
-            val postIdMatch = postIdPattern.find(scriptContent)
-            val postId = postIdMatch?.groupValues?.get(1) ?: return false
-
-            val noncePattern = "\"nonce\":\"([^\"]+)\"".toRegex()
-            val nonceMatch = noncePattern.find(scriptContent)
-            val nonce = nonceMatch?.groupValues?.get(1) ?: return false
-
-            val ajaxUrl = "https://netfapx.com/wp-admin/admin-ajax.php"
-
-            val ajaxResponse = app.post(
-                url = ajaxUrl,
-                data = mapOf(
-                    "action" to "get_video_url",
-                    "idpost" to postId
-                ),
-                headers = mapOf(
-                    "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
-                    "X-Requested-With" to "XMLHttpRequest",
-                    "Referer" to data,
-                    "Origin" to "https://netfapx.com"
-                )
+        val ajaxResponse = app.post(
+            url = "$mainUrl/wp-admin/admin-ajax.php",
+            data = mapOf(
+                "action" to "get_video_url",
+                "idpost" to postId
+            ),
+            headers = mapOf(
+                "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
+                "X-Requested-With" to "XMLHttpRequest",
+                "Referer" to data,
+                "Origin" to mainUrl
             )
+        )
 
-            if (ajaxResponse.code != 200) return false
+        val videoUrl = ajaxResponse.text.trim().takeIf { it.startsWith("http") }
+            ?: return false
 
-            val responseText = ajaxResponse.text
-
-            val videoUrlPattern = "https://videos\\.netfapx\\.com/[^\"'\\s]+\\.mp4".toRegex()
-            val urlMatch = videoUrlPattern.find(responseText)
-
-            if (urlMatch != null) {
-                val videoUrl = urlMatch.value
-
-                callback.invoke(
-                    newExtractorLink(
-                        name = "NetFapX",
-                        source = "NetFapX",
-                        url = videoUrl,
-                        type = ExtractorLinkType.VIDEO
-                    ) {
-                        this.referer = data
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
-                return true
-            } else {
-                val jsonResponse = try {
-                    mapper.readValue<Map<String, Any>>(responseText)
-                } catch (e: Exception) {
-                    null
-                }
-                if (jsonResponse != null) {
-                    val videoUrl =
-                        jsonResponse["url"]?.toString() ?: jsonResponse["video_url"]?.toString()
-                        ?: jsonResponse["src"]?.toString()
-
-                    if (videoUrl != null && videoUrl.isNotEmpty()) {
-                        callback.invoke(
-                            newExtractorLink(
-                                name = "NetFapX",
-                                source = "NetFapX",
-                                url = videoUrl,
-                                type = if (videoUrl.endsWith(".mp4")) ExtractorLinkType.VIDEO else ExtractorLinkType.M3U8
-                            ) {
-                                this.referer = data
-                                this.quality = Qualities.Unknown.value
-                            }
-                        )
-                        return true
-                    }
-                }
+        callback.invoke(
+            newExtractorLink(
+                name = "NetFapX",
+                source = "NetFapX",
+                url = videoUrl,
+                type = ExtractorLinkType.VIDEO
+            ) {
+                this.referer = data
             }
+        )
 
-            return false
-
-        } catch (e: Exception) {
-            return false
-        }
+        return true
     }
 }

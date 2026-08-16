@@ -151,7 +151,7 @@ class MainUrlUpdater:
                 continue
 
             yeni_domain = self._sadece_domain_al(final_url)
-            if not yeni_domain or mainurl_temiz == yeni_domain:
+            if not yeni_domain or mainurl_temiz == yeni_domain or "defendonlineprivacy.com" in yeni_domain:
                 continue
 
             # Güncelleme işlemleri

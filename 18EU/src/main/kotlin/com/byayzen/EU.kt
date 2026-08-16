@@ -33,7 +33,6 @@ class EU : MainAPI() {
         "${mainUrl}/tv-series/" to "TV Series",
     )
 
-
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         Log.d(this.name, "getMainPage: page=$page, name=${request.name}")
 
