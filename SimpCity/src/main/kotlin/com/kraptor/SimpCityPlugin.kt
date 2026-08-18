@@ -40,6 +40,7 @@ class SimpCityPlugin : Plugin() {
     override fun load(context: Context) {
         appContext = context
         activity = context as AppCompatActivity
+        ResultGalleryButton.register(this, activity!!)
 
         try {
             val testId = context.resources.getIdentifier("galleryPager", "id", "com.kraptor.simpcity")

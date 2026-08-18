@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.KeyEvent
 import android.webkit.CookieManager
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.LinearLayout
@@ -65,6 +66,16 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
         .map { it.trim() }
         .find { it.contains("_user=") } ?: ""
 
+    if (initialUserCookie.isNotEmpty()) {
+        context.getSharedPreferences("simp_cookies", Context.MODE_PRIVATE)
+            .edit().putString("simpcity.cr", initialUserCookie).apply()
+        simpIsProcessing = false
+        val waiters = simpWaitingList.toList()
+        simpWaitingList.clear()
+        waiters.forEach { runCatching { it.resume(initialUserCookie) } }
+        return initialUserCookie
+    }
+
     return suspendCancellableCoroutine { continuation ->
         continuation.invokeOnCancellation {
             simpWaitingList.remove(continuation)
@@ -86,14 +97,33 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                 settings.domStorageEnabled = true
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
-                settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                settings.setSupportMultipleWindows(false)
+                settings.javaScriptCanOpenWindowsAutomatically = true
+                settings.setSupportMultipleWindows(true)
                 settings.builtInZoomControls = true
                 settings.displayZoomControls = false
                 settings.setNeedInitialFocus(true)
                 isFocusable = true
                 isFocusableInTouchMode = true
                 setBackgroundColor(Color.BLACK)
+
+                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+                webChromeClient = object : WebChromeClient() {
+                    override fun onCreateWindow(
+                        view: WebView?,
+                        isDialog: Boolean,
+                        isUserGesture: Boolean,
+                        resultMsg: android.os.Message?
+                    ): Boolean {
+                        // Turnstile'ın erişilebilirlik/etkileşimli doğrulama akışı
+                        // bazen yeni bir pencere açmayı dener; bunu aynı WebView
+                        // içinde açarak sessizce başarısız olmasını engelliyoruz.
+                        val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+                        transport.webView = view
+                        resultMsg.sendToTarget()
+                        return true
+                    }
+                }
 
                 setOnKeyListener { _, keyCode, event ->
                     if (event.action == KeyEvent.ACTION_DOWN) {
@@ -243,7 +273,7 @@ suspend fun simpLogin(username: String, password: String, forceRefresh: Boolean 
                 while (simpActiveDialog?.isShowing == true) {
                     delay(2000)
                     val currentCookie = CookieManager.getInstance().getCookie("https://simpcity.cr") ?: ""
-                    if (currentCookie.contains("_user=") && currentCookie != initialUserCookie) {
+                    if (currentCookie.contains("_user=")) {
                         prefs.edit().putString("simpcity.cr", currentCookie).apply()
                         webView.evaluateJavascript("document.body.innerHTML='<h1 style=\"color:white;text-align:center;margin-top:20%\">Giriş Başarılı!</h1>'", null)
                         delay(1000)

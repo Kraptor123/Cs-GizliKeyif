@@ -68,8 +68,7 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
             "_xfToken" to xfToken
         )
 
-        val cookies = ensureAuth()
-        if (cookies.isEmpty()) throw ErrorLoadingException("Giriş yapılamadı!")
+         val cookies = getSimpCookie()
 
         var response = try {
             app.post("$mainUrl/search/search", headers = mapOf("Cookie" to cookies), data = postData)
@@ -109,12 +108,12 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
-        if (!getSimpCookie().contains("_user=")) return null
         val searchId = getSearchId(query)
+        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
         val searchUrl = if (page == 1) {
-            "${mainUrl}/search/$searchId/?q=$query&o=date"
+            "${mainUrl}/search/$searchId/?q=$encodedQuery&o=date"
         } else {
-            "${mainUrl}/search/$searchId/?page=$page&q=$query&o=date"
+            "${mainUrl}/search/$searchId/?page=$page&q=$encodedQuery&o=date"
         }
         val doc = authedGetDoc(searchUrl)
         return newSearchResponseList(
@@ -134,7 +133,6 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? {
-        if (!getSimpCookie().contains("_user=")) return null
         return search(query, 1)?.items
     }
 
@@ -202,31 +200,22 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
             allVideos.addAll(extractVideos(doc))
         }
 
-        val allEpisodes = mutableListOf<Episode>()
-        var globalIndex = 0
-
-        if (allImages.isNotEmpty()) {
-            val galleryData = "IMAGES::" + title + "::" + allImages.joinToString("||")
-            allEpisodes.add(newEpisode(galleryData) {
-                this.name = "Galeri (${allImages.size} fotoğraf)"
-                this.season = 1
-                this.episode = 1
-            })
-            globalIndex++
+          if (allImages.isNotEmpty()) {
+            ResultGalleryButton.cacheGallery(url, title, allImages)
         }
 
-        allVideos.forEach { videoUrl ->
-            val seasonNum = (globalIndex / 25) + 1
-            val episodeNum = (globalIndex % 25) + 1
-            
+        val allEpisodes = mutableListOf<Episode>()
+        allVideos.forEachIndexed { index, videoUrl ->
+            val seasonNum = (index / 25) + 1
+            val episodeNum = (index % 25) + 1
+
             allEpisodes.add(newEpisode(videoUrl) {
                 this.season = seasonNum
                 this.episode = episodeNum
             })
-            globalIndex++
         }
 
-        val maxSeason = if (globalIndex == 0) 1 else (globalIndex - 1) / 25 + 1
+        val maxSeason = if (allVideos.isEmpty()) 1 else (allVideos.size - 1) / 25 + 1
         val seasonNamesList = (1..maxSeason).map { SeasonData(it, "Sezon $it") }
 
         return newTvSeriesLoadResponse(title, url, TvType.NSFW, allEpisodes) {
@@ -243,18 +232,7 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        if (data.contains("IMAGES::")) {
-            val content = data.substringAfter("IMAGES::")
-            val threadTitle = content.substringBefore("::")
-            val imagesPart = content.substringAfter("::")
-            val images = imagesPart.split("||")
-            try {
-                plugin.loadGallery(threadTitle, images)
-            } catch (e: Exception) {
-            }
-        } else {
-            loadExtractor(data, subtitleCallback, callback)
-        }
+        loadExtractor(data, subtitleCallback, callback)
         return true
     }
 }
