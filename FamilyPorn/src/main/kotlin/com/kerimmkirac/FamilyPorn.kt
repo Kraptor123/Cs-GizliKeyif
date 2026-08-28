@@ -20,25 +20,29 @@ class FamilyPorn : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}"      to "All Porn Videos",
-        "${mainUrl}/tag/redhead"   to "Red Head Porn Videos",
-        "${mainUrl}/tag/cowgirl" to "Cowgirl Porn Videos",
-        "${mainUrl}/tag/doggystyle"  to "DoggyStyle Porn Videos",
-        "${mainUrl}/tag/latina"   to "Latina Porn Videos",
-        "${mainUrl}/tag/milf"   to "Milf Porn Videos",
-        "${mainUrl}/tag/natural-tits"   to "Natural Tits Porn Videos",
-        "${mainUrl}/tag/stepmomporn"   to "Stepmom Porn Videos",
-        "${mainUrl}/tag/stepsisterporn"   to "Step Sister Porn Videos",
-        "${mainUrl}/tag/athletic"   to "Athletic Porn Videos",
-        "${mainUrl}/tag/asian"   to "Asian Porn Videos",
-        "${mainUrl}/tag/big-natural-tits"   to "Big Natural Tits Porn Videos",
-        "${mainUrl}/tag/big-tits"   to "Big Tits Porn Videos",
+        mainUrl to "All",
+        "$mainUrl/tag/anal" to "Anal",
+        "$mainUrl/tag/asian" to "Asian",
+        "$mainUrl/tag/blonde" to "Blonde",
+        "$mainUrl/tag/brunette" to "Brunette",
+        "$mainUrl/tag/blowjob" to "Blowjob",
+        "$mainUrl/tag/doggystyle" to "DoggyStyle",
+        "$mainUrl/tag/ebony" to "Ebony",
+        "$mainUrl/tag/latina" to "Latina",
+        "$mainUrl/tag/lesbian" to "Lesbian",
+        "$mainUrl/tag/milf" to "Milf",
+        "$mainUrl/tag/petite" to "Petite",
+        "$mainUrl/tag/pov" to "POV",
+        "$mainUrl/tag/redhead" to "Red Head",
+        "$mainUrl/tag/teen" to "Teen",
+        "$mainUrl/tag/threesome" to "Threesome",
+        "$mainUrl/tag/hardcore" to "Hardcore",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page == 1) request.data else "${request.data}/page/$page"
+        val url      = if (page == 1) request.data else "${request.data}/page/$page"
         val document = app.get(url).document
-        val home = document.select("li.g1-collection-item").mapNotNull { it.toMainPageResult() }
+        val home     = document.select("li.king-post-item").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -46,15 +50,21 @@ class FamilyPorn : MainAPI() {
                 list = home,
                 isHorizontalImages = true
             ),
-            hasNext = true
+            hasNext = document.selectFirst("div.nav-previous a") != null
         )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val anchor = this.selectFirst("article a") ?: return null
-        val title = anchor.attr("title")?.trim() ?: return null
-        val href = fixUrl(anchor.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val anchor    = this.selectFirst("h2.entry-title a") ?: return null
+        val title     = anchor.text().trim().ifEmpty { return null }
+        val href      = fixUrl(anchor.attr("href").ifEmpty { return null })
+
+        val bgElement = this.selectFirst("div.king-box-bg")
+        val dataSrc   = bgElement?.attr("data-king-img-src")?.ifEmpty { null }
+        val styleSrc  = bgElement?.attr("style")?.let { style ->
+            Regex("""url\(["']?(.*?)["']?\)""").find(style)?.groupValues?.get(1)
+        }
+        val posterUrl = fixUrlNull(dataSrc ?: styleSrc)
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
@@ -62,55 +72,50 @@ class FamilyPorn : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val document = if (page == 1){
-            app.get("${mainUrl}/?s=${query}").document
-        } else {
-            app.get("${mainUrl}/page/$page/?s=${query}").document
-        }
+        val url      = if (page == 1) "$mainUrl/?s=$query" else "$mainUrl/page/$page/?s=$query"
+        val document = app.get(url).document
+        val results  = document.select("li.king-post-item").mapNotNull { it.toMainPageResult() }
 
-        val aramaCevap = document.select("li.g1-collection-item").mapNotNull { it.toSearchResult() }
-        return newSearchResponseList(aramaCevap, hasNext = true)
-    }
-
-    private fun Element.toSearchResult(): SearchResponse? {
-        val anchor = this.selectFirst("article a") ?: return null
-        val title = anchor.attr("title")?.trim() ?: return null
-        val href = fixUrl(anchor.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
+        return newSearchResponseList(
+            results,
+            hasNext = document.selectFirst("div.nav-previous a") != null
+        )
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse {
+        val document        = app.get(url).document
 
-        val document = app.get(url).document
-        val title = document.selectFirst("meta[property=og:title]")?.attr("content").toString()
-        val description = document.selectFirst("meta[property=og:description]")?.attr("content").toString()
-        val tags = document.select("p.entry-tags a").map { it.text().lowercase() }.take(5)
-        val posterUrl = document.selectFirst("meta[property=og:image]")?.attr("content").toString()
-        val recommendations = document.select("aside.g1-related-entries div.g1-collection li").mapNotNull { it.toRecommendationResult() }
+        val title           = document.selectFirst("h1.entry-title")?.text()?.trim()?.ifEmpty { null } ?: throw ErrorLoadingException("Invalid Title")
+        val posterUrl       = fixUrlNull(document.selectFirst("div.single-post-image img")?.attr("src")?.ifEmpty { null })
+        val plot            = document.select("div.entry-content p:not(:has(a[data-type=post_tag]))").lastOrNull()?.text()?.trim()?.ifEmpty { null }
+        val tags            = document.select("span.tags-links a").mapNotNull { it.text().trim().ifEmpty { null } }
+        val actors          = document.select("div.entry-content p:contains(Pornstar:) a, div.entry-content p a[data-type=post_tag]").mapNotNull { it.text().trim().ifEmpty { null } }
+        val recommendations = document.select("div.king-related div.king-simple-post").mapNotNull { it.toRecommendationResult() }
 
-        return newMovieLoadResponse(title, url, type = TvType.NSFW, data = url,
-            initializer = {
-                this.posterUrl = posterUrl
-                this.plot      = description
-                this.tags      = tags
-                this.recommendations = recommendations
-        })
+        Log.d("kraptor_FamilyPorn", "Loaded: $title")
+
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl       = posterUrl
+            this.plot            = plot
+            this.tags            = tags
+            this.recommendations = recommendations
+            addActors(actors)
+        }
     }
 
     private fun Element.toRecommendationResult(): SearchResponse? {
-        val anchor = this.selectFirst("article a") ?: return null
-        val title = anchor.attr("title")?.trim() ?: return null
-        val href = fixUrl(anchor.attr("href"))
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val anchor    = this.selectFirst("span.entry-title a") ?: return null
+        val title     = anchor.text().trim().ifEmpty { return null }
+        val href      = fixUrl(anchor.attr("href").ifEmpty { return null })
+
+        val img       = this.selectFirst("img")
+        val posterSrc = img?.attr("data-king-img-src")?.ifEmpty { null } ?: img?.attr("src")?.ifEmpty { null }
+        val poster    = fixUrlNull(posterSrc)
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
+            this.posterUrl = poster
         }
     }
 
@@ -120,15 +125,11 @@ class FamilyPorn : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("kraptor_FamilyPorn", "loadLinks() başladı - data: $data")
         val document = app.get(data).document
-
-        val iframe   = document.selectFirst("div.embed-container iframe")?.attr("src").toString()
+        val iframe   = document.selectFirst("iframe")?.attr("src")?.ifEmpty { null } ?: return false
 
         Log.d("kraptor_FamilyPorn", "iframe: $iframe")
 
-        loadExtractor(iframe, subtitleCallback, callback)
-
-        return true
+        return loadExtractor(iframe, subtitleCallback, callback)
     }
 }
