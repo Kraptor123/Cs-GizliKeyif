@@ -21,13 +21,11 @@ import com.kraptor.Smoothpre
 import com.kraptor.Dhtpre
 import com.kraptor.Peytonepre
 import com.kraptor.DoodPmExtractor
-import com.kraptor.FileMoonIn
 import com.kraptor.VidNest
 import com.kraptor.Playmogo
 import com.kraptor.ShaveTape
 import com.kraptor.Watchadsontape
 import com.lagradost.cloudstream3.extractors.*
-import com.lagradost.cloudstream3.extractors.FileMoonSx
 
 @CloudstreamPlugin
 class SextbPlugin: Plugin() {
@@ -63,15 +61,12 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(Streamhihi())
         registerExtractorAPI(Javsw())
         registerExtractorAPI(swhoi())
-        registerExtractorAPI(Javmoon())
         registerExtractorAPI(MixDropis())
         //   registerExtractorAPI(Javclan())
         registerExtractorAPI(Maxstream())
         registerExtractorAPI(Javggvideo())
         registerExtractorAPI(EmturbovidExtractor())
-        registerExtractorAPI(FileMoonSx())
         registerExtractorAPI(DoodPmExtractor())
-        registerExtractorAPI(FileMoonIn())
         registerExtractorAPI(VidNest())
         registerExtractorAPI(HgLink())
         registerExtractorAPI(RyderJet())
@@ -88,10 +83,6 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(Turboviplay())
         registerExtractorAPI(MixDropAG())
         registerExtractorAPI(MixDropMy())
-        registerExtractorAPI(FileMoon2())
-        registerExtractorAPI(Bysedikamoum())
-        registerExtractorAPI(Bysezoexe())
-        registerExtractorAPI(Filemoonx08())
         registerExtractorAPI(Player4Me())
         registerExtractorAPI(Vip4me())
         registerExtractorAPI(RPMShare())
@@ -110,5 +101,50 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(LULUDLC())
         registerExtractorAPI(LULU0())
         registerExtractorAPI(LULUX08())
+        registerExtractorAPI(KPFilemoonSx())
+        registerExtractorAPI(KPFilemoonIn())
+        registerExtractorAPI(KPFilemoonLink())
+        registerExtractorAPI(KPFilemoonWf())
+        registerExtractorAPI(KPFilemoonEu())
+        registerExtractorAPI(KPFilemoonArt())
+        registerExtractorAPI(KPFilemoonNl())
+        registerExtractorAPI(KPCinegrab())
+        registerExtractorAPI(KPMoonmov())
+        registerExtractorAPI(KPNineSixAr())
+        registerExtractorAPI(KPKerapoxy())
+        registerExtractorAPI(KPFurher())
+        registerExtractorAPI(KPOneAzayf9w())
+        registerExtractorAPI(KPEightOneU6xl9d())
+        registerExtractorAPI(KPSmdfs40r())
+        registerExtractorAPI(KPC1z39())
+        registerExtractorAPI(KPBf0skv())
+        registerExtractorAPI(KPZ1ekv717())
+        registerExtractorAPI(KPL1afav())
+        registerExtractorAPI(KPTwoTwoTwoi8x())
+        registerExtractorAPI(KPEightMhlloqo())
+        registerExtractorAPI(KPF51rm())
+        registerExtractorAPI(KPXcoic())
+        registerExtractorAPI(KPBoosteradx())
+        registerExtractorAPI(KPStreamlyplayer())
+        registerExtractorAPI(KPStreamlyplayero())
+        registerExtractorAPI(KPBysewihe())
+        registerExtractorAPI(KPByselapuix())
+        registerExtractorAPI(KPEmbedplaybyse())
+        registerExtractorAPI(KPSb1254w9megshle())
+        registerExtractorAPI(KPMoflixStream())
+        registerExtractorAPI(KPBysezoxexe())
+        registerExtractorAPI(KPF16px())
+        registerExtractorAPI(KPBysesayeveum())
+        registerExtractorAPI(KPBysetayico())
+        registerExtractorAPI(KPBysevepoin())
+        registerExtractorAPI(KPBysezejataos())
+        registerExtractorAPI(KPBysekoze())
+        registerExtractorAPI(KPBysesukior())
+        registerExtractorAPI(KPBysejikuar())
+        registerExtractorAPI(KPBysefujedu())
+        registerExtractorAPI(KPBysedikamoum())
+        registerExtractorAPI(KPBysebuho())
+        registerExtractorAPI(KPByseSx())
+        registerExtractorAPI(KPByseqekaho())
     }
 }

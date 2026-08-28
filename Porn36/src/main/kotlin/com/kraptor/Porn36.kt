@@ -39,8 +39,12 @@ class Porn36 : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}$page/").document
-        val home     = document.select("div.item").mapNotNull { it.toMainPageResult() }
+        val response = app.get("${request.data}$page/")
+        if (response.code == 403 || response.code == 503) {
+            throw ErrorLoadingException("Cloudflare 😒😒😒")
+        }
+        val document = response.document
+        val home = document.select("div.item").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
             list = HomePageList(

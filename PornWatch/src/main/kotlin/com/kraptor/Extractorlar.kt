@@ -1,6 +1,17 @@
 package com.kraptor
 
-import android.annotation.SuppressLint
+import kotlinx.coroutines.yield
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
+import org.json.JSONObject
+import java.math.BigInteger
+import java.security.KeyPairGenerator
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.security.Signature
+import java.security.spec.ECGenParameterSpec
+import java.security.interfaces.ECPublicKey
 import android.util.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
@@ -36,6 +47,537 @@ import javax.crypto.spec.SecretKeySpec
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.Jsoup
 import java.net.URL
+import kotlin.random.Random
+
+
+
+
+// Kotlin port of ResolveURL's "Byse" resolver (Filemoon/Byse mirror network):
+// https://github.com/Gujal00/ResolveURL/blob/master/script.module.resolveurl/lib/resolveurl/plugins/byse.py
+open class Filemoon(
+    override var mainUrl: String = "https://filemoon.to"
+) : ExtractorApi() {
+    override var name = "Filemoon"
+    override val requiresReferer = false
+
+    companion object {
+        private const val TAG = "FileMoonExtractor"
+
+        private const val UA =
+            "Mozilla/5.0 (Linux; Android 10; TX6s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
+
+        private val REDIRECT_DOMAINS = setOf(
+            "boosteradx.online", "byse.sx", "streamlyplayer.online"
+        )
+
+        private val URL_REGEX = Regex(
+            "(?://|\\.)((?:filemoon|cinegrab|moonmov|kerapoxy|furher|1azayf9w|81u6xl9d|f16px|sb1254w9megshle|" +
+                    "smdfs40r|bf0skv|z1ekv717|l1afav|222i8x|8mhlloqo|96ar|xcoic|f51rm|c1z39|boosteradx|streamlyplayero?|moflix-stream|" +
+                    "(?:embedplay)?byse[a-z0-9]*|dismz4n3wp6xnr3|[a-z0-9]{10,25})" +
+                    "\\.(?:sx|top?|s?k?in|link|nl|wf|com|eu|art|pro|cc|xyz|org|fun|net|lol|online))" +
+                    "/(?:(?:e|d|download|[a-zA-Z0-9_-]+)/)?([0-9a-zA-Z]+)(?:/.*)?"
+        )
+
+        fun canHandle(url: String): Boolean = URL_REGEX.containsMatchIn(url)
+
+        private fun b64UrlEncode(bytes: ByteArray): String =
+            Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+
+        private fun b64UrlDecode(value: String): ByteArray {
+            val padded = value + "=".repeat((4 - value.length % 4) % 4)
+            return Base64.decode(padded, Base64.URL_SAFE or Base64.NO_WRAP)
+        }
+
+        private fun sha256(bytes: ByteArray): ByteArray =
+            MessageDigest.getInstance("SHA-256").digest(bytes)
+
+        private fun fh(value: Double): String = b64UrlEncode(sha256(value.toString().toByteArray(Charsets.US_ASCII)))
+
+        private fun bigIntTo32Bytes(n: BigInteger): ByteArray {
+            val raw = n.toByteArray()
+            return when {
+                raw.size == 32 -> raw
+                raw.size > 32  -> raw.copyOfRange(raw.size - 32, raw.size)
+                else           -> ByteArray(32 - raw.size) + raw
+            }
+        }
+
+        private fun derToRawEcdsaSignature(der: ByteArray, componentLen: Int = 32): ByteArray {
+            var offset = 1
+            var seqLen = der[offset].toInt() and 0xFF
+            offset++
+            if (seqLen and 0x80 != 0) offset += (seqLen and 0x7F)
+
+            offset++
+            val rLen = der[offset].toInt() and 0xFF
+            offset++
+            val rBytes = der.copyOfRange(offset, offset + rLen)
+            offset += rLen
+
+            offset++
+            val sLen = der[offset].toInt() and 0xFF
+            offset++
+            val sBytes = der.copyOfRange(offset, offset + sLen)
+
+            fun fixedLen(b: ByteArray): ByteArray {
+                var trimmed = b
+                var start = 0
+                while (start < trimmed.size - 1 && trimmed[start] == 0.toByte()) start++
+                trimmed = trimmed.copyOfRange(start, trimmed.size)
+                return if (trimmed.size >= componentLen) trimmed.copyOfRange(trimmed.size - componentLen, trimmed.size)
+                else ByteArray(componentLen - trimmed.size) + trimmed
+            }
+
+            return fixedLen(rBytes) + fixedLen(sBytes)
+        }
+
+        private fun randomHex(byteLen: Int): String {
+            val bytes = ByteArray(byteLen)
+            SecureRandom().nextBytes(bytes)
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
+
+        private fun rot(state: IntArray) {
+            state[0] += state[1]; state[3] = Integer.rotateLeft(state[3] xor state[0], 16)
+            state[2] += state[3]; state[1] = Integer.rotateLeft(state[1] xor state[2], 12)
+            state[0] += state[1]; state[3] = Integer.rotateLeft(state[3] xor state[0], 8)
+            state[2] += state[3]; state[1] = Integer.rotateLeft(state[1] xor state[2], 7)
+        }
+
+        private fun powHash(input: ByteArray, out: IntArray, scratch: IntArray, state: IntArray) {
+            state[0] = 1779033703
+            state[1] = -1150833019
+            state[2] = 1013904242
+            state[3] = -1521486534
+            for (i in input.indices) {
+                state[0] += (input[i].toInt() and 0xFF)
+                state[0] = Integer.rotateLeft(state[0], 7)
+                rot(state)
+            }
+            repeat(8) { rot(state) }
+            for (i in 0 until 512) {
+                rot(state)
+                scratch[i] = state[0] xor state[2]
+            }
+            val lt = 511
+            val lr = -1640531535
+            val hr = -2048144777
+            repeat(2) {
+                for (s in 0 until 512) {
+                    val a = scratch[s] and lt
+                    var c = scratch[s] + scratch[a]
+                    c = Integer.rotateLeft(c, 13)
+                    c = c xor (scratch[(s + 1) and 511] * lr)
+                    scratch[s] = c
+                    state[0] = state[0] xor c
+                    rot(state)
+                }
+            }
+            val chunk = 512 / 8
+            for (i in 0 until 8) {
+                rot(state)
+                var s = state[0]
+                val base = i * chunk
+                for (c in 0 until chunk) {
+                    val d = scratch[base + c]
+                    s += d
+                    s = Integer.rotateLeft(s, 5)
+                    s = s xor (d * hr)
+                }
+                out[i] = s xor state[2]
+            }
+        }
+
+        private fun leadingZeroBits(hash: IntArray): Int {
+            var total = 0
+            for (word in hash) {
+                if (word == 0) {
+                    total += 32
+                    continue
+                }
+                return total + Integer.numberOfLeadingZeros(word)
+            }
+            return total
+        }
+
+        private suspend fun solvePow(nonce: String, difficulty: Int, timeoutSec: Double = 20.0): String? {
+            if (difficulty <= 0) return "0"
+            val start = System.currentTimeMillis()
+            val prefix = "$nonce:"
+            val prefixBytes = prefix.toByteArray(Charsets.US_ASCII)
+            val buffer = ByteArray(64)
+            System.arraycopy(prefixBytes, 0, buffer, 0, prefixBytes.size)
+            val pLen = prefixBytes.size
+
+            val out = IntArray(8)
+            val scratch = IntArray(512)
+            val state = IntArray(4)
+
+            var s = 0L
+            while (true) {
+                for (iter in 0 until 1024) {
+                    val sStr = s.toString()
+                    val sLen = sStr.length
+                    for (i in 0 until sLen) {
+                        buffer[pLen + i] = sStr[i].code.toByte()
+                    }
+                    val input = buffer.copyOf(pLen + sLen)
+                    powHash(input, out, scratch, state)
+                    if (leadingZeroBits(out) >= difficulty) {
+                        Log.d(TAG, "PoW solved in ${System.currentTimeMillis() - start}ms: s=$s")
+                        return s.toString()
+                    }
+                    s++
+                }
+                if ((System.currentTimeMillis() - start) > timeoutSec * 1000) {
+                    Log.e(TAG, "PoW timeout after ${System.currentTimeMillis() - start}ms")
+                    return null
+                }
+                yield()
+            }
+        }
+    }
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        Log.d(TAG, "getUrl() -> url: $url, referer: $referer")
+        try {
+            val match = URL_REGEX.find(url)
+            if (match == null) {
+                Log.e(TAG, "URL regex ile eşleşmedi: $url")
+                return
+            }
+            val matchedHost = match.groupValues[1]
+            val mediaId     = match.groupValues[2]
+            val host        = if (matchedHost in REDIRECT_DOMAINS) "streamlyplayero.online" else matchedHost
+
+            Log.d(TAG, "Regex eşleşti -> host: $host, mediaId: $mediaId")
+            resolve(host, mediaId, callback)
+        } catch (e: Exception) {
+            Log.e(TAG, "getUrl hatası: ${e.message}", e)
+        }
+    }
+
+    private suspend fun resolve(host: String, mediaId: String, callback: (ExtractorLink) -> Unit) {
+        val webUrl  = "https://$host/e/$mediaId"
+        var ref     = "https://$host/"
+        val headers = mutableMapOf(
+            "User-Agent" to UA,
+            "Referer"    to ref,
+            "Origin"     to ref.trimEnd('/')
+        )
+        Log.d(TAG, "resolve() -> webUrl: $webUrl, ref: $ref")
+
+        var embed = ""
+        var details = fetchJson("${ref}api/videos/$mediaId/details", headers)
+        if (details == null) {
+            Log.d(TAG, "api/videos/$mediaId/details null döndü, embed/details deneniyor...")
+            embed = "embed/"
+            details = fetchJson("${ref}api/videos/$mediaId/${embed}details", headers)
+                ?: run {
+                    Log.e(TAG, "Video link not found for $webUrl")
+                    return
+                }
+        }
+        Log.d(TAG, "Details alındı: ${details.optString("title")}")
+
+        val embedUrl = details.optString("embed_frame_url").orEmpty()
+        if (embedUrl.isNotEmpty()) {
+            val prevRef = ref
+            ref = originOf(embedUrl)
+            embed = "embed/"
+            headers["Referer"] = embedUrl
+            headers["Origin"] = ref.trimEnd('/')
+            headers["X-Embed-Origin"] = prevRef.trimEnd('/')
+            headers["X-Embed-Referer"] = prevRef
+            headers["X-Embed-Parent"] = webUrl
+            Log.d(TAG, "Embed frame yönlendirmesi -> ref: $ref, embedUrl: $embedUrl")
+        }
+
+        Log.d(TAG, "Settings isteniyor: ${ref}api/videos/$mediaId/${embed}settings")
+        val settings = fetchJson("${ref}api/videos/$mediaId/${embed}settings", headers) ?: run {
+            Log.e(TAG, "Settings alınamadı for $webUrl")
+            return
+        }
+
+        val data = if (settings.optBoolean("captcha_required", false)) {
+            Log.d(TAG, "Captcha gerekli, çözülüyor...")
+            solveCaptchaAndGetPlayback(ref, mediaId, embed, headers)
+        } else {
+            Log.d(TAG, "Captcha gerekmiyor, doğrudan playback isteniyor...")
+            postJson(
+                "${ref}api/videos/$mediaId/${embed}playback",
+                headers,
+                buildFingerprint(16, 0.83, 0.94),
+                40
+            )
+        } ?: run {
+            Log.e(TAG, "Playback request failed for $webUrl")
+            return
+        }
+
+        Log.d(TAG, "Playback verisi alındı, kaynaklar ayrıştırılıyor...")
+        emitSources(data, ref, headers, callback)
+    }
+
+    private suspend fun solveCaptchaAndGetPlayback(
+        ref: String,
+        mediaId: String,
+        embed: String,
+        headers: MutableMap<String, String>
+    ): JSONObject? {
+        Log.d(TAG, "Access challenge isteniyor: ${ref}api/videos/access/challenge")
+        val challenge = postJson("${ref}api/videos/access/challenge", headers, JSONObject(), 30)
+            ?: run {
+                Log.e(TAG, "Access challenge request failed")
+                return null
+            }
+
+        Log.d(TAG, "Access attest gönderiliyor...")
+        val attest = postJson("${ref}api/videos/access/attest", headers, buildAttestPayload(challenge), 30)
+            ?: run {
+                Log.e(TAG, "Access attest request failed")
+                return null
+            }
+
+        val fingerprint = JSONObject().apply {
+            put("token", attest.optString("token"))
+            put("viewer_id", attest.optString("viewer_id"))
+            put("device_id", attest.optString("device_id"))
+            put("confidence", attest.optDouble("confidence"))
+        }
+
+        Log.d(TAG, "Captcha token/PoW isteniyor...")
+        val captcha = postJson(
+            "${ref}api/videos/$mediaId/${embed}captcha",
+            headers,
+            JSONObject().put("fingerprint", fingerprint),
+            30
+        ) ?: run {
+            Log.e(TAG, "Captcha request failed")
+            return null
+        }
+
+        val solution = solvePow(captcha.optString("pow_nonce"), captcha.optInt("pow_difficulty", 0))
+            ?: run {
+                Log.e(TAG, "Unable to solve captcha PoW")
+                return null
+            }
+
+        Log.d(TAG, "Captcha doğrulanıyor (verify)...")
+        val verifyBody = JSONObject().apply {
+            put("pow_token", captcha.optString("pow_token"))
+            put("solution", solution)
+            put("fingerprint", fingerprint)
+        }
+        val verify = postJson("${ref}api/videos/$mediaId/${embed}captcha/verify", headers, verifyBody, 30)
+            ?: run {
+                Log.e(TAG, "Captcha verify request failed")
+                return null
+            }
+        headers["X-Captcha-Token"] = verify.optString("token")
+
+        Log.d(TAG, "Playback isteniyor: ${ref}api/videos/$mediaId/${embed}playback")
+        return postJson(
+            "${ref}api/videos/$mediaId/${embed}playback",
+            headers,
+            JSONObject().put("fingerprint", fingerprint),
+            30
+        )
+    }
+
+    private fun buildAttestPayload(challenge: JSONObject): JSONObject {
+        val nonce = challenge.optString("nonce")
+        val challengeId = challenge.optString("challenge_id")
+
+        val keyPairGenerator = KeyPairGenerator.getInstance("EC")
+        keyPairGenerator.initialize(ECGenParameterSpec("secp256r1"))
+        val keyPair = keyPairGenerator.generateKeyPair()
+
+        val signer = Signature.getInstance("SHA256withECDSA")
+        signer.initSign(keyPair.private)
+        signer.update(nonce.toByteArray(Charsets.US_ASCII))
+        val signature = b64UrlEncode(derToRawEcdsaSignature(signer.sign()))
+
+        val publicKey = keyPair.public as ECPublicKey
+        val publicKeyJwk = JSONObject().apply {
+            put("crv", "P-256")
+            put("ext", true)
+            put("key_ops", JSONArray(listOf("verify")))
+            put("kty", "EC")
+            put("x", b64UrlEncode(bigIntTo32Bytes(publicKey.w.affineX)))
+            put("y", b64UrlEncode(bigIntTo32Bytes(publicKey.w.affineY)))
+        }
+
+        return JSONObject().apply {
+            put("viewer_id", "")
+            put("device_id", "")
+            put("challenge_id", challengeId)
+            put("nonce", nonce)
+            put("signature", signature)
+            put("public_key", publicKeyJwk)
+        }
+    }
+
+    private fun buildFingerprint(byteLen: Int, minConfidence: Double, maxConfidence: Double): JSONObject {
+        val viewerId = randomHex(byteLen)
+        val deviceId = randomHex(byteLen)
+        val ctime = System.currentTimeMillis() / 1000
+        val confidence = Math.round(Random.nextDouble(minConfidence, maxConfidence) * 100.0) / 100.0
+
+        val tokenData = JSONObject().apply {
+            put("viewer_id", viewerId)
+            put("device_id", deviceId)
+            put("confidence", confidence)
+            put("iat", ctime)
+            put("exp", ctime + 600)
+        }
+        val tokenBData = b64UrlEncode(tokenData.toString().toByteArray(Charsets.UTF_8))
+        val tokenSig = b64UrlEncode(sha256(tokenBData.toByteArray(Charsets.UTF_8)))
+        val token = "$tokenBData.$tokenSig"
+
+        val fingerprint = JSONObject().apply {
+            put("viewer_id", viewerId)
+            put("device_id", deviceId)
+            put("confidence", confidence)
+            put("token", token)
+        }
+        return JSONObject().put("fingerprint", fingerprint)
+    }
+
+    private fun deriveKey(keyParts: JSONArray, version: Int?): ByteArray {
+        val parts = if (version != null && version != 0) {
+            listOf(keyParts.getString(version - 1), keyParts.getString(keyParts.length() - version))
+        } else {
+            (0 until keyParts.length()).map { keyParts.getString(it) }
+        }
+        return parts.map { b64UrlDecode(it) }.reduce { acc, bytes -> acc + bytes }
+    }
+
+    private fun aesGcmDecrypt(key: ByteArray, iv: ByteArray, payload: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+        return cipher.doFinal(payload)
+    }
+
+    private suspend fun emitSources(
+        data: JSONObject,
+        ref: String,
+        headers: Map<String, String>,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val sources = data.optJSONArray("sources")
+        if (sources != null && sources.length() > 0) {
+            emitFromArray(sources, ref, headers, callback)
+            return
+        }
+
+        val playback = data.optJSONObject("playback") ?: run {
+            Log.e(TAG, "No sources/playback in response")
+            return
+        }
+
+        try {
+            val iv = b64UrlDecode(playback.getString("iv"))
+            val keyParts = playback.getJSONArray("key_parts")
+            val version = if (playback.isNull("version")) null else playback.optInt("version")
+            val key = deriveKey(keyParts, version)
+            val payloadBytes = b64UrlDecode(playback.getString("payload"))
+
+            val plaintext = aesGcmDecrypt(key, iv, payloadBytes)
+            val decrypted = JSONObject(String(plaintext, Charsets.UTF_8))
+            val decryptedSources = decrypted.optJSONArray("sources") ?: return
+
+            val cleanHeaders = headers.toMutableMap().apply {
+                remove("X-Embed-Parent")
+                remove("X-Embed-Origin")
+                remove("X-Embed-Referer")
+                remove("X-Captcha-Token")
+            }
+            emitFromArray(decryptedSources, ref, cleanHeaders, callback)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to decrypt playback payload: ${e.message}", e)
+        }
+    }
+
+    private suspend fun emitFromArray(
+        sources: JSONArray,
+        ref: String,
+        headers: Map<String, String>,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        for (i in 0 until sources.length()) {
+            val source = sources.optJSONObject(i) ?: continue
+            val label = source.optString("label").orEmpty()
+            var sourceUrl = source.optString("url").orEmpty()
+            if (sourceUrl.isEmpty()) continue
+
+            if (sourceUrl.startsWith("/")) {
+                sourceUrl = resolveRelative(ref, sourceUrl)
+            }
+            val finalUrl = followRedirect(sourceUrl, headers)
+            val linkType = if (finalUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+
+            callback.invoke(
+                newExtractorLink(name, name, finalUrl, type = linkType) {
+                    this.referer = headers["Referer"] ?: ref
+                    this.quality = getQualityFromName(label)
+                    this.headers = headers
+                }
+            )
+        }
+    }
+
+    private suspend fun fetchJson(url: String, headers: Map<String, String>): JSONObject? {
+        return try {
+            val res = app.get(url, headers = headers, timeout = 30L)
+            if (res.code !in 200..299) null else JSONObject(res.text)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun postJson(
+        url: String,
+        headers: Map<String, String>,
+        body: JSONObject,
+        timeoutSec: Long
+    ): JSONObject? {
+        return try {
+            val requestBody = body.toString().toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+            val res = app.post(url, requestBody = requestBody, headers = headers, timeout = timeoutSec)
+            if (res.code !in 200..299) null else JSONObject(res.text)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun followRedirect(url: String, headers: Map<String, String>): String {
+        return try {
+            val res = app.get(url, headers = headers, allowRedirects = false)
+            res.headers["location"] ?: res.headers["Location"] ?: res.url
+        } catch (e: Exception) {
+            url
+        }
+    }
+
+    private fun resolveRelative(base: String, relative: String): String = try {
+        URI(base).resolve(relative).toString()
+    } catch (e: Exception) {
+        relative
+    }
+
+    private fun originOf(url: String): String = try {
+        URI(url).resolve("/").toString()
+    } catch (e: Exception) {
+        url
+    }
+}
+
 
 open class Streamwish : ExtractorApi() {
     override var name = "Streamwish"
@@ -68,6 +610,9 @@ open class Streamwish : ExtractorApi() {
         return null
     }
 }
+
+
+
 
 class Streamhihi : Streamwish() { override var name = "Streamhihi"; override var mainUrl = "https://streamhihi.com" }
 class Javsw : Streamwish() { override var mainUrl = "https://javsw.me"; override var name = "Javsw" }
@@ -110,7 +655,7 @@ open class VidHidePro : ExtractorApi() {
             url.contains("/d/") -> url.replace("/d/", "/v/")
             url.contains("/download/") -> url.replace("/download/", "/v/")
             url.contains("/file/") -> url.replace("/file/", "/v/")
-            url.contains("/e/") -> url.replace("/e/", "/v/") // Embed fix
+            url.contains("/e/") -> url.replace("/e/", "/v/")
             else -> url.replace("/f/", "/v/")
         }
     }
@@ -446,99 +991,10 @@ class VidNest : ExtractorApi() {
     }
 }
 
-open class Filemoon : ExtractorApi() {
-    override var name = "Filemoon"
-    override var mainUrl = "https://filemoon.to"
-    override val requiresReferer = true
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val mediaId = Regex("""/(?:e|d|v|f|download)/([0-9a-zA-Z]+)""").find(url)?.groupValues?.get(1)
-            ?: url.substringAfterLast("/").substringBefore("?")
-        val host = url.substringAfter("://").substringBefore("/")
-        val rootReferer = "https://$host/"
-        val apiUrl = "https://$host/api/videos/$mediaId/embed/playback"
-        val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            "Referer" to rootReferer,
-            "Origin" to rootReferer.removeSuffix("/"),
-            "X-Requested-With" to "XMLHttpRequest"
-        )
-
-        val response = app.get(apiUrl, headers = headers).text
-
-        if (response.contains("video not found") || response.isBlank()) {
-            return
-        }
-
-        val json = try { mapper.readValue<PlaybackResponse>(response) } catch (e: Exception) { null } ?: return
-
-        val finalSources = json.sources ?: json.playback?.let { pb ->
-            try {
-                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-                cipher.init(Cipher.DECRYPT_MODE,
-                    SecretKeySpec(xn(pb.key_parts), "AES"), GCMParameterSpec(128, ft(pb.iv))
-                )
-                val decryptedData = cipher.doFinal(ft(pb.payload)).toString(Charsets.ISO_8859_1)
-                mapper.readValue<PlaybackResponse>(decryptedData).sources
-            } catch (e: Exception) {
-                null
-            }
-        }
-
-        finalSources?.let { processSources(it, url, callback) }
-    }
-
-    private suspend fun processSources(sources: List<VideoSource>, referer: String, callback: (ExtractorLink) -> Unit) {
-        sources.forEach { source ->
-            if (source.url.contains("m3u8")) {
-                M3u8Helper.generateM3u8(this.name, source.url, referer).forEach(callback)
-            } else {
-                callback(
-                    newExtractorLink(this.name, source.label ?: this.name, source.url) {
-                        this.referer = referer
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
-            }
-        }
-    }
-
-    private fun ft(e: String): ByteArray {
-        val t = e.replace("-", "+").replace("_", "/")
-        val r = if (t.length % 4 == 0) 0 else 4 - (t.length % 4)
-        return Base64.decode(t + "=".repeat(r), Base64.DEFAULT)
-    }
-
-    private fun xn(e: List<String>): ByteArray {
-        var result = byteArrayOf()
-        e.forEach { result += ft(it) }
-        return result
-    }
-
-
-}
 
 
 
 
-
-class FileMoon2 : Filemoon() {
-    override var mainUrl = "https://filemoon.to" }
-class FileMoonIn : Filemoon() {
-    override var mainUrl = "https://filemoon.in" }
-class FileMoonSx : Filemoon() {
-    override var mainUrl = "https://filemoon.sx" }
-class Bysedikamoum : Filemoon() {
-    override var mainUrl = "https://bysedikamoum.com" }
-class Bysezoexe : Filemoon() {
-    override var mainUrl = "https://bysezoxexe.com" }
-class Filemoonx08 : Filemoon() {
-    override var mainUrl = "https://x08.ovh" }
 
 
 
@@ -1102,9 +1558,6 @@ data class Yanit(
     val cf: String? = null
 )
 
-data class PlaybackResponse(val sources: List<VideoSource>? = null, val playback: PlaybackData? = null)
-data class PlaybackData(val iv: String, val payload: String, val key_parts: List<String>)
-data class VideoSource(val url: String, val label: String? = null)
 
 data class SvgObject(
     val stream: String,
@@ -1112,3 +1565,48 @@ data class SvgObject(
 )
 
 
+class KPFilemoonSx : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.sx" }
+class KPFilemoonIn : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.in" }
+class KPFilemoonLink : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.link" }
+class KPFilemoonWf : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.wf" }
+class KPFilemoonEu : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.eu" }
+class KPFilemoonArt : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.art" }
+class KPFilemoonNl : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.nl" }
+class KPCinegrab : Filemoon() { override var name = "Cinegrab"; override var mainUrl = "https://cinegrab.com" }
+class KPMoonmov : Filemoon() { override var name = "Moonmov"; override var mainUrl = "https://moonmov.pro" }
+class KPNineSixAr : Filemoon() { override var name = "96ar"; override var mainUrl = "https://96ar.com" }
+class KPKerapoxy : Filemoon() { override var name = "Kerapoxy"; override var mainUrl = "https://kerapoxy.cc" }
+class KPFurher : Filemoon() { override var name = "Furher"; override var mainUrl = "https://furher.in" }
+class KPOneAzayf9w : Filemoon() { override var name = "1azayf9w"; override var mainUrl = "https://1azayf9w.xyz" }
+class KPEightOneU6xl9d : Filemoon() { override var name = "81u6xl9d"; override var mainUrl = "https://81u6xl9d.xyz" }
+class KPSmdfs40r : Filemoon() { override var name = "Smdfs40r"; override var mainUrl = "https://smdfs40r.skin" }
+class KPC1z39 : Filemoon() { override var name = "C1z39"; override var mainUrl = "https://c1z39.com" }
+class KPBf0skv : Filemoon() { override var name = "Bf0skv"; override var mainUrl = "https://bf0skv.org" }
+class KPZ1ekv717 : Filemoon() { override var name = "Z1ekv717"; override var mainUrl = "https://z1ekv717.fun" }
+class KPL1afav : Filemoon() { override var name = "L1afav"; override var mainUrl = "https://l1afav.net" }
+class KPTwoTwoTwoi8x : Filemoon() { override var name = "222i8x"; override var mainUrl = "https://222i8x.lol" }
+class KPEightMhlloqo : Filemoon() { override var name = "8mhlloqo"; override var mainUrl = "https://8mhlloqo.fun" }
+class KPF51rm : Filemoon() { override var name = "F51rm"; override var mainUrl = "https://f51rm.com" }
+class KPXcoic : Filemoon() { override var name = "Xcoic"; override var mainUrl = "https://xcoic.com" }
+class KPBoosteradx : Filemoon() { override var name = "Boosteradx"; override var mainUrl = "https://boosteradx.online" }
+class KPStreamlyplayer : Filemoon() { override var name = "Streamlyplayer"; override var mainUrl = "https://streamlyplayer.online" }
+class KPStreamlyplayero : Filemoon() { override var name = "Streamlyplayero"; override var mainUrl = "https://streamlyplayero.online" }
+class KPBysewihe : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysewihe.com" }
+class KPByselapuix : Filemoon() { override var name = "Byse"; override var mainUrl = "https://byselapuix.com" }
+class KPEmbedplaybyse : Filemoon() { override var name = "Byse"; override var mainUrl = "https://embedplaybyse.top" }
+class KPSb1254w9megshle : Filemoon() { override var name = "Sb1254w9megshle"; override var mainUrl = "https://sb1254w9megshle.org" }
+class KPMoflixStream : Filemoon() { override var name = "MoflixStream"; override var mainUrl = "https://moflix-stream.link" }
+class KPBysezoxexe : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysezoxexe.com" }
+class KPF16px : Filemoon() { override var name = "F16px"; override var mainUrl = "https://f16px.com" }
+class KPBysesayeveum : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysesayeveum.com" }
+class KPBysetayico : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysetayico.com" }
+class KPBysevepoin : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysevepoin.com" }
+class KPBysezejataos : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysezejataos.com" }
+class KPBysekoze : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysekoze.com" }
+class KPBysesukior : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysesukior.com" }
+class KPBysejikuar : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysejikuar.com" }
+class KPBysefujedu : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysefujedu.com" }
+class KPBysedikamoum : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysedikamoum.com" }
+class KPBysebuho : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysebuho.com" }
+class KPByseSx : Filemoon() { override var name = "Byse"; override var mainUrl = "https://byse.sx" }
+class KPByseqekaho : Filemoon() { override var name = "Byse"; override var mainUrl = "https://byseqekaho.com" }
