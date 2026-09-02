@@ -40,31 +40,25 @@ class FamilyPorn : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url      = if (page == 1) request.data else "${request.data}/page/$page"
+        val cleanUrl = request.data.removeSuffix("/")
+        val url      = if (page == 1) cleanUrl else "$cleanUrl/page/$page/"
         val document = app.get(url).document
-        val home     = document.select("li.king-post-item").mapNotNull { it.toMainPageResult() }
+        val home     = document.select("ul.g1-collection-items > li.g1-collection-item").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
             list = HomePageList(
-                name = request.name,
-                list = home,
+                name               = request.name,
+                list               = home,
                 isHorizontalImages = true
             ),
-            hasNext = document.selectFirst("div.nav-previous a") != null
+            hasNext = home.isNotEmpty()
         )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val anchor    = this.selectFirst("h2.entry-title a") ?: return null
-        val title     = anchor.text().trim().ifEmpty { return null }
-        val href      = fixUrl(anchor.attr("href").ifEmpty { return null })
-
-        val bgElement = this.selectFirst("div.king-box-bg")
-        val dataSrc   = bgElement?.attr("data-king-img-src")?.ifEmpty { null }
-        val styleSrc  = bgElement?.attr("style")?.let { style ->
-            Regex("""url\(["']?(.*?)["']?\)""").find(style)?.groupValues?.get(1)
-        }
-        val posterUrl = fixUrlNull(dataSrc ?: styleSrc)
+        val title     = this.selectFirst("h3.entry-title a")?.text()?.trim()?.ifEmpty { return null } ?: return null
+        val href      = fixUrl(this.selectFirst("h3.entry-title a")?.attr("href")?.ifEmpty { return null } ?: return null)
+        val posterUrl = fixUrlNull(this.selectFirst("div.entry-featured-media img")?.attr("src")?.ifEmpty { null })
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
@@ -74,11 +68,11 @@ class FamilyPorn : MainAPI() {
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url      = if (page == 1) "$mainUrl/?s=$query" else "$mainUrl/page/$page/?s=$query"
         val document = app.get(url).document
-        val results  = document.select("li.king-post-item").mapNotNull { it.toMainPageResult() }
+        val results  = document.select("ul.g1-collection-items > li.g1-collection-item").mapNotNull { it.toMainPageResult() }
 
         return newSearchResponseList(
             results,
-            hasNext = document.selectFirst("div.nav-previous a") != null
+            hasNext = results.isNotEmpty()
         )
     }
 
