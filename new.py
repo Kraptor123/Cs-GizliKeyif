@@ -18,7 +18,7 @@ LOAD_MOVIE = """
         Log.d(name, "Load aşaması: $url")
         val document = app.get(url).document
         {vars}
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl       = poster
             this.plot            = description
             this.year            = year
@@ -35,7 +35,7 @@ LOAD_MOVIE = """
         val title     = this.selectFirst("a img")?.attr("alt") ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
@@ -55,7 +55,7 @@ LOAD_TV = """
                 this.episode = ep.selectFirst(".num-ep, .episode")?.text()?.trim()?.toIntOrNull() ?: 1
             }
         }
-        return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+        return newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
             this.posterUrl       = poster
             this.plot            = description
             this.year            = year
@@ -175,8 +175,8 @@ def main():
         for i in os.listdir(tmp_pkg): shutil.move(os.path.join(tmp_pkg, i), n_pkg)
         shutil.rmtree(tmp_pkg)
 
-    types = {"1": "TvType.Movie", "2": "TvType.TvSeries", "3": "TvType.Movie"}
-    sets = {"1": "setOf(TvType.Movie)", "2": "setOf(TvType.TvSeries)", "3": "setOf(TvType.Movie, TvType.TvSeries)"}
+    types = {"1": "TvType.NSFW", "2": "TvType.NSFW", "3": "TvType.NSFW"}
+    sets = {"1": "setOf(TvType.NSFW)", "2": "setOf(TvType.NSFW)", "3": "setOf(TvType.NSFW, TvType.NSFW)"}
     loads = {"1": LOAD_MOVIE, "2": LOAD_TV, "3": LOAD_BOTH}
 
     for r, ds, fs in os.walk(dst, topdown=False):
