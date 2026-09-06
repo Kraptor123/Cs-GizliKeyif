@@ -10,5 +10,6 @@ class XXXChinaPlugin: Plugin() {
     override fun load() {
         registerMainAPI(XXXChina())
         registerExtractorAPI(HQLinks())
+        registerExtractorAPI(TurbovidHLS())
     }
 }
