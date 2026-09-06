@@ -132,6 +132,7 @@ class MangopornProvider: Plugin() {
         registerExtractorAPI(KPBysebuho())
         registerExtractorAPI(KPByseSx())
         registerExtractorAPI(KPByseqekaho())
+        registerExtractorAPI(Playmate())
 
         this.openSettings = { ctx: Context ->
             MangoAyarlar.showSettingsDialog(ctx as AppCompatActivity) {

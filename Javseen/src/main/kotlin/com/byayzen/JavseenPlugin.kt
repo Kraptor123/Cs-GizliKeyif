@@ -133,6 +133,7 @@ class JavseenPlugin: Plugin() {
         registerExtractorAPI(KPBysebuho())
         registerExtractorAPI(KPByseSx())
         registerExtractorAPI(KPByseqekaho())
+        registerExtractorAPI(Playmate())
 
     }
 }

@@ -21,6 +21,7 @@ import com.kraptor.Smoothpre
 import com.kraptor.Dhtpre
 import com.kraptor.Peytonepre
 import com.kraptor.DoodPmExtractor
+import com.kraptor.Playmate
 import com.kraptor.VidNest
 import com.kraptor.Playmogo
 import com.kraptor.ShaveTape
@@ -146,5 +147,6 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(KPBysebuho())
         registerExtractorAPI(KPByseSx())
         registerExtractorAPI(KPByseqekaho())
+        registerExtractorAPI(Playmate())
     }
 }

@@ -131,5 +131,6 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(KPBysebuho())
         registerExtractorAPI(KPByseSx())
         registerExtractorAPI(KPByseqekaho())
+        registerExtractorAPI(Playmate())
     }
 }

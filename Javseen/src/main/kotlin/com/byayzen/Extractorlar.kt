@@ -37,6 +37,7 @@ import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
 import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.cloudstream3.extractors.AesHelper
 import com.lagradost.cloudstream3.extractors.Voe
@@ -1563,6 +1564,60 @@ data class SvgObject(
     val stream: String,
     val hash: String
 )
+
+
+
+
+class Playmate : ExtractorApi() {
+    override val name            = "Playmate"
+    override val mainUrl         = "https://playmate.to"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        Log.d("Playmate", "getUrl: $url")
+        val code = Regex("""(?:embed|e)/([a-zA-Z0-9]+)""").find(url)?.groupValues?.get(1) ?: return
+        val requestBody = """{"c":"$code","d":"web"}""".toRequestBody("application/json".toMediaTypeOrNull())
+        val apiResponse = app.post(
+            "$mainUrl/api/s",
+            headers     = mapOf(
+                "Origin"       to mainUrl,
+                "Referer"      to url,
+                "Content-Type" to "application/json",
+                "User-Agent"   to USER_AGENT
+            ),
+            requestBody = requestBody
+        ).parsedSafe<ApiResponse>() ?: return
+
+        val streamUrl = apiResponse.sx?.ifEmpty { null } ?: return
+
+        callback(
+            newExtractorLink(
+                source = name,
+                name   = name,
+                url    = streamUrl,
+                type   = ExtractorLinkType.M3U8
+            ) {
+                this.referer = "$mainUrl/"
+                this.headers = mutableMapOf(
+                    "Origin"     to mainUrl,
+                    "User-Agent" to USER_AGENT
+                )
+                this.quality = Qualities.Unknown.value
+            }
+        )
+    }
+}
+
+data class ApiResponse(
+    @JsonProperty("sx") val sx: String? = null
+)
+
+
 
 
 class KPFilemoonSx : Filemoon() { override var name = "Filemoon"; override var mainUrl = "https://filemoon.sx" }
