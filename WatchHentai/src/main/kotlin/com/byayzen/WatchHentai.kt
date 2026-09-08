@@ -88,7 +88,7 @@ class WatchHentai : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         Log.d(name, "Load aşaması: $url")
-        val document = app.get(url).document
+        val document        = app.get(url).document
 
         val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
         val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
@@ -96,16 +96,20 @@ class WatchHentai : MainAPI() {
         val year            = document.selectFirst("div.extra span.C a")?.text()?.trim()?.toIntOrNull()
         val tags            = document.select("div.sgeneros a").map { it.text() }
         val duration        = document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
-        val recommendations = document.select("div.srelacionados article").mapNotNull { it.toRecommendationResult() }
-        val actors          = document.select("span.valor a").map { Actor(it.text())
-        }
+        val recommendations = document.select("article.item.tvshows").mapNotNull { it.toRecommendationResult() }
+        val actors          = document.select("span.valor a").map { Actor(it.text()) }
 
-        val episodes = document.select("ul.episodios li").mapNotNull { li ->
-            val epiA     = li.selectFirst("div.episodiotitle a") ?: return@mapNotNull null
-            val epUrl = fixUrlNull(epiA.attr("href")) ?: return@mapNotNull null
+        val episodes        = document.select("ul.episodios li").mapNotNull { li ->
+            val epA         = li.selectFirst("a.tv-ep-card-link") ?: return@mapNotNull null
+            val epUrl       = fixUrlNull(epA.attr("href")) ?: return@mapNotNull null
+            val epTitle     = li.selectFirst("span.eptitle")?.text()?.trim()
+            val epNum       = Regex("(\\d+)").find(epTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
             newEpisode(epUrl) {
+                this.name    = epTitle
+                this.episode = epNum
             }
         }
+
         return newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
             this.posterUrl       = poster
             this.plot            = description
@@ -118,9 +122,9 @@ class WatchHentai : MainAPI() {
     }
 
     private fun Element.toRecommendationResult(): SearchResponse? {
-        val title     = this.selectFirst("a img")?.attr("alt") ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("a img")?.attr("data-src"))
+        val title     = this.selectFirst("div.data h3 a")?.text()?.trim() ?: return null
+        val href      = fixUrlNull(this.selectFirst("div.data h3 a")?.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("div.poster img")?.let { img -> img.attr("data-src").ifEmpty { img.attr("src") } })
         return newTvSeriesSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
@@ -136,8 +140,8 @@ class WatchHentai : MainAPI() {
         val document = app.get(data).document
         val metaUrl  = document.selectFirst("meta[itemprop=contentUrl]")?.attr("content")?.ifEmpty { null } ?: return false
         Log.d(tag, "metaUrl: $metaUrl")
-        val jwHtml   = app.get(metaUrl).text.replace("\\/", "/")
-        val videoUrl = Regex("""["']?file["']?\s*:\s*["'](https?://[^"']+\.mp4)["']""").find(jwHtml)?.groupValues?.get(1) ?: return false
+        val metaHtml = app.get(metaUrl).text
+        val videoUrl = Regex(""""contentUrl"\s*:\s*"(https?://[^"]+\.mp4)"""").find(metaHtml)?.groupValues?.get(1) ?: return false
 
         callback.invoke(
             newExtractorLink(
