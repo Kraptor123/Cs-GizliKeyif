@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class Horny69 : MainAPI() {
-    override var mainUrl              = "https://www.horny69.com"
+    override var mainUrl              = "https://www.porntape.net"
     override var name                 = "Horny69"
     override val hasMainPage          = true
     override var lang                 = "en"
