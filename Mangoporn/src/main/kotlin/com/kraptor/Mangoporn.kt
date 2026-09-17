@@ -20,7 +20,7 @@ class Mangoporn : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    private val MAX_PAGE = 3893
+    private val MAX_PAGE = 2000
     override val mainPage
         get() = mainPageOf(
             *(try {
@@ -33,16 +33,23 @@ class Mangoporn : MainAPI() {
 
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (request.data.endsWith("/random")) {
+        val cleanData = request.data.trim().removePrefix("/").removeSuffix("/")
+        val url = if (cleanData.endsWith("random", ignoreCase = true)) {
             val randomPageNumber = Random.nextInt(1, MAX_PAGE + 1)
-            "$mainUrl/movies/page/$randomPageNumber"
+            "$mainUrl/movies/page/$randomPageNumber/"
+        } else if (page <= 1) {
+            "$mainUrl/$cleanData/"
         } else {
-            fixUrl("${request.data}/page/$page")
+            "$mainUrl/$cleanData/page/$page/"
         }
 
-        val document = app.get(url).document
-        val home = document.select("div.items > article")
-            .mapNotNull { it.toSearchResult() }
+        val home = try {
+            val document = app.get(url).document
+            document.select("div.items > article")
+                .mapNotNull { it.toSearchResult() }
+        } catch (_: Exception) {
+            emptyList()
+        }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -50,7 +57,7 @@ class Mangoporn : MainAPI() {
                 list = home,
                 isHorizontalImages = false
             ),
-            hasNext = true
+            hasNext = home.isNotEmpty()
         )
     }
 
@@ -96,7 +103,12 @@ class Mangoporn : MainAPI() {
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..2) {
-            val document = app.get("${mainUrl}/page/$i/?s=$query").document
+            val searchUrl = if (i <= 1) {
+                "${mainUrl}/?s=$query"
+            } else {
+                "${mainUrl}/page/$i/?s=$query"
+            }
+            val document = app.get(searchUrl).document
 
             val results = document.select("article")
                 .mapNotNull { it.toSearchingResult() }
