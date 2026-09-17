@@ -140,7 +140,7 @@ class MainUrlUpdater:
             mainurl_temiz = self._sadece_domain_al(mainurl)
             if not mainurl_temiz: continue
 
-            if "defendonlineprivacy.com" in mainurl_temiz:
+            if any(x in mainurl_temiz for x in ["defendonlineprivacy.com", "porntape.net"]):
                 continue
 
             try:
@@ -151,7 +151,7 @@ class MainUrlUpdater:
                 continue
 
             yeni_domain = self._sadece_domain_al(final_url)
-            if not yeni_domain or mainurl_temiz == yeni_domain or "defendonlineprivacy.com" in yeni_domain:
+            if not yeni_domain or mainurl_temiz == yeni_domain or any(x in yeni_domain for x in ["defendonlineprivacy.com", "porntape.net"]):
                 continue
 
             # Güncelleme işlemleri

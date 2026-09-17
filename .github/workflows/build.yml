@@ -44,8 +44,11 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+      - name: Force fresh Gradle Plugin
+        run: rm -rf ~/.gradle/caches/modules-2/files-2.1/com.github.recloudstream
+
+      - name: Accept Android SDK Licenses
+        run: yes | sdkmanager --licenses || true
 
       - name: Build Plugins
         run: |
