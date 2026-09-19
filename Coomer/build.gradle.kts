@@ -1,4 +1,4 @@
-version = 12
+version = 13
 
 dependencies {
     implementation("androidx.cardview:cardview:1.0.0")
@@ -21,14 +21,6 @@ cloudstream {
     authors     = listOf("kraptor")
     language    = "en"
     description = "Coomer: supports photos and videos"
-
-    /**
-     * Status int as the following:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
-    **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
     iconUrl = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://coomer.st&size=32"

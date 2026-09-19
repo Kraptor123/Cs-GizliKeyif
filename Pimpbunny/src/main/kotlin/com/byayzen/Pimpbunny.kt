@@ -2,15 +2,15 @@
 
 package com.byayzen
 
+import android.content.Context
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.network.CloudflareKiller
 
-class Pimpbunny : MainAPI() {
+class Pimpbunny(context: Context) : MainAPI() {
     override var mainUrl = "https://pimpbunny.com"
     override var name = "Pimpbunny"
     override val hasMainPage = true
@@ -18,6 +18,9 @@ class Pimpbunny : MainAPI() {
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
+
+    private val appContext = context
+    private val tag = "gizlikeyif_${name}"
 
     override val mainPage = mainPageOf(
         "${mainUrl}/videos" to "Newest Videos",
@@ -88,10 +91,13 @@ class Pimpbunny : MainAPI() {
     }
 
     private fun Element.toSearchResult(isModel: Boolean = true): SearchResponse? {
+        if (this.hasClass("item--adv-thumb") || this.hasClass("js-adv-thumb-item") || this.hasClass("is-adv-randomized") || this.selectFirst("div.qualtiy:contains(AD)") != null) return null
         val anchor = this.selectFirst("a.ui-card-link__KxRw6l, a")
-        val href = fixUrlNull(anchor?.attr("href")) ?: return null
+        val rawHref = anchor?.attr("href")?.trim() ?: return null
+        if (rawHref.isEmpty()) return null
+        if (!rawHref.startsWith("/") && !rawHref.startsWith(mainUrl)) return null
 
-        if (!href.contains("pimpbunny.com")) return null
+        val href = fixUrlNull(rawHref) ?: return null
 
         val title = this.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim()
             ?: return null
@@ -133,47 +139,61 @@ class Pimpbunny : MainAPI() {
         return newSearchResponseList(results, hasNext = results.isNotEmpty())
     }
 
-
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
+        Log.d(tag, "Load url: $url")
         val document = app.get(
             url,
             interceptor = CloudflareKiller(),
             headers = mapOf("Referer" to "$mainUrl/")
         ).document
 
-        val title =
-            document.selectFirst("h1.ui-heading-h1__0HdXaM, h1.ui-text-root__ZkCuFK, div.pages-view-video-video-title__9lYVyi")
-                ?.text()?.trim() ?: return null
-        val description =
-            document.selectFirst("div.blocks-model-view-creator-description__MQ09nz, .ui-text-muted__v_mC_E, div.ui-text-md__xx4iLH")
-                ?.text()?.trim()
-        val tags =
-            document.select("ul.includes-list-categories-wrapper__NTP3e_ li a, ul.pages-view-video-tags__EjO14g li a")
-                .map { it.text().trim() }
+        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
+            ?: document.selectFirst("div.pages-view-video-video-text__wO4wIS, div.pages-view-video-video-title__9lYVyi")?.text()?.trim()
+            ?: document.selectFirst("h1:not(:contains(This site is for adults only))")?.text()?.trim()
+            ?: return null
 
-        val actors =
-            document.select("div.blocks-model-view-title__7xX3ZF h1, ul.pages-view-video-models__OeBRr0 li")
-                .map {
-                    val name = it.select("div.pages-view-video-model-title__jPOPZM a").text().trim()
-                        .ifEmpty { it.text().trim() }
-                    val imgelement = it.selectFirst("img")
-                    val image = if (imgelement != null) {
-                        fixUrlNull(
-                            imgelement.attr("data-original").ifEmpty { imgelement.attr("src") })
-                    } else null
-                    Actor(name, image)
-                }
+        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+            ?: document.selectFirst("div.pages-view-video-description__CuSQws, div.blocks-model-view-creator-description__MQ09nz")?.text()?.trim()
 
-        val mainPosterElement =
-            document.selectFirst("div.blocks-model-view-thumbnail__z5_Ral img, div.pages-view-video-player-wrapper__8D_N_ img")
-        val mainPoster = if (mainPosterElement != null) {
-            fixUrlNull(
-                mainPosterElement.attr("data-original").ifEmpty { mainPosterElement.attr("src") })
-        } else {
-            actors.firstOrNull()?.image
+        val mainPoster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+            ?: fixUrlNull(document.selectFirst("div.pages-view-video-player-wrapper__8D_N_ img, div.blocks-model-view-thumbnail__z5_Ral img")?.attr("data-original"))
+            ?: fixUrlNull(document.selectFirst("div.pages-view-video-player-wrapper__8D_N_ img, div.blocks-model-view-thumbnail__z5_Ral img")?.attr("src"))
+
+        val duration = document.selectFirst("meta[property=video:duration]")?.attr("content")?.toIntOrNull()
+            ?: getDurationFromString(document.selectFirst("div.fp-time-duration, span.pages-view-video-views___bmCJD")?.text())
+
+        val year = document.selectFirst("meta[property=video:release_date]")?.attr("content")?.let {
+            Regex("\\d{4}").find(it)?.value?.toIntOrNull()
+        } ?: document.selectFirst("div.pages-view-video-video-info__re_sY")?.text()?.let {
+            Regex("\\d{4}").find(it)?.value?.toIntOrNull()
         }
+
+        val tags = document.select("meta[property=video:tag]").map { it.attr("content").trim() }
+            .ifEmpty {
+                document.select("ul.pages-view-video-categories__OWVJKQ li a, ul.includes-list-categories-wrapper__NTP3e_ li a, ul.pages-view-video-tags__EjO14g li a")
+                    .map { it.text().trim() }
+            }
+            .filter { it.isNotEmpty() && !it.equals("Categories", ignoreCase = true) && !it.equals("Tags", ignoreCase = true) }
+            .distinct()
+
+        val actors = document.select("ul.pages-view-video-models__OeBRr0 li, div.blocks-model-view-title__7xX3ZF").mapNotNull {
+            val name = it.selectFirst("div.pages-view-video-model-title__jPOPZM a, h1, a")?.text()?.trim() ?: return@mapNotNull null
+            if (name.equals("Models", ignoreCase = true) || name.isEmpty()) return@mapNotNull null
+            val imgElement = it.selectFirst("img")
+            val image = fixUrlNull(imgElement?.attr("data-original")?.ifEmpty { null } ?: imgElement?.attr("src"))
+            Actor(name, image)
+        }.ifEmpty {
+            Regex("""video_models:\s*['"]([^'"]+)['"]""").find(document.html())?.groupValues?.get(1)?.split(",")?.mapNotNull {
+                val n = it.trim()
+                if (n.isNotEmpty()) Actor(n) else null
+            } ?: emptyList()
+        }.distinct()
+
+        val recommendations = document.select("div#list_videos_similar_videos_items div.ui-card-root__0dWeQJ, div.ui-card-root__0dWeQJ")
+            .distinct()
+            .mapNotNull { it.toSearchResult() }
 
         val isSeries = url.contains("/onlyfans-creators/") || url.contains("/categories/")
 
@@ -193,17 +213,13 @@ class Pimpbunny : MainAPI() {
 
                 pageDoc.select("#list_videos_model_video_list_items .ui-card-video__Iv9u1W")
                     .forEach { card ->
-                        val epHref =
-                            fixUrlNull(card.selectFirst("a.ui-card-link__KxRw6l")?.attr("href"))
+                        val epHref = fixUrlNull(card.selectFirst("a.ui-card-link__KxRw6l")?.attr("href"))
                         if (epHref != null) {
                             episodes.add(newEpisode(epHref) {
-                                this.name =
-                                    card.selectFirst(".ui-card-title__igirYJ")?.text()?.trim()
+                                this.name = card.selectFirst(".ui-card-title__igirYJ")?.text()?.trim()
                                 val epImgElement = card.selectFirst("img")
                                 this.posterUrl = if (epImgElement != null) {
-                                    fixUrlNull(
-                                        epImgElement.attr("data-original")
-                                            .ifEmpty { epImgElement.attr("src") })
+                                    fixUrlNull(epImgElement.attr("data-original").ifEmpty { epImgElement.attr("src") })
                                 } else null
                             })
                         }
@@ -211,18 +227,22 @@ class Pimpbunny : MainAPI() {
             }
 
             newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes.distinctBy { it.data }) {
-                this.posterUrl = mainPoster
+                this.posterUrl = mainPoster ?: actors.firstOrNull()?.image
                 this.plot = description
                 this.tags = tags
+                this.duration = duration
+                this.year = year
+                this.recommendations = recommendations
                 addActors(actors)
             }
         } else {
             newMovieLoadResponse(title, url, TvType.NSFW, url) {
-                this.posterUrl = mainPoster
+                this.posterUrl = mainPoster ?: actors.firstOrNull()?.image
                 this.plot = description
-                this.year = document.selectFirst("div.pages-view-video-video-info__re_sY")?.text()
-                    ?.let { Regex("\\d{4}").find(it)?.value?.toIntOrNull() }
+                this.duration = duration
+                this.year = year
                 this.tags = tags
+                this.recommendations = recommendations
                 addActors(actors)
             }
         }
@@ -234,31 +254,8 @@ class Pimpbunny : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        Log.d(tag, "loadLinks data = $data")
         val response = app.get(data, interceptor = CloudflareKiller()).text
-        
-        val urls = Regex("""(video_(?:alt_)?url\d*):\s*['"]([^'"]+)['"]""").findAll(response)
-            .associate { it.groupValues[1] to it.groupValues[2] }
-        val texts = Regex("""(video_(?:alt_)?url\d*_text):\s*['"]([^'"]+)['"]""").findAll(response)
-            .associate { it.groupValues[1].removeSuffix("_text") to it.groupValues[2] }
-
-        if (urls.isEmpty()) return false
-
-        urls.forEach { (key, url) ->
-            val quality = texts[key] ?: "360p"
-            callback.invoke(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = url,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.quality = getQualityFromName(quality)
-                    this.referer = data
-                    this.headers = mapOf("Referer" to data)
-                }
-            )
-        }
-
-        return true
+        return KtPlayerExtractor(appContext).getLinks(name, mainUrl, data, response, callback)
     }
 }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jsoup.Jsoup
 import java.util.Collections
+import kotlin.time.Duration.Companion.milliseconds
 
 data class Creator(
     @JsonProperty("id") val id: String,
@@ -99,11 +100,10 @@ class Coomer (val plugin: CoomerPlugin) : MainAPI() {
         val banner = "https://img.coomer.st/banners/$service/$id"
 //        Log.d("kraptor_coomer","url = $url")
 
-        // Async olarak pagination ile post çekme
         val allPosts = Collections.synchronizedList(mutableListOf<Post>())
         val mapper = jacksonObjectMapper()
 
-        withTimeoutOrNull(3000) {
+        withTimeoutOrNull(3000.milliseconds) {
             coroutineScope {
                 // İlk sayfayı senkron çek
                 val firstPageUrl = "$mainUrl/api/v1/$service/user/$id/posts"
@@ -293,11 +293,13 @@ class Coomer (val plugin: CoomerPlugin) : MainAPI() {
                 val images = imagesPart.split("||")
                 plugin.loadChapter(images)
             }
+
             data.contains("VIDEOS::") -> {
                 // Video bölümü
                 val videosPart = data.substringAfter("VIDEOS::")
                 val videos = videosPart.split("||")
                 videos.forEachIndexed { index, videoUrl ->
+                    Log.d(name, videoUrl)
                     callback.invoke(
                         newExtractorLink(
                             source = name,
@@ -306,7 +308,8 @@ class Coomer (val plugin: CoomerPlugin) : MainAPI() {
                             type = ExtractorLinkType.VIDEO,
                             {
                                 this.referer = "${mainUrl}/"
-                                this.headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.7103.48 Safari/537.36")
+                                this.headers =
+                                    mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.7103.48 Safari/537.36")
                                 this.quality = Qualities.Unknown.value
                             }
                         )
@@ -327,8 +330,8 @@ data class Post(
     val title: String?,
     val substring: String?,
     val published: String?,
-    val file: FileEntry = FileEntry(),                // default boş
-    val attachments: List<FileEntry> = emptyList()     // default boş liste
+    val file: FileEntry = FileEntry(),
+    val attachments: List<FileEntry> = emptyList()
 )
 
 data class FileEntry(
