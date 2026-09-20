@@ -8,6 +8,6 @@ import android.content.Context
 @CloudstreamPlugin
 class AllClassicPornPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(AllClassicPorn(context))
+        registerMainAPI(AllClassicPorn())
     }
 }

@@ -2,14 +2,13 @@
 
 package com.byayzen
 
-import android.content.Context
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 
-class Yesporn(context: Context) : MainAPI() {
+class Yesporn : MainAPI() {
     override var mainUrl              = "https://yesporn.vip"
     override var name                 = "Yesporn"
     override val hasMainPage          = true
@@ -18,7 +17,6 @@ class Yesporn(context: Context) : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
-    private val appContext = context
     private val tag = "gizlikeyif_${name}"
 
     override val mainPage = mainPageOf(
@@ -144,6 +142,6 @@ class Yesporn(context: Context) : MainAPI() {
     ): Boolean {
         Log.d(tag, "loadLinks data = $data")
         val pageHtml = app.get(data).text
-        return KtPlayerExtractor(appContext).getLinks(name, mainUrl, data, pageHtml, callback)
+        return KtPlayerExtractor.getLinks(name, mainUrl, data, pageHtml, callback = callback)
     }
 }

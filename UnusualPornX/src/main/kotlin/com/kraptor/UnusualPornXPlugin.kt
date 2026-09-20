@@ -9,6 +9,6 @@ import android.content.Context
 @CloudstreamPlugin
 class UnusualPornXPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(UnusualPornX(context))
+        registerMainAPI(UnusualPornX())
     }
 }

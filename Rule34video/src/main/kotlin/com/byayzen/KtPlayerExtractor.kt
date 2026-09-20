@@ -1,4 +1,4 @@
-// ! Bu araç @kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
+// ! Bu araç @ByAyzen tarafından | @Cs-GizliKeyif için yazılmıştır.
 
 package com.byayzen
 

@@ -9,6 +9,6 @@ import android.content.Context
 @CloudstreamPlugin
 class YespornPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Yesporn(context))
+        registerMainAPI(Yesporn())
     }
 }

@@ -7,6 +7,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class Porn00Plugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Porn00(context))
+        registerMainAPI(Porn00())
     }
 }

@@ -146,28 +146,6 @@ class Whoreshub : MainAPI() {
         Log.d(tag, "loadLinks başladı")
         val response = app.get(data).text
 
-        val links = listOfNotNull(
-            Regex("""video_alt_url:\s*'(https?:[^']+)'""").find(response)?.groupValues?.get(1)?.let { it to Qualities.P1080.value },
-            Regex("""video_url:\s*'(https?:[^']+)'""").find(response)?.groupValues?.get(1)?.let { it to Qualities.P720.value }
-        )
-
-        if (links.isEmpty()) return false
-
-        links.forEach { (url, quality) ->
-            callback.invoke(
-                newExtractorLink(
-                    source      = this.name,
-                    name        = this.name,
-                    url         = url,
-                    type        = INFER_TYPE,
-                    initializer = {
-                        this.quality = quality
-                        this.referer = "$mainUrl/"
-                    }
-                )
-            )
-        }
-
-        return true
+        return KtPlayerExtractor.getLinks(name, mainUrl, data, response, callback = callback)
     }
 }

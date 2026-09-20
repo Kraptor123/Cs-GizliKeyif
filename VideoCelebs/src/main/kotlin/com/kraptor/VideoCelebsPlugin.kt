@@ -8,6 +8,6 @@ import android.content.Context
 @CloudstreamPlugin
 class VideoCelebsPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(VideoCelebs(context))
+        registerMainAPI(VideoCelebs())
     }
 }

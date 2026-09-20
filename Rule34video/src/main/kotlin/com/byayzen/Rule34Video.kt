@@ -128,42 +128,6 @@ class Rule34Video : MainAPI() {
         Log.d(name, "url = $url")
         val response = app.get(url).text
 
-        val videoregex = Regex("""video_alt_url\d*:\s*'(https?://[^']+)'""")
-        val primaryregex = Regex("""video_url:\s*'(https?://[^']+)'""")
-
-        val links = videoregex.findAll(response).map { it.groupValues[1] }.toList() +
-                primaryregex.findAll(response).map { it.groupValues[1] }.toList()
-
-        if (links.isEmpty()) {
-            Log.d(name, "No links found")
-            return false
-        }
-
-        links.distinct().forEach { link ->
-            val quality = when {
-                link.contains("2160p") || link.contains("4k") -> 2160
-                link.contains("1080p") -> 1080
-                link.contains("720p") -> 720
-                link.contains("480p") -> 480
-                link.contains("360") -> 360
-                else -> Qualities.Unknown.value
-            }
-
-            Log.d(name, "link = $link | quality = $quality")
-
-            callback(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = link,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = quality
-                }
-            )
-        }
-
-        return true
+        return KtPlayerExtractor.getLinks(name, mainUrl, url, response, callback = callback)
     }
 }

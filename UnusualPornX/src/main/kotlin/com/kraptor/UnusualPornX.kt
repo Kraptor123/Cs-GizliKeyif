@@ -2,27 +2,14 @@
 
 package com.kraptor
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
 
-class UnusualPornX(context: Context) : MainAPI() {
+class UnusualPornX : MainAPI() {
     override var mainUrl              = "https://unusualpornx.com"
     override var name                 = "UnusualPornX"
     override val hasMainPage          = true
@@ -44,7 +31,6 @@ class UnusualPornX(context: Context) : MainAPI() {
         "${mainUrl}/categories/ghosts" to "Monsters",
     )
 
-    private val context = context
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}/$page/").document
@@ -112,205 +98,13 @@ class UnusualPornX(context: Context) : MainAPI() {
     }
 
 
-    private fun cleanupWebView(wv: WebView) {
-        try {
-            wv.stopLoading()
-            wv.setWebChromeClient(null)
-            wv.webViewClient = object : WebViewClient() {}
-            wv.removeAllViews()
-            wv.clearHistory()
-            wv.loadUrl("about:blank")
-            wv.destroy()
-        } catch (ignored: Throwable) {
-        }
-    }
-
-    // WebView oluşturup video URL'sini çıkar
-    @SuppressLint("SetJavaScriptEnabled")
-    suspend fun createWebViewAndExtractVideo(
-        context: Context,
-        html: String,
-        onResult: (String?) -> Unit
-    ): WebView = withContext(Dispatchers.Main) {
-
-        val wv = WebView(context.applicationContext).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = true
-            settings.allowContentAccess = true
-
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    extractVideoWithDelay(view, { result ->
-                        onResult(result)
-                        // İş bitince temizle
-                        Handler(Looper.getMainLooper()).post {
-//                            Log.d("kraptor_UnusualPornX", "WebView temizlendi")
-                            cleanupWebView(this@apply)
-                        }
-                    }, 0)
-                }
-            }
-
-            // HTML'i yükle
-            loadDataWithBaseURL("${mainUrl}/", html, "text/html", "UTF-8", null)
-        }
-
-        return@withContext wv
-    }
-
-    // Video URL'sini gecikmeyle çıkar
-    private fun extractVideoWithDelay(webView: WebView?, onResult: (String?) -> Unit, attempt: Int) {
-        if (webView == null || attempt > 3) {
-//            Log.d("kraptor_UnusualPornX", "Timeout reached or WebView is null")
-            onResult(null)
-            return
-        }
-
-//        Log.d("kraptor_UnusualPornX", "Attempt $attempt - kt_player video URL araniyor...")
-
-        val extractScript = """
-    (function() {
-        try {
-            var results = [];
-            
-            if (typeof flashvars !== 'undefined' && flashvars) {
-                // 360p
-                if (flashvars.video_url) {
-                    var videoUrl = flashvars.video_url;
-                    if (videoUrl.startsWith('function/0/')) {
-                        videoUrl = videoUrl.substring(11);
-                    }
-                    // Sondaki / varsa temizle
-                    if (videoUrl.endsWith('/')) {
-                        videoUrl = videoUrl.slice(0, -1);
-                    }
-                    var quality = flashvars.video_url_text || '360p';
-                    results.push({
-                        url: videoUrl,
-                        quality: quality
-                    });
-                }
-                
-                // 720p
-                if (flashvars.video_alt_url) {
-                    var altUrl = flashvars.video_alt_url;
-                    if (altUrl.startsWith('function/0/')) {
-                        altUrl = altUrl.substring(11);
-                    }
-                    // Sondaki / varsa temizle
-                    if (altUrl.endsWith('/')) {
-                        altUrl = altUrl.slice(0, -1);
-                    }
-                    var altQuality = flashvars.video_alt_url_text || '720p';
-                    results.push({
-                        url: altUrl,
-                        quality: altQuality
-                    });
-                }
-            }
-            
-            return results.length > 0 ? JSON.stringify(results) : null;
-            
-        } catch (e) {
-            console.log('Extract error:', e);
-            return null;
-        }
-    })();
-""".trimIndent()
-
-        webView.evaluateJavascript(extractScript) { resultJson ->
-//            Log.d("kraptor_UnusualPornX", "Raw result: '$resultJson'")
-
-            val cleanResult = resultJson?.let { raw ->
-                if (raw == "null" || raw == "\"null\"") {
-                    null
-                } else {
-                    raw.removePrefix("\"").removeSuffix("\"")
-                        .replace("\\\"", "\"")
-                        .replace("\\\\", "\\")
-                }
-            }
-
-            if (cleanResult.isNullOrEmpty() || cleanResult == "null") {
-                if (attempt < 20) {
-//                    Log.d("kraptor_UnusualPornX", "Video URL bulunamadi, 1 saniye bekleyip tekrar deniyor...")
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        extractVideoWithDelay(webView, onResult, attempt + 1)
-                    }, 1000)
-                } else {
-//                    Log.d("kraptor_UnusualPornX", "Max deneme sayisina ulasildi, basarisiz")
-                    onResult(null)
-                }
-            } else {
-                // function/0/ prefix'ini temizle
-                val finalUrl = if (cleanResult.startsWith("function/0/")) {
-                    cleanResult.removePrefix("function/0/")
-                } else {
-                    cleanResult
-                }
-
-//                Log.d("kraptor_UnusualPornX", "SUCCESS! Video URL bulundu: $finalUrl")
-                onResult(finalUrl)
-            }
-        }
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("kraptor_UnusualPornX", "data » $data")
         val pageHtml = app.get(data).text
-
-        Log.d("kraptor_UnusualPornX", "WebView ile kt_player video URL'si çıkarılıyor...")
-
-        val videoResultJson = suspendCancellableCoroutine { continuation ->
-            runBlocking {
-                createWebViewAndExtractVideo(context = context, pageHtml) { result ->
-                    continuation.resume(result)
-                }
-            }
-        }
-
-        Log.d("kraptor_UnusualPornX", "Video JSON = $videoResultJson")
-
-        videoResultJson?.let { jsonResult ->
-            try {
-                val videoList = try { mapper.readValue<List<VideoQuality>>(jsonResult) } catch (e: Exception) { null }
-
-                videoList?.forEach { video ->
-                    if (video.url.startsWith("http")) {
-                        Log.d("kraptor_UnusualPornX", "${video.quality} - ${video.url}")
-
-                        callback.invoke(
-                            newExtractorLink(
-                                source = "UnusualPornX",
-                                name = "UnusualPornX",
-                                url = video.url,
-                                type = ExtractorLinkType.VIDEO,
-                            ) {
-                                this.referer = "${mainUrl}/"
-                                quality = getQualityFromName(video.quality)
-                            })
-                    }
-                }
-                return videoList?.isNotEmpty() == true
-
-            } catch (e: Exception) {
-                Log.e("kraptor_UnusualPornX", "Parse Hata verdi: ${e.message}")
-                return false
-            }
-        }
-
-        return false
+        return KtPlayerExtractor.getLinks(name, mainUrl, data, pageHtml, callback = callback)
     }
 }
-
-data class VideoQuality(
-    @param:JsonProperty("url") val url: String,
-    @param:JsonProperty("quality") val quality: String
-)

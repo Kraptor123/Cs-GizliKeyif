@@ -2,25 +2,13 @@
 
 package com.kraptor
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
-class WatchPorn(context: Context) : MainAPI() {
+class WatchPorn : MainAPI() {
     override var mainUrl = "https://watchporn.to"
     override var name = "WatchPorn"
     override val hasMainPage = true
@@ -28,7 +16,6 @@ class WatchPorn(context: Context) : MainAPI() {
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
 
-    private val context = context
 
     override val mainPage = mainPageOf(
         "${mainUrl}/top-rated/" to "Top Rated",
@@ -163,117 +150,13 @@ class WatchPorn(context: Context) : MainAPI() {
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    suspend fun extractVideoUrls(
-        context: Context,
-        html: String
-    ): List<String> = suspendCoroutine { continuation ->
-
-        Handler(Looper.getMainLooper()).post {
-            val wv = WebView(context.applicationContext).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            view?.evaluateJavascript("""
-                            (function() {
-                                var videos = [];
-                                
-                                // flashvars objesinden videoları al
-                                if (typeof flashvars !== 'undefined') {
-                                    // video_url (720p)
-                                    if (flashvars.video_url && flashvars.video_url.indexOf('https://') !== -1) {
-                                        videos.push(flashvars.video_url);
-                                    }
-                                    // video_alt_url (1080p)
-                                    if (flashvars.video_alt_url && flashvars.video_alt_url.indexOf('https://') !== -1) {
-                                        videos.push(flashvars.video_alt_url);
-                                    }
-                                }
-                                
-                                // Eğer flashvars'dan bulamadıysa, script'leri tara
-                                if (videos.length === 0) {
-                                    var scripts = document.getElementsByTagName('script');
-                                    for (var i = 0; i < scripts.length; i++) {
-                                        var text = scripts[i].textContent;
-                                        
-                                        // https://watchporn.to/get_file/ ile başlayan .mp4 linklerini bul
-                                        var matches = text.match(/https:\/\/watchporn\.to\/get_file\/[^\s'"]+\.mp4[^\s'"]*/g);
-                                        
-                                        if (matches) {
-                                            for (var j = 0; j < matches.length; j++) {
-                                                videos.push(matches[j]);
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // Tekrarları temizle
-                                videos = videos.filter(function(item, pos) {
-                                    return videos.indexOf(item) === pos;
-                                });
-                                
-                                return JSON.stringify(videos);
-                            })();
-                        """) { result ->
-                                try {
-                                    val cleanResult = result.trim('"').replace("\\", "")
-                                    val videoUrls = JSONArray(cleanResult)
-
-                                    val urls = mutableListOf<String>()
-                                    for (i in 0 until videoUrls.length()) {
-                                        urls.add(videoUrls.getString(i))
-                                    }
-
-                                    continuation.resume(urls)
-
-                                    Handler(Looper.getMainLooper()).post {
-                                        try {
-                                            this@apply.stopLoading()
-                                            this@apply.clearHistory()
-                                            this@apply.destroy()
-                                        } catch (ignored: Throwable) {}
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("VideoExtractor", "Error: ${e.message}")
-                                    continuation.resume(emptyList())
-                                }
-                            }
-                        }, 100)
-                    }
-                }
-
-                loadDataWithBaseURL(mainUrl, html, "text/html", "UTF-8", null)
-            }
-        }
-    }
-
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("kraptor_$name", "data = ${data}")
-        val document = app.get(data).text
-
-        val videoUrls = extractVideoUrls(context, document)
-
-        videoUrls.forEach { url ->
-            Log.d("kraptor_$name", "url = ${url}")
-            val quality = url.substringBeforeLast("/").substringAfterLast("/").substringBefore(".").substringAfter("_")
-            callback.invoke(
-                newExtractorLink(
-                    name,
-                    name,
-                    url,
-                    type = ExtractorLinkType.VIDEO,
-                    {
-                        this.referer = "$mainUrl/"
-                        this.quality = getQualityFromName(quality)
-                    }
-                )
-            )
-        }
-
-        return videoUrls.isNotEmpty()
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val pageHtml = app.get(data).text
+        return KtPlayerExtractor.getLinks(name, mainUrl, data, pageHtml, callback = callback)
     }
 }

@@ -2,28 +2,14 @@
 
 package com.kraptor
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.webkit.WebSettings
 import android.webkit.WebView
-import android.webkit.WebViewClient
-import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
-class AllClassicPorn(context: Context) : MainAPI() {
+class AllClassicPorn : MainAPI() {
     override var mainUrl              = "https://allclassic.porn"
     override var name                 = "AllClassicPorn"
     override val hasMainPage          = true
@@ -31,7 +17,6 @@ class AllClassicPorn(context: Context) : MainAPI() {
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
 
-    private val appContext = context
 
     override val mainPage = mainPageOf(
         "${mainUrl}/categories/amateur/"            to  "Amateur Classic",
@@ -193,119 +178,13 @@ class AllClassicPorn(context: Context) : MainAPI() {
     }
 
     // Minimal WebView temizleme
-    private fun cleanupWebView(wv: WebView) {
-        try {
-            wv.stopLoading()
-            wv.loadUrl("about:blank")
-            wv.destroy()
-        } catch (ignored: Throwable) {}
-    }
-
-    // Ultra minimal WebView - gereksiz her şey kaldırıldı
-    @SuppressLint("SetJavaScriptEnabled")
-    suspend fun createWebViewAndExtractVideo(
-        context: Context,
-        html: String,
-        onResult: (String?) -> Unit
-    ): WebView = withContext(Dispatchers.Main) {
-
-        val wv = WebView(context.applicationContext).apply {
-            // Sadece gerekli ayarlar
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                blockNetworkImage = true // Hız için resimler yüklenmesin
-                cacheMode = WebSettings.LOAD_NO_CACHE
-            }
-
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    // Direkt çıkar - bekleme yok
-                    extractVideoUrl(view, onResult)
-                }
-            }
-
-            loadDataWithBaseURL("https://allclassic.porn/", html, "text/html", "UTF-8", null)
-        }
-
-        return@withContext wv
-    }
-
-    // Tek seferlik video URL çıkarma - retry yok
-    private fun extractVideoUrl(webView: WebView?, onResult: (String?) -> Unit) {
-        webView?.evaluateJavascript("""
-    (function() {
-        // En muhtemel yerler - ilk bulduğunu döndür
-        if (window.player_obj?.config?.video_url) return window.player_obj.config.video_url;
-        if (window.flashvars?.video_url) return window.flashvars.video_url;
-        
-        // Video element kontrolü
-        var video = document.querySelector('video');
-        if (video?.src?.includes('.mp4')) return video.src;
-        if (video?.currentSrc?.includes('.mp4')) return video.currentSrc;
-        
-        // Script içinde .mp4 ara
-        var scripts = document.querySelectorAll('script');
-        for (var script of scripts) {
-            var content = script.innerHTML;
-            if (content.includes('.mp4')) {
-                var match = content.match(/video_url['"]\s*:\s*['"]([^'"]+\.mp4[^'"]*)['"]/i) ||
-                           content.match(/(https?:\/\/[^\s'"]+\.mp4[^\s'"]*)/i);
-                if (match) return match[1];
-            }
-        }
-        return null;
-    })();
-    """.trimIndent()) { result ->
-
-            val videoUrl = result?.takeIf { it != "null" && it.isNotEmpty() }
-                ?.removePrefix("\"")?.removeSuffix("\"")
-                ?.replace("\\/", "/")
-
-            Log.d("kraptor_${this.name}", if (videoUrl != null) "SUCCESS! Video URL: $videoUrl" else "Video URL bulunamadı")
-
-            onResult(videoUrl)
-            cleanupWebView(webView)
-        }
-    }
-
-    suspend fun getVideoUrl(appContext: Context, pageHtml: String): String? {
-        return suspendCoroutine { continuation ->
-            // Main thread'de çalıştır - WebView için gerekli
-            CoroutineScope(Dispatchers.Main).launch {
-                createWebViewAndExtractVideo(appContext, pageHtml) { result ->
-                    continuation.resume(result)
-                }
-            }
-        }
-    }
-
-
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-       Log.d("kraptor_${this.name}", "data » $data")
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
         val pageHtml = app.get(data).text
-
-       Log.d("kraptor_${this.name}", "WebView ile kt_player video URL'si çıkarılıyor...")
-
-        val videoUrl = getVideoUrl(appContext, pageHtml)
-
-       Log.d("kraptor_${this.name}", "Final video URL = $videoUrl")
-
-        videoUrl?.let { url ->
-            if (url.startsWith("http")) {
-                callback.invoke(newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = url,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = "${mainUrl}/"
-                })
-                return true
-            }
-        }
-
-        return true
+        return KtPlayerExtractor.getLinks(name, mainUrl, data, pageHtml, callback = callback)
     }
 }

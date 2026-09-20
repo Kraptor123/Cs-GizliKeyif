@@ -2,7 +2,6 @@
 
 package com.byayzen
 
-import android.content.Context
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
@@ -10,7 +9,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.network.CloudflareKiller
 
-class Pimpbunny(context: Context) : MainAPI() {
+class Pimpbunny : MainAPI() {
     override var mainUrl = "https://pimpbunny.com"
     override var name = "Pimpbunny"
     override val hasMainPage = true
@@ -19,13 +18,13 @@ class Pimpbunny(context: Context) : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    private val appContext = context
-    private val tag = "gizlikeyif_${name}"
+    private val tag             = "gizlikeyif_${name}"
+    private val cloudflareKiller = CloudflareKiller()
 
     override val mainPage = mainPageOf(
         "${mainUrl}/videos" to "Newest Videos",
         "${mainUrl}/" to "Featured Videos",
-        "${mainUrl}/onlyfans-creators/?models_per_page=30" to "Newest Models",
+        "${mainUrl}/onlyfans-creators/" to "Newest Models",
         "${mainUrl}/categories/4k/" to "4K",
         "${mainUrl}/categories/anal/" to "Anal",
         "${mainUrl}/categories/bbc/" to "BBC",
@@ -54,18 +53,12 @@ class Pimpbunny(context: Context) : MainAPI() {
         val url = if (page <= 1) {
             request.data
         } else {
-            if (request.data.contains("onlyfans-models")) {
-                val base = request.data.substringBefore("?")
-                val query = request.data.substringAfter("?")
-                "${base}${page}/?${query}"
-            } else {
-                "${request.data.removeSuffix("/")}/$page/"
-            }
+            "${request.data.removeSuffix("/")}/$page/"
         }
 
         val document = app.get(
             url = url,
-            interceptor = CloudflareKiller(),
+            interceptor = cloudflareKiller,
             headers = mapOf("Referer" to "$mainUrl/")
         ).document
 
@@ -107,8 +100,8 @@ class Pimpbunny(context: Context) : MainAPI() {
             ?: img?.attr("src")
         )
 
-        return if (isModel || href.contains("/onlyfans-models/")) {
-            newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
+        return if (isModel || href.contains("/onlyfans-creators/")) {
+            newTvSeriesSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = posterUrl
             }
         } else {
@@ -125,7 +118,7 @@ class Pimpbunny(context: Context) : MainAPI() {
             "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_models_models_list_search_result&from_models=$page&sort_by=title&items_per_page=$itemsPerPage&models_per_page=$itemsPerPage&_=$timestamp"
         val response = app.get(
             url = searchUrl,
-            interceptor = CloudflareKiller(),
+            interceptor = cloudflareKiller,
             headers = mapOf(
                 "Referer" to "$mainUrl/search/$query/",
                 "X-Requested-With" to "XMLHttpRequest"
@@ -139,13 +132,13 @@ class Pimpbunny(context: Context) : MainAPI() {
         return newSearchResponseList(results, hasNext = results.isNotEmpty())
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
         Log.d(tag, "Load url: $url")
         val document = app.get(
             url,
-            interceptor = CloudflareKiller(),
+            interceptor = cloudflareKiller,
             headers = mapOf("Referer" to "$mainUrl/")
         ).document
 
@@ -207,7 +200,7 @@ class Pimpbunny(context: Context) : MainAPI() {
                 val pageUrl = if (i == 1) url else "${url.removeSuffix("/")}/$i/"
                 val pageDoc = if (i == 1) document else app.get(
                     pageUrl,
-                    interceptor = CloudflareKiller(),
+                    interceptor = cloudflareKiller,
                     headers = mapOf("Referer" to "$mainUrl/")
                 ).document
 
@@ -255,7 +248,14 @@ class Pimpbunny(context: Context) : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         Log.d(tag, "loadLinks data = $data")
-        val response = app.get(data, interceptor = CloudflareKiller()).text
-        return KtPlayerExtractor(appContext).getLinks(name, mainUrl, data, response, callback)
+        val response = app.get(data, interceptor = cloudflareKiller).text
+        return KtPlayerExtractor.getLinks(
+            sourceName         = name,
+            mainUrl            = mainUrl,
+            pageUrl            = data,
+            pageHtml           = response,
+            cookieHeaders      = cloudflareKiller.getCookieHeaders(data).associate { (key, value) -> key to value },
+            callback           = callback
+        )
     }
 }

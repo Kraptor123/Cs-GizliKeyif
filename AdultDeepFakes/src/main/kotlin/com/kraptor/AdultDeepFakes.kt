@@ -2,22 +2,12 @@
 
 package com.kraptor
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import org.json.JSONArray
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
-class AdultDeepFakes(context: Context) : MainAPI() {
+class AdultDeepFakes : MainAPI() {
     override var mainUrl              = "https://adultdeepfakes.com"
     override var name                 = "AdultDeepFakes"
     override val hasMainPage          = true
@@ -25,7 +15,6 @@ class AdultDeepFakes(context: Context) : MainAPI() {
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
-    private var context = context
 
     override val mainPage = mainPageOf(
         "${mainUrl}/top-rated/"                                    to "Top Rated",
@@ -150,152 +139,13 @@ class AdultDeepFakes(context: Context) : MainAPI() {
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    suspend fun extractVideoUrls(
-        context: Context,
-        html: String
-    ): List<String> = suspendCoroutine { continuation ->
-
-        Handler(Looper.getMainLooper()).post {
-            val wv = WebView(context.applicationContext).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-
-                        // JavaScript'in çalışması için bekle
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            view?.evaluateJavascript("""
-                            (function() {
-                                var videos = [];
-                                
-                                // URL temizleme fonksiyonu (function/0/... vb. kalıntıları atar)
-                                var cleanUrl = function(urlStr) {
-                                    if (!urlStr) return null;
-                                    // https:// ile başlayıp .mp4 ile biten kısmı alır
-                                    var match = urlStr.match(/(https:\/\/[^'"\s]+\.mp4)/);
-                                    return match ? match[1] : null;
-                                };
-
-                                if (typeof flashvars !== 'undefined') {
-                                    // 1. video_url (Genelde 480p veya SD)
-                                    var url1 = cleanUrl(flashvars.video_url);
-                                    if (url1) {
-                                        videos.push({
-                                            url: url1,
-                                            quality: flashvars.video_url_text || 'SD'
-                                        });
-                                    }
-                                    
-                                    // 2. video_alt_url (Genelde 720p veya HD)
-                                    var url2 = cleanUrl(flashvars.video_alt_url);
-                                    if (url2) {
-                                        videos.push({
-                                            url: url2,
-                                            quality: flashvars.video_alt_url_text || 'HD'
-                                        });
-                                    }
-                                }
-                                
-                                // Eğer flashvars'dan bulamadıysa, script'leri tara (Fallback)
-                                if (videos.length === 0) {
-                                    var scripts = document.getElementsByTagName('script');
-                                    for (var i = 0; i < scripts.length; i++) {
-                                        var text = scripts[i].textContent;
-                                        var matches = text.match(/https:\/\/adultdeepfakes\.com\/get_file\/[^\s'"]+\.mp4[^\s'"]*/g);
-                                        
-                                        if (matches) {
-                                            for (var j = 0; j < matches.length; j++) {
-                                                var cleanedMatch = cleanUrl(matches[j]);
-                                                if (cleanedMatch) {
-                                                    videos.push({
-                                                        url: cleanedMatch,
-                                                        quality: 'Unknown' // Script içinde kalite yazmıyorsa varsayılan
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // Tekrarları temizle (URL'ye göre)
-                                var uniqueVideos = [];
-                                var seen = {};
-                                for (var k = 0; k < videos.length; k++) {
-                                    var item = videos[k];
-                                    if (!seen[item.url]) {
-                                        seen[item.url] = true;
-                                        uniqueVideos.push(item);
-                                    }
-                                }
-                                
-                                return JSON.stringify(uniqueVideos);
-                            })();
-                        """) { result ->
-                                try {
-                                    // JSON Array olarak sonucu al
-                                    val cleanResult = result.trim('"').replace("\\", "")
-                                    val videoArray = JSONArray(cleanResult)
-
-                                    val urls = mutableListOf<String>()
-                                    for (i in 0 until videoArray.length()) {
-                                        val obj = videoArray.getJSONObject(i)
-                                        val url = obj.getString("url")
-                                        val quality = obj.getString("quality")
-
-                                        // Sonucu "Kalite | URL" formatında ekle
-                                        urls.add("$quality | $url")
-                                    }
-
-                                    continuation.resume(urls)
-
-                                    Handler(Looper.getMainLooper()).post {
-                                        try {
-                                            this@apply.stopLoading()
-                                            this@apply.clearHistory()
-                                            this@apply.destroy()
-                                        } catch (ignored: Throwable) {}
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("VideoExtractor", "Error: ${e.message}")
-                                    continuation.resume(emptyList())
-                                }
-                            }
-                        }, 100)
-                    }
-                }
-
-                loadDataWithBaseURL("https://adultdeepfakes.com/", html, "text/html", "UTF-8", null)
-            }
-        }
-    }
-
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("kraptor_$name", "data = ${data}")
-        val document = app.get(data).text
-
-        val videoUrls = extractVideoUrls(context, document)
-
-        videoUrls.forEach { url ->
-            val split = url.split("|")
-            val url = split[1].trim()
-            val quality = split[0].trim()
-            callback.invoke(
-                newExtractorLink(
-                    name,
-                    name,
-                    url,
-                    type = ExtractorLinkType.VIDEO,
-                    {
-                        this.referer = "$mainUrl/"
-                        this.quality = getQualityFromName(quality)
-                    }
-                )
-            )
-        }
-
-        return videoUrls.isNotEmpty()
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val pageHtml = app.get(data).text
+        return KtPlayerExtractor.getLinks(name, mainUrl, data, pageHtml, callback = callback)
     }
 }

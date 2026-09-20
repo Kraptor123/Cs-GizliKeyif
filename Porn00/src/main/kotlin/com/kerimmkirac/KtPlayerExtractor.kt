@@ -1,6 +1,6 @@
-// ! Bu araç @kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
+// ! Bu araç @kerimmkirac tarafından | @Cs-GizliKeyif için yazılmıştır.
 
-package com.byayzen
+package com.kerimmkirac
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log

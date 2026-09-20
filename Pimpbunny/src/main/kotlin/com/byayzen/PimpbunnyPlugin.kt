@@ -8,6 +8,6 @@ import android.content.Context
 @CloudstreamPlugin
 class PimpbunnyPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Pimpbunny(context))
+        registerMainAPI(Pimpbunny())
     }
 }

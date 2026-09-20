@@ -2,24 +2,13 @@
 
 package com.kraptor
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
-class EPawg(context: Context) : MainAPI() {
+class EPawg : MainAPI() {
     override var mainUrl = "https://epawg.com"
     override var name = "EPawg"
     override val hasMainPage = true
@@ -94,7 +83,6 @@ class EPawg(context: Context) : MainAPI() {
 //        "${mainUrl}/categories/panty-fetish/" to "Panty Fetish",
     )
 
-    private val appContext = context
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("${request.data}$page/").document
@@ -182,176 +170,13 @@ class EPawg(context: Context) : MainAPI() {
             this.posterUrl = posterUrl
         }
     }
-    private fun cleanupWebView(wv: WebView) {
-        try {
-            wv.stopLoading()
-            wv.setWebChromeClient(null)
-            wv.webViewClient = object : WebViewClient() {}
-            wv.removeAllViews()
-            wv.clearHistory()
-            wv.loadUrl("about:blank")
-            wv.destroy()
-        } catch (ignored: Throwable) {}
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    suspend fun createWebViewAndExtractVideo(
-        context: Context,
-        html: String,
-        onResult: (String?) -> Unit
-    ): WebView = withContext(Dispatchers.Main) {
-
-        val wv = WebView(context.applicationContext).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = true
-            settings.allowContentAccess = true
-
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    extractVideoWithDelay(view, { result ->
-                        onResult(result)
-                        Handler(Looper.getMainLooper()).post {
-                            Log.d("kraptor_EPawg", "WebView temizlendi")
-                            cleanupWebView(this@apply)
-                        }
-                    }, 0)
-                }
-            }
-
-            loadDataWithBaseURL("https://epawg.com/", html, "text/html", "UTF-8", null)
-        }
-
-        return@withContext wv
-    }
-
-    private fun extractVideoWithDelay(webView: WebView?, onResult: (String?) -> Unit, attempt: Int) {
-        if (webView == null || attempt > 3) {
-            Log.d("kraptor_EPawg", "Timeout reached or WebView is null")
-            onResult(null)
-            return
-        }
-
-        Log.d("kraptor_EPawg", "Attempt $attempt - kt_player video URL araniyor...")
-
-        val extractScript = """
-        (function() {
-            try {
-                // kt_player objesini kontrol et
-                if (typeof window.player_obj !== 'undefined' && window.player_obj) {
-                    // Player'dan video source'unu al
-                    if (window.player_obj.getVideoUrl) {
-                        return window.player_obj.getVideoUrl();
-                    }
-                    
-                    // Alternative: config objesinden al
-                    if (window.player_obj.config && window.player_obj.config.video_url) {
-                        return window.player_obj.config.video_url;
-                    }
-                }
-                
-                // Global kt_player config'i kontrol et
-                var configKeys = Object.keys(window).filter(key => key.startsWith('t') && key.length > 5);
-                for (var i = 0; i < configKeys.length; i++) {
-                    var configObj = window[configKeys[i]];
-                    if (configObj && typeof configObj === 'object' && configObj.video_url) {
-                        return configObj.video_url;
-                    }
-                }
-                
-                // Video elementlerini kontrol et
-                var videos = document.getElementsByTagName('video');
-                if (videos.length > 0) {
-                    var video = videos[0];
-                    if (video.src && video.src !== '') {
-                        return video.src;
-                    }
-                    if (video.currentSrc && video.currentSrc !== '') {
-                        return video.currentSrc;
-                    }
-                }
-                
-                return null;
-            } catch (e) {
-                console.log('Extract error:', e);
-                return null;
-            }
-        })();
-    """.trimIndent()
-
-        webView.evaluateJavascript(extractScript) { resultJson ->
-            Log.d("kraptor_EPawg", "Raw result: '$resultJson'")
-
-            val cleanResult = resultJson?.let { raw ->
-                if (raw == "null" || raw == "\"null\"") {
-                    null
-                } else {
-                    raw.removePrefix("\"").removeSuffix("\"")
-                        .replace("\\\"", "\"")
-                        .replace("\\\\", "\\")
-                }
-            }
-
-            if (cleanResult.isNullOrEmpty() || cleanResult == "null") {
-                if (attempt < 20) {
-                    Log.d("kraptor_EPawg", "Video URL bulunamadi, 1 saniye bekleyip tekrar deniyor...")
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        extractVideoWithDelay(webView, onResult, attempt + 1)
-                    }, 1000)
-                } else {
-                    Log.d("kraptor_EPawg", "Max deneme sayisina ulasildi, basarisiz")
-                    onResult(null)
-                }
-            } else {
-                // function/0/ prefix'ini temizle
-                val finalUrl = if (cleanResult.startsWith("function/0/")) {
-                    cleanResult.removePrefix("function/0/")
-                } else {
-                    cleanResult
-                }
-
-                Log.d("kraptor_EPawg", "SUCCESS! Video URL bulundu: $finalUrl")
-                onResult(finalUrl)
-            }
-        }
-    }
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("kraptor_EPawg", "data » $data")
         val pageHtml = app.get(data).text
-
-        Log.d("kraptor_EPawg", "WebView ile kt_player video URL'si çıkarılıyor...")
-
-        val videoUrl = suspendCoroutine { continuation ->
-            runBlocking {
-                createWebViewAndExtractVideo(appContext, pageHtml) { result ->
-                    continuation.resume(result)
-                }
-            }
-        }
-
-        Log.d("kraptor_EPawg", "Final video URL = $videoUrl")
-
-        videoUrl?.let { url ->
-            if (url.startsWith("http")) {
-                callback.invoke(newExtractorLink(
-                    source = "EPawg",
-                    name = "EPawg",
-                    url = url,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = "${mainUrl}/"
-                })
-                return true
-            }
-        }
-
-        return false
+        return KtPlayerExtractor.getLinks(name, mainUrl, data, pageHtml, callback = callback)
     }
 }

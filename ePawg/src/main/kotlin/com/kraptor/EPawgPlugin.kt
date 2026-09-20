@@ -8,6 +8,6 @@ import android.content.Context
 @CloudstreamPlugin
 class EPawgPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(EPawg(context))
+        registerMainAPI(EPawg())
     }
 }

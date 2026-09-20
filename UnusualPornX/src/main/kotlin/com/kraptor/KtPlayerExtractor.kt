@@ -1,6 +1,6 @@
-// ! Bu araç @kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
+// ! This Extension Made By @Kraptor123 for GizliKeyif
 
-package com.byayzen
+package com.kraptor
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log

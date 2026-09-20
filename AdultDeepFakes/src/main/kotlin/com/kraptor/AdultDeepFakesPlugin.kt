@@ -8,6 +8,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class AdultDeepFakesPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(AdultDeepFakes(context))
+        registerMainAPI(AdultDeepFakes())
     }
 }
