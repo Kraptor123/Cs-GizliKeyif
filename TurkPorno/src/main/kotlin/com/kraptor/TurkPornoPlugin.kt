@@ -1,4 +1,5 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
+
 package com.kraptor
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
@@ -11,5 +12,7 @@ class TurkPornoPlugin: Plugin() {
         registerMainAPI(TurkPorno())
         registerExtractorAPI(VeevToExtractor())
         registerExtractorAPI(UpnsLiveExtractor())
+        registerExtractorAPI(W3playExtractor())
+        registerExtractorAPI(CdnlyExtractor())
     }
 }

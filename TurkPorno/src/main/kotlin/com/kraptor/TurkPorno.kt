@@ -174,13 +174,14 @@ class TurkPorno : MainAPI() {
             val video2 = videolar.substringAfter("url2=")
             videocuklar.add(video1)
             videocuklar.add(video2)
-        } else {
-            loadExtractor(videolar, subtitleCallback, callback)
+        } else if (videolar.isNotBlank()) {
+            loadExtractor(fixUrl(videolar), data, subtitleCallback, callback)
         }
 
-
         videocuklar.forEach { video ->
-            loadExtractor(video, subtitleCallback, callback)
+            if (video.isNotBlank()) {
+                loadExtractor(fixUrl(video), data, subtitleCallback, callback)
+            }
         }
 
         Log.d("kraptor_$name", "videocuklar = ${videocuklar}")
