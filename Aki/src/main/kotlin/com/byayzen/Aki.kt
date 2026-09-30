@@ -105,10 +105,14 @@ class Aki : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = "$mainUrl/search/?q=$query&page=$page"
-        val res = app.get(
+        val url = "$mainUrl/search/"
+        val res = app.post(
             url,
-            headers = mapOf("X-Requested-With" to "XMLHttpRequest")
+            data = mapOf("q" to query, "page" to page.toString()),
+            headers = mapOf(
+                "Content-Type" to "application/x-www-form-urlencoded",
+                "Referer" to "$mainUrl/"
+            )
         )
         val doc = res.document
 
