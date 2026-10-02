@@ -1,3 +1,5 @@
+// ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
+
 package com.kraptor
 
 import android.app.AlertDialog
@@ -5,6 +7,8 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.util.TypedValue
@@ -12,7 +16,11 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.view.WindowManager
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -20,16 +28,12 @@ import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import org.json.JSONArray
 
-object MangoAyarlar {
-    private const val PREFS_PREFIX = "Mangoporn_"
+object SpeedAyarlar {
+    private const val PREFS_PREFIX = "Speedporn_"
     const val ALL_CATEGORIES_ORDER_KEY = "${PREFS_PREFIX}ALL_order"
 
-    private const val COLOR_BG = "#0A0A0A"
-    private const val COLOR_PRIMARY = "#8842f3"
-    private const val COLOR_FOCUS = "#00D9FF"
-    private const val COLOR_DELETE = "#D32F2F"
-    private const val COLOR_SAVE = "#2E7D32"
-    private const val COLOR_CARD = "#1A1A1A"
+    private const val COLOR_BLACK = "#000000"
+    private const val COLOR_WHITE = "#FFFFFF"
 
     private val defaultCategories = listOf(
         "movies" to "Latest Release",
@@ -62,7 +66,6 @@ object MangoAyarlar {
         "genre/free-use" to "FreeUSE",
         "genre/gangbang" to "Gangbang",
         "genre/germany" to "German",
-        "genre/germany" to "Germany",
         "genre/gonzo" to "Gonzo",
         "genre/group-sex" to "Group Sex",
         "genre/interracial" to "Interracial",
@@ -133,7 +136,9 @@ object MangoAyarlar {
         "Latest Release", "Random Contents", "German", "Russian", "French"
     )
 
-    fun dpToPx(c: Context, dp: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), c.resources.displayMetrics).toInt()
+    private fun dpToPx(c: Context, dp: Int): Int {
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), c.resources.displayMetrics).toInt()
+    }
 
     fun getOrderedAndEnabledCategories(): List<Pair<String, String>> {
         val allCats = defaultCategories
@@ -147,9 +152,9 @@ object MangoAyarlar {
     fun isCategoryEnabled(categoryName: String): Boolean {
         val key = "${PREFS_PREFIX}${categoryName}_enabled"
         return when (getKey<String>(key)) {
-            "true" -> true
+            "true"  -> true
             "false" -> false
-            else -> defaultEnabledNames.contains(categoryName)
+            else    -> defaultEnabledNames.contains(categoryName)
         }
     }
 
@@ -167,7 +172,7 @@ object MangoAyarlar {
                 val validSavedList = savedList.filter { it in defaultSet }
                 val newItems = defaultList.filter { it !in validSavedList }
                 validSavedList + newItems
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 defaultList
             }
         } else {
@@ -192,63 +197,69 @@ object MangoAyarlar {
     }
 
     private class SettingsManager(val context: AppCompatActivity, val onSave: () -> Unit) {
-        private val mainLayout = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor(COLOR_BG))
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        }
-        private lateinit var adapter: CategoryAdapter
         private var dialog: AlertDialog? = null
+        private lateinit var adapter: CategoryAdapter
+
+        private val focusTextColorList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_focused),
+                intArrayOf(-android.R.attr.state_focused)
+            ),
+            intArrayOf(
+                Color.parseColor(COLOR_BLACK),
+                Color.parseColor(COLOR_WHITE)
+            )
+        )
 
         fun show() {
-            dialog = AlertDialog.Builder(context)
-                .setView(createRootView())
-                .setCancelable(false)
-                .create()
-            dialog?.show()
+            val mainLayout = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(Color.parseColor(COLOR_BLACK))
+                setPadding(dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 16))
+                isFocusable = false
+                isClickable = false
+            }
 
-            val window = dialog?.window
-            val displayMetrics = context.resources.displayMetrics
-            window?.setLayout((displayMetrics.widthPixels * 0.92).toInt(), (displayMetrics.heightPixels * 0.88).toInt())
-            window?.setBackgroundDrawable(GradientDrawable().apply {
-                setColor(Color.parseColor(COLOR_BG))
-                cornerRadius = 32f
-                setStroke(3, Color.parseColor(COLOR_PRIMARY))
-            })
-        }
-
-        private fun createRootView(): View {
             val title = TextView(context).apply {
-                text = "CATEGORY SETTINGS"
-                textSize = 22f
+                text = "Categories"
+                textSize = 20f
                 setTypeface(null, Typeface.BOLD)
-                setTextColor(Color.WHITE)
+                setTextColor(Color.parseColor(COLOR_WHITE))
                 gravity = Gravity.CENTER
-                setPadding(0, 50, 0, 50)
+                setPadding(0, dpToPx(context, 12), 0, dpToPx(context, 12))
+                isFocusable = false
             }
             mainLayout.addView(title)
 
-            adapter = CategoryAdapter(context) { name, enabled -> setCategoryEnabled(name, enabled) }
+            adapter = CategoryAdapter(context) { name, enabled ->
+                setCategoryEnabled(name, enabled)
+                refreshList()
+            }
+
             val rv = RecyclerView(context).apply {
                 layoutManager = LinearLayoutManager(context)
-                this.adapter = this@SettingsManager.adapter
-                setPadding(20, 0, 20, 0)
+                this.adapter  = this@SettingsManager.adapter
+                setPadding(dpToPx(context, 8), 0, dpToPx(context, 8), 0)
                 clipToPadding = false
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+                isFocusable   = false
+                isClickable   = false
+                layoutParams  = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             }
             mainLayout.addView(rv)
 
             val footer = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setPadding(40, 30, 40, 40)
+                setPadding(0, dpToPx(context, 12), 0, dpToPx(context, 8))
                 gravity = Gravity.CENTER
+                isFocusable = false
+                isClickable = false
             }
 
-            val btnReset = createActionButton("RESET ALL", COLOR_DELETE) {
+            val btnReset = createActionButton("Reset") {
                 resetAllSettings()
                 refreshList()
             }
-            val btnSave = createActionButton("SAVE & EXIT", COLOR_SAVE) {
+            val btnSave = createActionButton("Save and Exit") {
                 onSave()
                 dialog?.dismiss()
             }
@@ -257,46 +268,73 @@ object MangoAyarlar {
             footer.addView(btnSave)
             mainLayout.addView(footer)
 
+            dialog = AlertDialog.Builder(context)
+                .setView(mainLayout)
+                .setCancelable(true)
+                .setOnKeyListener { _, keyCode, event ->
+                    if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                        onSave()
+                        dialog?.dismiss()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .create()
+
+            dialog?.show()
+
+            val window = dialog?.window
+            val displayMetrics = context.resources.displayMetrics
+            window?.setLayout((displayMetrics.widthPixels * 0.92).toInt(), (displayMetrics.heightPixels * 0.88).toInt())
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window?.setDimAmount(0f)
+            window?.setBackgroundDrawable(ColorDrawable(Color.parseColor(COLOR_BLACK)))
+
             refreshList()
-            return mainLayout
         }
 
-        private fun createActionButton(txt: String, color: String, onClick: (View) -> Unit) = Button(context).apply {
+        private fun createActionButton(txt: String, onClick: (View) -> Unit) = Button(context).apply {
             text = txt
-            setTextColor(Color.WHITE)
+            setTextColor(focusTextColorList)
             setTypeface(null, Typeface.BOLD)
             textSize = 14f
-            background = createButtonDrawable(Color.parseColor(color))
-            layoutParams = LinearLayout.LayoutParams(0, dpToPx(context, 50), 1f).apply {
-                marginStart = 20
-                marginEnd = 20
+            isFocusable = true
+            isClickable = true
+            background = createBWDrawable(radiusPx = dpToPx(context, 24))
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(context, 48), 1f).apply {
+                marginStart = dpToPx(context, 8)
+                marginEnd   = dpToPx(context, 8)
             }
             setOnClickListener { onClick(it) }
         }
 
         private fun refreshList() {
-            val names = defaultCategories.map { it.second }
-            val ordered = getOrderedCategories(ALL_CATEGORIES_ORDER_KEY, names)
-            adapter.setList(ordered)
+            val names        = defaultCategories.map { it.second }
+            val ordered      = getOrderedCategories(ALL_CATEGORIES_ORDER_KEY, names)
+            val enabledList  = ordered.filter { isCategoryEnabled(it) }
+            val disabledList = ordered.filter { !isCategoryEnabled(it) }
+            val sortedList   = enabledList + disabledList
+            adapter.setList(sortedList)
         }
 
-        private fun createButtonDrawable(color: Int) = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                setColor(Color.parseColor(COLOR_FOCUS))
-                cornerRadius = 16f
-                setStroke(4, Color.WHITE)
-            })
-            addState(intArrayOf(), GradientDrawable().apply {
-                setColor(color)
-                cornerRadius = 16f
-            })
+        private fun createBWDrawable(radiusPx: Int): Drawable {
+            val focusedDrawable = GradientDrawable().apply {
+                setColor(Color.parseColor(COLOR_WHITE))
+                cornerRadius = radiusPx.toFloat()
+            }
+            val normalDrawable = GradientDrawable().apply {
+                setColor(Color.parseColor(COLOR_BLACK))
+                cornerRadius = radiusPx.toFloat()
+            }
+            return StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), focusedDrawable)
+                addState(intArrayOf(), normalDrawable)
+            }
         }
 
         private inner class CategoryAdapter(val ctx: Context, val onCheckedChange: (String, Boolean) -> Unit) : RecyclerView.Adapter<CategoryAdapter.ViewHolder>() {
             private val items = mutableListOf<String>()
-            private val CHECKBOX_ID = View.generateViewId()
-            private val UP_ID = View.generateViewId()
-            private val DOWN_ID = View.generateViewId()
 
             fun setList(newList: List<String>) {
                 items.clear()
@@ -304,24 +342,86 @@ object MangoAyarlar {
                 notifyDataSetChanged()
             }
 
-            inner class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-                val cb = v.findViewById<CheckBox>(CHECKBOX_ID)
-                val up = v.findViewById<Button>(UP_ID)
-                val down = v.findViewById<Button>(DOWN_ID)
+            inner class ViewHolder(v: View, val cb: CheckBox, val up: Button, val down: Button) : RecyclerView.ViewHolder(v)
+
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+                val row = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity     = Gravity.CENTER_VERTICAL
+                    val p       = dpToPx(ctx, 4)
+                    setPadding(p, p, p, p)
+                    val m       = dpToPx(ctx, 4)
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(m, m, m, m)
+                    }
+                    isFocusable = false
+                    isClickable = false
+                }
+
+                val cb = CheckBox(ctx).apply {
+                    setTextColor(focusTextColorList)
+                    buttonTintList = ColorStateList(
+                        arrayOf(
+                            intArrayOf(android.R.attr.state_checked),
+                            intArrayOf(-android.R.attr.state_checked)
+                        ),
+                        intArrayOf(
+                            Color.parseColor(COLOR_WHITE),
+                            Color.parseColor("#888888")
+                        )
+                    )
+                    textSize    = 16f
+                    isFocusable = true
+                    isClickable = true
+                    val p       = dpToPx(ctx, 8)
+                    setPadding(p, p, p, p)
+                    background  = createBWDrawable(radiusPx = dpToPx(ctx, 8))
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                row.addView(cb)
+
+                val bSize = dpToPx(ctx, 44)
+                val up = Button(ctx).apply {
+                    text        = "▲"
+                    setTextColor(focusTextColorList)
+                    textSize    = 16f
+                    setTypeface(null, Typeface.BOLD)
+                    isFocusable = true
+                    isClickable = true
+                    background  = createBWDrawable(radiusPx = dpToPx(ctx, 22))
+                    layoutParams = LinearLayout.LayoutParams(bSize, bSize).apply {
+                        marginStart = dpToPx(ctx, 6)
+                        marginEnd   = dpToPx(ctx, 4)
+                    }
+                }
+                row.addView(up)
+
+                val down = Button(ctx).apply {
+                    text        = "▼"
+                    setTextColor(focusTextColorList)
+                    textSize    = 16f
+                    setTypeface(null, Typeface.BOLD)
+                    isFocusable = true
+                    isClickable = true
+                    background  = createBWDrawable(radiusPx = dpToPx(ctx, 22))
+                    layoutParams = LinearLayout.LayoutParams(bSize, bSize)
+                }
+                row.addView(down)
+
+                return ViewHolder(row, cb, up, down)
             }
 
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ViewHolder(createItemLayout(parent.context))
-            override fun getItemCount() = items.size
+            override fun getItemCount(): Int = items.size
+
             override fun onBindViewHolder(holder: ViewHolder, position: Int) {
                 val name = items[position]
 
                 holder.cb.setOnCheckedChangeListener(null)
-
-                holder.cb.text = name
+                holder.cb.text      = name
                 holder.cb.isChecked = isCategoryEnabled(name)
 
                 holder.cb.setOnCheckedChangeListener { _, isChecked ->
-                    setCategoryEnabled(name, isChecked)
+                    onCheckedChange(name, isChecked)
                 }
 
                 holder.up.setOnClickListener { move(holder.adapterPosition, holder.adapterPosition - 1) }
@@ -334,53 +434,6 @@ object MangoAyarlar {
                 items.add(to, item)
                 notifyItemMoved(from, to)
                 setOrderedCategories(ALL_CATEGORIES_ORDER_KEY, items)
-            }
-
-            private fun createItemLayout(c: Context) = LinearLayout(c).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                val p = dpToPx(c, 12)
-                setPadding(p, p, p, p)
-                val margin = dpToPx(c, 6)
-                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(margin, margin, margin, margin)
-                }
-                background = StateListDrawable().apply {
-                    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        setColor(Color.parseColor(COLOR_CARD))
-                        cornerRadius = 12f
-                        setStroke(2, Color.parseColor(COLOR_FOCUS))
-                    })
-                    addState(intArrayOf(), GradientDrawable().apply {
-                        setColor(Color.parseColor(COLOR_CARD))
-                        cornerRadius = 12f
-                    })
-                }
-
-                addView(CheckBox(c).apply {
-                    id = CHECKBOX_ID
-                    setTextColor(Color.WHITE)
-                    textSize = 16f
-                    buttonTintList = ColorStateList.valueOf(Color.parseColor(COLOR_PRIMARY))
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    isFocusable = true
-                    setOnFocusChangeListener { _, hasFocus ->
-                        setTextColor(if (hasFocus) Color.parseColor(COLOR_FOCUS) else Color.WHITE)
-                    }
-                })
-
-                val bSize = dpToPx(c, 42)
-                addView(createNavButton(c, "▲", UP_ID).apply { layoutParams = LinearLayout.LayoutParams(bSize, bSize).apply { marginEnd = 10 } })
-                addView(createNavButton(c, "▼", DOWN_ID).apply { layoutParams = LinearLayout.LayoutParams(bSize, bSize) })
-            }
-
-            private fun createNavButton(c: Context, symbol: String, btnId: Int) = Button(c).apply {
-                id = btnId
-                text = symbol
-                setTextColor(Color.WHITE)
-                textSize = 18f
-                setTypeface(null, Typeface.BOLD)
-                background = createButtonDrawable(Color.parseColor("#333333"))
             }
         }
     }

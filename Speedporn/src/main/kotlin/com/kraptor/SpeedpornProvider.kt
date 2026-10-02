@@ -1,3 +1,5 @@
+// ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
+
 package com.kraptor
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
@@ -12,9 +14,9 @@ import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.extractors.Voe
 
 @CloudstreamPlugin
-class MangopornProvider: Plugin() {
+class SpeedpornProvider: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Mangoporn())
+        registerMainAPI(Speedporn())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(StreamTapeNet())
         registerExtractorAPI(StreamTapeXyz())
@@ -47,7 +49,6 @@ class MangopornProvider: Plugin() {
         registerExtractorAPI(swhoi())
         registerExtractorAPI(Javmoon())
         registerExtractorAPI(MixDropis())
-     //   registerExtractorAPI(Javclan())
         registerExtractorAPI(Maxstream())
         registerExtractorAPI(Javggvideo())
         registerExtractorAPI(EmturbovidExtractor())
@@ -135,7 +136,7 @@ class MangopornProvider: Plugin() {
         registerExtractorAPI(Playmate())
 
         this.openSettings = { ctx: Context ->
-            MangoAyarlar.showSettingsDialog(ctx as AppCompatActivity) {
+            SpeedAyarlar.showSettingsDialog(ctx as AppCompatActivity) {
                 MainActivity.reloadHomeEvent.invoke(true)
             }
         }
