@@ -3,12 +3,14 @@
 package com.kraptor
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import java.util.Locale
 
 class Beeg : MainAPI() {
     override var mainUrl = "https://beeg.com"
@@ -21,265 +23,264 @@ class Beeg : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     private val mapper = jacksonObjectMapper().registerKotlinModule()
-
     private val apiBeeg = "https://store.externulls.com"
 
-    override val mainPage = mainPageOf(
-        "actors" to "Actors",
-        "$apiBeeg/facts/tag?slug=WowGirls&limit=48&offset=" to "Wow Girls",
-        "$apiBeeg/facts/tag?slug=BrattySis&limit=48&offset=" to "Bratty Sis",
-        "$apiBeeg/facts/tag?slug=NubilesPorn&limit=48&offset=" to "Nubiles Porn",
-        "$apiBeeg/facts/tag?slug=AdultTime&limit=48&offset=" to "Adult Time",
-        "$apiBeeg/facts/tag?slug=UltraFilms&limit=48&offset=" to "Ultra Films",
-        "$apiBeeg/facts/tag?slug=Blacked&limit=48&offset=" to "Blacked",
-        "$apiBeeg/facts/tag?slug=NubileFilms&limit=48&offset=" to "Nubile Films",
-        "$apiBeeg/facts/tag?slug=LetsDoeIt&limit=48&offset=" to "LetsDoeIt!",
-        "$apiBeeg/facts/tag?slug=Tiny4K&limit=48&offset=" to "Tiny 4K",
-        "$apiBeeg/facts/tag?slug=NaughtyAmerica&limit=48&offset=" to "Naughty America",
-        "$apiBeeg/facts/tag?slug=FamilyXXX&limit=48&offset=" to "Family XXX",
-        "$apiBeeg/facts/tag?slug=VixenCom&limit=48&offset=" to "Vixen",
-        "$apiBeeg/facts/tag?slug=NewSensations&limit=48&offset=" to "New Sensations",
-        "$apiBeeg/facts/tag?slug=PureTaboo&limit=48&offset=" to "Pure Taboo",
-        "$apiBeeg/facts/tag?slug=StepSiblingsCaught&limit=48&offset=" to "Step Siblings Caught",
-        "$apiBeeg/facts/tag?slug=MyFriendsHotMom&limit=48&offset=" to "My Friend's Hot Mom",
-        "$apiBeeg/facts/tag?slug=DorcelClub&limit=48&offset=" to "Dorcel Club",
-        "$apiBeeg/facts/tag?slug=PornForce&limit=48&offset=" to "Porn Force",
-        "$apiBeeg/facts/tag?slug=MomsTeachSex&limit=48&offset=" to "Moms Teach Sex",
-        "$apiBeeg/facts/tag?slug=BareBackStudios&limit=48&offset=" to "Bare Back Studios",
-        "$apiBeeg/facts/tag?slug=PassionHD&limit=48&offset=" to "Passion HD",
-        "$apiBeeg/facts/tag?slug=MyFamilyPies&limit=48&offset=" to "My Family Pies",
-        "$apiBeeg/facts/tag?slug=HotWifeXXX&limit=48&offset=" to "Hot Wife XXX",
-        "$apiBeeg/facts/tag?slug=21Naturals&limit=48&offset=" to "21 Naturals",
-        "$apiBeeg/facts/tag?slug=TeenFidelity&limit=48&offset=" to "Teen Fidelity",
-        "$apiBeeg/facts/tag?slug=NFBusty&limit=48&offset=" to "NF Busty",
-        "$apiBeeg/facts/tag?slug=PornWorld&limit=48&offset=" to "Porn World",
-        "$apiBeeg/facts/tag?slug=Tushy&limit=48&offset=" to "Tushy",
-        "$apiBeeg/facts/tag?id=27173&limit=48&offset=" to "Main Page",
-        "$apiBeeg/facts/tag?slug=Anal&limit=48&offset=" to "Anal",
-        "$apiBeeg/facts/tag?slug=Japanese&limit=48&offset=" to "Japanese",
-        "$apiBeeg/facts/tag?slug=BigTits&limit=48&offset=" to "BigTits",
-        "$apiBeeg/facts/tag?slug=BigAss&limit=48&offset=" to "BigAss",
-        "$apiBeeg/facts/tag?slug=MILF&limit=48&offset=" to "MILF",
-        "$apiBeeg/facts/tag?slug=Lesbian&limit=48&offset=" to "Lesbian",
-        "$apiBeeg/facts/tag?slug=POV&limit=48&offset=" to "POV",
-        "$apiBeeg/facts/tag?slug=Creampie&limit=48&offset=" to "Creampie",
-        "$apiBeeg/facts/tag?slug=Blowjob&limit=48&offset=" to "Blowjob",
-        "$apiBeeg/facts/tag?slug=Hardcore&limit=48&offset=" to "Hardcore",
-        "$apiBeeg/facts/tag?slug=Squirting&limit=48&offset=" to "Squirting",
-        "$apiBeeg/facts/tag?slug=Russian&limit=48&offset=" to "Russian",
-        "$apiBeeg/facts/tag?slug=LongerFull&limit=48&offset=" to "LongerFull",
-        "$apiBeeg/facts/tag?slug=AsianGirl&limit=48&offset=" to "AsianGirl",
-        "$apiBeeg/facts/tag?slug=Compilation&limit=48&offset=" to "Compilation",
-        "$apiBeeg/facts/tag?slug=3some&limit=48&offset=" to "3some",
-        "$apiBeeg/facts/tag?slug=Stockings&limit=48&offset=" to "Stockings",
-        "$apiBeeg/facts/tag?slug=Deepthroat&limit=48&offset=" to "Deepthroat",
-        "$apiBeeg/facts/tag?slug=Latina&limit=48&offset=" to "Latina",
-        "$apiBeeg/facts/tag?slug=Babe&limit=48&offset=" to "Babe",
-        "$apiBeeg/facts/tag?slug=Cumshot&limit=48&offset=" to "Cumshot",
-        "$apiBeeg/facts/tag?slug=Gangbang&limit=48&offset=" to "Gangbang",
-        "$apiBeeg/facts/tag?slug=Cosplay&limit=48&offset=" to "Cosplay",
-        "$apiBeeg/facts/tag?slug=Masturbation&limit=48&offset=" to "Masturbation",
-        "$apiBeeg/facts/tag?slug=Cuckold&limit=48&offset=" to "Cuckold",
-        "$apiBeeg/facts/tag?slug=Lingerie&limit=48&offset=" to "Lingerie",
-        "$apiBeeg/facts/tag?slug=Indian&limit=48&offset=" to "Indian",
-        "$apiBeeg/facts/tag?slug=NaturalTits&limit=48&offset=" to "NaturalTits",
-        "$apiBeeg/facts/tag?slug=Redhead&limit=48&offset=" to "Redhead",
-        "$apiBeeg/facts/tag?slug=Solo&limit=48&offset=" to "Solo",
-        "$apiBeeg/facts/tag?slug=FemaleOrgasm&limit=48&offset=" to "FemaleOrgasm",
-        "$apiBeeg/facts/tag?slug=DP&limit=48&offset=" to "DP",
-        "$apiBeeg/facts/tag?slug=Schoolgirl&limit=48&offset=" to "Schoolgirl",
-        "$apiBeeg/facts/tag?slug=BBC&limit=48&offset=" to "BBC",
-        "$apiBeeg/facts/tag?slug=Homemade&limit=48&offset=" to "Homemade",
-        "$apiBeeg/facts/tag?slug=Classic&limit=48&offset=" to "Classic",
-        "$apiBeeg/facts/tag?slug=Blonde&limit=48&offset=" to "Blonde",
-        "$apiBeeg/facts/tag?slug=BDSM&limit=48&offset=" to "BDSM",
-        "$apiBeeg/facts/tag?slug=Skinny&limit=48&offset=" to "Skinny",
-        "$apiBeeg/facts/tag?slug=Cowgirl&limit=48&offset=" to "Cowgirl",
-        "$apiBeeg/facts/tag?slug=Taboo&limit=48&offset=" to "Taboo",
-        "$apiBeeg/facts/tag?slug=Public&limit=48&offset=" to "Public",
-        "$apiBeeg/facts/tag?slug=Interracial&limit=48&offset=" to "Interracial",
-        "$apiBeeg/facts/tag?slug=Orgy&limit=48&offset=" to "Orgy",
-        "$apiBeeg/facts/tag?slug=MatureWoman&limit=48&offset=" to "MatureWoman",
-        "$apiBeeg/facts/tag?slug=OldYoung&limit=48&offset=" to "OldYoung"
-    )
-
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        if (request.data == "actors") {
-            val responseString = app.get("$apiBeeg/tag/recommends?type=person&slug=index", headers = headerlar).text
-            val players = runCatching { mapper.readValue<List<Map<String, Any>>>(responseString) }.getOrNull() ?: emptyList()
-
-            val items = players.mapNotNull {
-                val name = it["tg_name"]?.toString() ?: return@mapNotNull null
-                val slug = it["tg_slug"]?.toString() ?: return@mapNotNull null
-
-                val thumbs = it["thumbs"] as? List<*>
-                val firstthumb = thumbs?.getOrNull(0) as? Map<*, *>
-                val crops = firstthumb?.get("crops") as? List<*>
-                val cropdata = crops?.getOrNull(0) as? Map<*, *>
-
-                val ptphoto = cropdata?.get("pt_photo")?.toString()
-                val cropid = cropdata?.get("id")?.toString()
-                val posterurl = if (ptphoto != null && cropid != null) "https://thumbs.externulls.com/photos/$ptphoto/to.webp?crop_id=$cropid&size_new=112x112" else ""
-
-                newMovieSearchResponse(name, "$mainUrl/$slug", TvType.NSFW) {
-                    this.posterUrl = posterurl
-                }
-            }
-            return newHomePageResponse(HomePageList(request.name, items, true))
-        } else {
-            val responseString = app.get("${request.data}${page * 48}", referer = "${mainUrl}/").text
-            val response: List<ApiCevap> = mapper.readValue(responseString)
-            val items: List<SearchResponse> = response.flatMap { it.toMainPageResults() }
-
-            return newHomePageResponse(HomePageList(request.name, items, true))
-        }
-    }
-
-    private fun ApiCevap.toMainPageResults(): List<SearchResponse> {
-        return this.file.data.map { cevap ->
-            val title = cevap.cd_value
-            val apiDataJson = mapper.writeValueAsString(this.file)
-            val apiTagsJson = mapper.writeValueAsString(this.tags)
-            val posterUrl =
-                "https://thumbs.externulls.com/videos/${cevap.cd_file}/49.webp?size=480x270"
-            newMovieSearchResponse(
-                title,
-                "$apiDataJson|:$posterUrl|:$title|:$apiTagsJson",
-                TvType.NSFW
-            ).apply {
-                this.posterUrl = posterUrl
-            }
-        }
-    }
-
-
     private val headerlar = mapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:157.0) Gecko/20100101 Firefox/157.0",
         "Origin" to "https://beeg.com",
         "Referer" to "https://beeg.com/",
         "Accept" to "application/json, text/plain, */*",
         "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
     )
 
+    private val categories = listOf(
+        "index" to "Main Page",
+        "WowGirls" to "Wow Girls",
+        "BrattySis" to "Bratty Sis",
+        "NubilesPorn" to "Nubiles Porn",
+        "AdultTime" to "Adult Time",
+        "UltraFilms" to "Ultra Films",
+        "Blacked" to "Blacked",
+        "NubileFilms" to "Nubile Films",
+        "LetsDoeIt" to "LetsDoeIt!",
+        "Tiny4K" to "Tiny 4K",
+        "NaughtyAmerica" to "Naughty America",
+        "FamilyXXX" to "Family XXX",
+        "VixenCom" to "Vixen",
+        "NewSensations" to "New Sensations",
+        "PureTaboo" to "Pure Taboo",
+        "StepSiblingsCaught" to "Step Siblings Caught",
+        "MyFriendsHotMom" to "My Friend's Hot Mom",
+        "DorcelClub" to "Dorcel Club",
+        "PornForce" to "Porn Force",
+        "MomsTeachSex" to "Moms Teach Sex",
+        "BareBackStudios" to "Bare Back Studios",
+        "PassionHD" to "Passion HD",
+        "MyFamilyPies" to "My Family Pies",
+        "HotWifeXXX" to "Hot Wife XXX",
+        "21Naturals" to "21 Naturals",
+        "TeenFidelity" to "Teen Fidelity",
+        "NFBusty" to "NF Busty",
+        "PornWorld" to "Porn World",
+        "Tushy" to "Tushy",
+        "Anal" to "Anal",
+        "Japanese" to "Japanese",
+        "BigTits" to "BigTits",
+        "BigAss" to "BigAss",
+        "MILF" to "MILF",
+        "Lesbian" to "Lesbian",
+        "POV" to "POV",
+        "Creampie" to "Creampie",
+        "Blowjob" to "Blowjob",
+        "Hardcore" to "Hardcore",
+        "Squirting" to "Squirting",
+        "Russian" to "Russian",
+        "LongerFull" to "LongerFull",
+        "AsianGirl" to "AsianGirl",
+        "Compilation" to "Compilation",
+        "3some" to "3some",
+        "Stockings" to "Stockings",
+        "Deepthroat" to "Deepthroat",
+        "Latina" to "Latina",
+        "Babe" to "Babe",
+        "Cumshot" to "Cumshot",
+        "Gangbang" to "Gangbang",
+        "Cosplay" to "Cosplay",
+        "Masturbation" to "Masturbation",
+        "Cuckold" to "Cuckold",
+        "Lingerie" to "Lingerie",
+        "Indian" to "Indian",
+        "NaturalTits" to "NaturalTits",
+        "Redhead" to "Redhead",
+        "Solo" to "Solo",
+        "FemaleOrgasm" to "FemaleOrgasm",
+        "DP" to "DP",
+        "Schoolgirl" to "Schoolgirl",
+        "BBC" to "BBC",
+        "Homemade" to "Homemade",
+        "Classic" to "Classic",
+        "Blonde" to "Blonde",
+        "BDSM" to "BDSM",
+        "Skinny" to "Skinny",
+        "Cowgirl" to "Cowgirl",
+        "Taboo" to "Taboo",
+        "Public" to "Public",
+        "Interracial" to "Interracial",
+        "Orgy" to "Orgy",
+        "MatureWoman" to "MatureWoman",
+        "OldYoung" to "OldYoung"
+    )
+
+    override val mainPage = mainPageOf(
+        "actors" to "Actors",
+        *categories.map { (slug, title) ->
+            "$apiBeeg/tag/videos/$slug?limit=48&offset=" to title
+        }.toTypedArray()
+    )
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val items = if (request.data == "actors") {
+            val responseString = app.get("$apiBeeg/tag/recommends?type=person&slug=index", headers = headerlar).text
+            runCatching { mapper.readValue<List<ApiPersonRecommend>>(responseString) }
+                .getOrNull().orEmpty()
+                .mapNotNull { it.toSearchResponse() }
+        } else {
+            val responseString = app.get("${request.data}${page * 48}", headers = headerlar).text
+            mapper.readValue<List<ApiCevap>>(responseString).mapNotNull { it.toMainPageResult() }
+        }
+
+        return newHomePageResponse(HomePageList(request.name, items, true))
+    }
+
+    private fun ApiCevap.toMainPageResult(): SearchResponse? {
+        val firstContent = this.file?.data?.firstOrNull()
+        val title = firstContent?.cdValue ?: return null
+        val fileId = this.file.id?.toString() ?: firstContent.cdFile?.toString() ?: return null
+        val posterUrl = "https://thumbs.externulls.com/videos/$fileId/49.webp?size=480x270"
+        val apiDataJson = mapper.writeValueAsString(this.file)
+        val apiTagsJson = mapper.writeValueAsString(this.tags ?: emptyList<ApiTag>())
+
+        return newMovieSearchResponse(
+            title,
+            "$apiDataJson|:$posterUrl|:$title|:$apiTagsJson",
+            TvType.NSFW
+        ) {
+            this.posterUrl = posterUrl
+        }
+    }
+
+    private fun ApiPersonRecommend.toSearchResponse(): SearchResponse? {
+        val name = this.tgName ?: return null
+        val slug = this.tgSlug ?: return null
+
+        return newMovieSearchResponse(name, "$mainUrl/$slug", TvType.NSFW) {
+            this.posterUrl = extractActorPoster(thumbs).orEmpty()
+        }
+    }
+
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        Log.d("beeg", query)
+        Log.d("beeg", "search query: $query")
 
-        val response = try {
-            app.get("https://store.externulls.com/tag/recommends?type=person&slug=index", headers = headerlar).text
-        } catch (e: Exception) {
-            return newSearchResponseList(emptyList(), hasNext = false)
-        }
+        val response = runCatching {
+            app.get("$apiBeeg/tag/recommends?type=person&slug=index", headers = headerlar).text
+        }.getOrNull() ?: return newSearchResponseList(emptyList(), hasNext = false)
 
-        val players = try {
-            mapper.readValue<List<Map<String, Any>>>(response)
-        } catch (e: Exception) {
-            emptyList()
-        }
-
-        val results = players.filter {
-            val name = it["tg_name"]?.toString() ?: ""
-            name.contains(query, ignoreCase = true)
-        }.mapNotNull {
-            val name = it["tg_name"]?.toString() ?: return@mapNotNull null
-            val slug = it["tg_slug"]?.toString() ?: return@mapNotNull null
-
-            val thumbs = it["thumbs"] as? List<*>
-            val firstthumb = thumbs?.getOrNull(0) as? Map<*, *>
-            val crops = firstthumb?.get("crops") as? List<*>
-            val cropdata = crops?.getOrNull(0) as? Map<*, *>
-
-            val ptphoto = cropdata?.get("pt_photo")?.toString()
-            val cropid = cropdata?.get("id")?.toString()
-            val poster = if (ptphoto != null && cropid != null) "https://thumbs.externulls.com/photos/$ptphoto/to.webp?crop_id=$cropid&size_new=112x112" else ""
-
-            Log.d("beeg", name)
-            newMovieSearchResponse(name, "$mainUrl/$slug", TvType.NSFW) {
-                this.posterUrl = poster
-            }
-        }
+        val results = runCatching { mapper.readValue<List<ApiPersonRecommend>>(response) }
+            .getOrNull().orEmpty()
+            .filter { it.tgName?.contains(query, ignoreCase = true) == true }
+            .mapNotNull { it.toSearchResponse() }
 
         return newSearchResponseList(results, hasNext = false)
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        Log.d("beeg", url)
+        Log.d("beeg", "load url: $url")
 
         if (url.contains("|:")) {
-            val linkler = url.split("|:")
-            val apidata = linkler[0]
-            val poster = linkler[1]
-            val title = linkler[2]
-            val apitagsjson = linkler[3]
+            val parts = url.split("|:")
+            val apiData = parts[0]
+            val poster = parts.getOrNull(1)
+            val title = parts.getOrNull(2) ?: "Video"
+            val apiTagsJson = parts.getOrNull(3)
 
-            val tagslistesi = try {
-                mapper.readValue<List<TagData>>(apitagsjson)
-            } catch (e: Exception) {
-                emptyList()
-            }
+            val node = runCatching { mapper.readValue<ApiFile>(apiData) }.getOrNull()
+            val fileId = node?.id?.toString()
+                ?: runCatching { mapper.readTree(apiData).get("data")?.get(0)?.get("cd_file")?.asText() }.getOrNull()
 
-            val tags = tagslistesi.flatMap { tagdata ->
-                tagdata.data.flatMap { tag ->
-                    tag.td_value.split(",", ".").map { it.trim() }.filter { it.isNotEmpty() }
+            val actorsList = mutableListOf<ActorData>()
+            val tagsList = mutableListOf<String>()
+            var plotText = title
+            var durationSec = node?.durationSeconds
+            var firstSlug: String? = null
+
+            if (!fileId.isNullOrBlank()) {
+                val facts = runCatching {
+                    mapper.readValue<ApiCevap>(app.get("$apiBeeg/facts/file/$fileId?tag=27173", headers = headerlar).text)
+                }.getOrNull()
+
+                durationSec = durationSec ?: facts?.file?.durationSeconds
+                facts?.file?.data?.firstOrNull()?.cdValue?.takeIf { it.isNotBlank() }?.let { plotText = it }
+
+                facts?.tags?.forEach { tag ->
+                    val name = tag.tgName
+                    val isPerson = tag.isPerson == true
+                    if (name.isNullOrBlank()) return@forEach
+                    if (!isPerson && (name.startsWith("1080p") || name.contains("Media") || name == "Index" || name == "Intro")) return@forEach
+
+                    if (isPerson) {
+                        actorsList.add(ActorData(Actor(name, extractActorPoster(tag.thumbs))))
+                    } else {
+                        tagsList.add(name.replace("{", "").replace("}", ""))
+                    }
+                    if (firstSlug == null && !tag.tgSlug.isNullOrBlank()) firstSlug = tag.tgSlug
                 }
             }
 
-            return newMovieLoadResponse(title, apidata, TvType.NSFW, apidata) {
+            if (tagsList.isEmpty() && !apiTagsJson.isNullOrBlank()) {
+                runCatching { mapper.readValue<List<TagData>>(apiTagsJson) }.getOrNull().orEmpty().forEach { tagData ->
+                    tagData.data.orEmpty().forEach { tag ->
+                        tag.tdValue?.split(",", ".")?.map { it.trim() }?.filter { it.isNotEmpty() }?.let(tagsList::addAll)
+                    }
+                }
+            }
+
+            val recsList = firstSlug?.takeIf { it.isNotBlank() }?.let { slug ->
+                runCatching {
+                    mapper.readValue<List<ApiCevap>>(
+                        app.get("$apiBeeg/tag/videos/$slug?limit=24&offset=0", headers = headerlar).text
+                    ).mapNotNull { it.toMainPageResult() }.filter { it.name != title }
+                }.getOrNull()
+            }.orEmpty()
+
+            return newMovieLoadResponse(title, apiData, TvType.NSFW, apiData) {
                 this.posterUrl = poster
-                this.tags = tags
+                this.plot = plotText
+                this.tags = tagsList.distinct()
+                this.actors = actorsList.distinctBy { it.actor.name }
+                durationSec?.takeIf { it > 0 }?.let { this.duration = it / 60 }
+                this.recommendations = recsList
             }
         }
-
-        val html = try { app.get(url, headers = headerlar).document } catch (e: Exception) { null }
-        val title = html?.selectFirst("h1")?.text() ?: url.substringAfterLast("/").replaceFirstChar { it.uppercase() }
 
         val slug = url.removeSuffix("/").substringAfterLast("/")
-        val allepisodes = mutableListOf<Episode>()
+        val title = runCatching { app.get(url, headers = headerlar).document }.getOrNull()?.selectFirst("h1")?.text()
+            ?: slug.replaceFirstChar { it.uppercase() }
+
+        val allEpisodes = mutableListOf<Episode>()
 
         for (i in 0..10) {
-            val offset = i * 48
-            val apiurl = "$apiBeeg/tag/videos/$slug?limit=48&offset=$offset"
-            val jsonres = try { app.get(apiurl, headers = headerlar).text } catch (e: Exception) { null }
+            val jsonRes = runCatching {
+                app.get("$apiBeeg/tag/videos/$slug?limit=48&offset=${i * 48}", headers = headerlar).text
+            }.getOrNull()
+            if (jsonRes.isNullOrBlank() || jsonRes == "[]") break
 
-            if (jsonres.isNullOrBlank() || jsonres == "[]") break
+            val videoList = runCatching { mapper.readValue<List<Map<String, Any>>>(jsonRes) }.getOrNull().orEmpty()
+            if (videoList.isEmpty()) break
 
-            val videolist = try {
-                mapper.readValue<List<Map<String, Any>>>(jsonres)
-            } catch (e: Exception) {
-                emptyList()
-            }
+            val pageEpisodes = videoList.mapNotNull { video ->
+                val fileObj = video["file"] as? Map<*, *> ?: return@mapNotNull null
+                val firstData = (fileObj["data"] as? List<*>)?.getOrNull(0) as? Map<*, *>
+                val videoId = (video["id"] ?: fileObj["id"])?.toString() ?: return@mapNotNull null
+                val epDataJson = runCatching { mapper.writeValueAsString(fileObj) }.getOrNull() ?: return@mapNotNull null
+                val durationSec = fileObj["fl_duration"]?.toString()?.toIntOrNull() ?: 0
 
-            if (videolist.isEmpty()) break
-
-            val pageepisodes = videolist.mapNotNull { video ->
-                val fileobj = video["file"] as? Map<*, *> ?: return@mapNotNull null
-                val dataarray = fileobj["data"] as? List<*>
-                val firstdata = dataarray?.getOrNull(0) as? Map<*, *>
-
-                val eptitle = firstdata?.get("cd_value")?.toString() ?: "Video"
-                val videoid = (video["id"] ?: fileobj["id"])?.toString() ?: return@mapNotNull null
-
-                val durationinseconds = fileobj["fl_duration"]?.toString()?.toIntOrNull() ?: 0
-                val duration = "${durationinseconds / 60}:${String.format("%02d", durationinseconds % 60)}"
-
-                val epdatajson = try { mapper.writeValueAsString(fileobj) } catch (e: Exception) { return@mapNotNull null }
-
-                Log.d("beeg", eptitle)
-
-                newEpisode(epdatajson) {
-                    this.name = eptitle
-                    this.posterUrl = "https://thumbs.externulls.com/videos/$videoid/0.webp?size=480x270"
-                    this.description = duration
+                newEpisode(epDataJson) {
+                    this.name = firstData?.get("cd_value")?.toString() ?: "Video"
+                    this.posterUrl = "https://thumbs.externulls.com/videos/$videoId/0.webp?size=480x270"
+                    if (durationSec > 0) {
+                        this.description = "${durationSec / 60}:${String.format(Locale.US, "%02d", durationSec % 60)}"
+                    }
                 }
             }
 
-            allepisodes.addAll(pageepisodes)
-            if (pageepisodes.size < 48) break
+            allEpisodes.addAll(pageEpisodes)
+            if (pageEpisodes.size < 48) break
         }
 
-        Log.d("beeg", allepisodes.size.toString())
+        if (allEpisodes.isEmpty()) return null
 
-        return newTvSeriesLoadResponse(title, url, TvType.NSFW, allepisodes) {
-            this.posterUrl = allepisodes.randomOrNull()?.posterUrl
+        return newTvSeriesLoadResponse(title, url, TvType.NSFW, allEpisodes) {
+            this.posterUrl = allEpisodes.randomOrNull()?.posterUrl
             this.plot = title
         }
     }
@@ -290,80 +291,99 @@ class Beeg : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("beeg", data)
+        Log.d("beeg", "loadLinks data: $data")
 
-        val apidatajson = if (data.contains("|")) data.split("|")[0] else data
-        val apidata = try { mapper.readValue<ApiData>(apidatajson) } catch (e: Exception) { null }
-
-        val hlsmulti = apidata?.hls_resources?.fl_cdn_multi
-
-        if (!hlsmulti.isNullOrBlank()) {
-            callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    "https://video.beeg.com/$hlsmulti",
-                    ExtractorLinkType.M3U8,
-                    { this.referer = "$mainUrl/" }
-                )
-            )
-            return true
+        val rawData = data.substringBefore("|")
+        val videoId = if (rawData.trim().startsWith("{")) {
+            runCatching { mapper.readValue<ApiFile>(rawData).id?.toString() }.getOrNull()
+                ?: runCatching { mapper.readTree(rawData).get("data")?.get(0)?.get("cd_file")?.asText() }.getOrNull()
+                ?: runCatching { mapper.readTree(rawData).get("cd_file")?.asText() }.getOrNull()
+        } else {
+            rawData.trim().ifEmpty { null }
         }
 
-        if (apidata?.id != null) {
-            try {
-                val res = app.get("$apiBeeg/facts/file/${apidata.id}", referer = "$mainUrl/").text
-                val root = mapper.readTree(res)
-                val video = root.get("file")?.get("hls_resources")?.get("fl_cdn_multi")?.asText()
-                    ?: root.get("fc_facts")?.get(0)?.get("hls_resources")?.get("fl_cdn_multi")?.asText()
+        if (videoId.isNullOrBlank()) return false
 
-                if (video != null) {
-                    callback.invoke(
-                        newExtractorLink(
-                            this.name,
-                            this.name,
-                            "https://video.beeg.com/$video",
-                            ExtractorLinkType.M3U8,
-                            { this.referer = "$mainUrl/" }
-                        )
-                    )
-                    return true
-                }
-            } catch (e: Exception) {
-                return false
+        val playUrlPath = runCatching {
+            app.get("$apiBeeg/video/play_url/$videoId", headers = headerlar).text.trim().trim('"')
+        }.getOrNull()
+
+        if (playUrlPath.isNullOrBlank() || playUrlPath.contains("error")) return false
+
+        callback.invoke(
+            newExtractorLink(
+                this.name,
+                this.name,
+                "https://video.beeg.com/$playUrlPath",
+                ExtractorLinkType.M3U8
+            ) {
+                this.referer = "$mainUrl/"
             }
-        }
-        return false
+        )
+        return true
+    }
+
+    private fun extractActorPoster(thumbs: List<ApiThumb>?): String? {
+        val firstThumb = thumbs?.firstOrNull() ?: return null
+        val thumbId = firstThumb.id ?: return null
+        val cropId = firstThumb.crops?.firstOrNull()?.id ?: return null
+        return "https://thumbs.externulls.com/photos/$thumbId/to.webp?crop_id=$cropId&size_new=112x112"
     }
 }
 
-
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class ApiCevap(val file: ApiData, val tags: List<TagData>)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class ApiData(
-    val data: List<Icerik>,
-    val hls_resources: HlsSource? = null,
-    val qualities: Map<String, List<Videolar>>? = null,
-    val id: Long
+private data class ApiCevap(
+    val file: ApiFile? = null,
+    val tags: List<ApiTag>? = null
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Videolar(val quality: Int, val url: String)
+private data class ApiFile(
+    val id: Long? = null,
+    val data: List<ApiContent>? = null,
+    @JsonProperty("fl_duration") val durationSeconds: Int? = null
+)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Icerik(val cd_file: String, val cd_value: String)
+private data class ApiContent(
+    @JsonProperty("cd_file") val cdFile: Any? = null,
+    @JsonProperty("cd_value") val cdValue: String? = null
+)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class TagData(val data: List<Tagler>)
+private data class ApiTag(
+    val id: Long? = null,
+    @JsonProperty("is_person") val isPerson: Boolean? = false,
+    @JsonProperty("tg_name") val tgName: String? = null,
+    @JsonProperty("tg_slug") val tgSlug: String? = null,
+    val thumbs: List<ApiThumb>? = null,
+    val data: List<ApiTagData>? = null
+)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Tagler(val td_value: String)
+private data class ApiThumb(
+    val id: Long? = null,
+    val crops: List<ApiCrop>? = null
+)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class HlsSource(val fl_cdn_multi: String? = null)
+private data class ApiCrop(
+    val id: Long? = null
+)
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+private data class ApiTagData(
+    @JsonProperty("td_value") val tdValue: String? = null
+)
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+private data class ApiPersonRecommend(
+    @JsonProperty("tg_name") val tgName: String? = null,
+    @JsonProperty("tg_slug") val tgSlug: String? = null,
+    val thumbs: List<ApiThumb>? = null
+)
 
-
+@JsonIgnoreProperties(ignoreUnknown = true)
+private data class TagData(
+    val data: List<ApiTagData>? = null
+)
