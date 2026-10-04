@@ -6,6 +6,14 @@
 
 **All extensions are intended for users aged 18 and above.**
 
+## CloudStream
+
+[CloudStream](https://github.com/recloudstream/cloudstream)
+
+## Official CloudStream Wiki
+
+[Wiki](https://cloudstream.miraheze.org)
+
 ## 💾 Installation
 
 1. **[cloudstream/pre-release](https://github.com/recloudstream/cloudstream/releases/tag/pre-release)** *Download the latest APK.*
