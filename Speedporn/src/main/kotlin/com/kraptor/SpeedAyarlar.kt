@@ -133,7 +133,7 @@ object SpeedAyarlar {
     ) + (1980..2025).map { "year/$it" to "$it" }.sortedBy { it.second.lowercase() }
 
     private val defaultEnabledNames = setOf(
-        "Latest Release", "Random Contents", "German", "Russian", "French"
+        "Latest Release", "Random Contents"
     )
 
     private fun dpToPx(c: Context, dp: Int): Int {
