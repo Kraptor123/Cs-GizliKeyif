@@ -6,7 +6,7 @@
 
 **All extensions are intended for users aged 18 and above.**
 
-## CloudStream
+## Official CloudStream Repository
 
 [CloudStream](https://github.com/recloudstream/cloudstream)
 
