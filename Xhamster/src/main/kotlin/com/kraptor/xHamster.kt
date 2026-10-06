@@ -5,19 +5,18 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.*
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import com.fasterxml.jackson.module.kotlin.readValue
 
 @Suppress("ClassName")
 class xHamster : MainAPI() {
-    override var mainUrl = "https://xhamster.com"
-    override var name = "xHamster"
-    override val hasMainPage = true
-    override var lang = "en"
-    override val hasQuickSearch = false
-    override val supportedTypes = setOf(TvType.NSFW)
-    override val vpnStatus = VPNStatus.MightBeNeeded
+    override var mainUrl          = "https://xhamster2.com"
+    override var name             = "xHamster"
+    override val hasMainPage      = true
+    override var lang             = "en"
+    override val hasQuickSearch   = false
+    override val supportedTypes   = setOf(TvType.NSFW)
+    override val vpnStatus        = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
         "${mainUrl}/newest/" to "Newest",
@@ -49,25 +48,36 @@ class xHamster : MainAPI() {
             "${request.data}/$page?geo=us",
             cookies = mapOf("video_titles_translation" to "0")
         ).document
-        val home = document.select("div.thumb-list div.thumb-list__item")
+
+        Log.d(name, "$page ${request.data}")
+
+        val home = document.select("div.thumb-list div.thumb-list__item, div.thumb-list__item, div.video-thumb")
             .mapNotNull { it.toSearchResult() }
 
+        Log.d(name, "${home.size}")
 
         return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
+            list    = HomePageList(
+                name               = request.name,
+                list               = home,
                 isHorizontalImages = true
             ),
             hasNext = true
         )
     }
 
-
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("a.video-thumb-info__name")?.text() ?: return null
-        val href = fixUrl(this.selectFirst("a.video-thumb-info__name")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.select("img.thumb-image-container__image").attr("src"))
+        val titleElement = this.selectFirst("a.video-thumb-info__name") ?: return null
+        val title        = titleElement.attr("title").ifEmpty { titleElement.text().trim() }.ifEmpty { return null }
+        val href         = fixUrl(titleElement.attr("href"))
+
+        val imgElement   = this.selectFirst("img")
+        val rawPoster    = imgElement?.attr("srcset")?.substringBefore(" ")?.ifEmpty { null }
+            ?: imgElement?.attr("data-src")?.ifEmpty { null }
+            ?: imgElement?.attr("src")?.ifEmpty { null }
+        val posterUrl    = fixUrlNull(rawPoster)
+
+        Log.d(name, "$title $href")
 
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
@@ -146,17 +156,16 @@ class xHamster : MainAPI() {
         val document: Document = try {
             app.get("${data}?geo=us", cookies = mapOf("video_titles_translation" to "0")).document
         } catch (e: Exception) {
-            Log.e(sourceName, "Failed to fetch document: ${e.message}")
+            Log.e(sourceName, "${e.message}")
             return false
         }
-
 
         val preloadLinks = document.select("link[rel=preload][as=fetch]")
         preloadLinks.forEach { link ->
             val href = link.attr("href")
             if (href.isNotEmpty() && href.contains(".m3u8")) {
                 val fixed = fixUrl(href)
-                Log.d(sourceName, "Found M3U8 URL from preload: $fixed")
+                Log.d(sourceName, fixed)
 
                 callback(
                     newExtractorLink(
@@ -173,7 +182,6 @@ class xHamster : MainAPI() {
             }
         }
 
-
         val initialData = getInitialsJson(document.html())
         initialData?.xplayerSettings?.subtitles?.tracks?.forEach { track ->
             track.urls?.vtt?.let { url ->
@@ -182,13 +190,9 @@ class xHamster : MainAPI() {
                     track.label?.replace(Regex("\\s*\\(auto-generated\\)"), "") ?: track.lang
                     ?: "Unknown"
 
-                Log.d(sourceName, "Subtitle $cleanLabel: $fixed")
+                Log.d(sourceName, "$cleanLabel $fixed")
                 subtitleCallback(newSubtitleFile(lang = cleanLabel, url = fixed))
-            } ?: Log.w(sourceName, "Subtitle missing VTT: $track")
-        } ?: Log.w(sourceName, "No subtitles in JSON.")
-
-        if (!foundLinks) {
-            Log.w(sourceName, "No video links found.")
+            }
         }
 
         return foundLinks
@@ -223,7 +227,6 @@ class xHamster : MainAPI() {
 
     data class SubtitleUrls(val vtt: String? = null)
 
-
     private fun getInitialsJson(html: String): InitialsJson? {
         return try {
             val regex = Regex("window\\.initials\\s*=\\s*(\\{.*?\\});", RegexOption.DOT_MATCHES_ALL)
@@ -232,7 +235,7 @@ class xHamster : MainAPI() {
             val parsedJson = mapper.readValue<InitialsJson>(jsonString)
             parsedJson
         } catch (e: Exception) {
-            Log.e("xHamster", "getInitialsJson failed: ${e.message}")
+            Log.e("xHamster", "${e.message}")
             null
         }
     }
