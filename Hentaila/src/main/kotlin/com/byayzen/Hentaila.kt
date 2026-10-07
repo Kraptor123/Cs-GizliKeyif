@@ -80,7 +80,7 @@ class Hentaila : MainAPI() {
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newAnimeSearchResponse(title, href, TvType.Anime) { this.posterUrl = posterUrl }
+        return newAnimeSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
@@ -130,7 +130,7 @@ class Hentaila : MainAPI() {
             })
         }
 
-        return newAnimeLoadResponse(title, url, TvType.Anime, true) {
+        return newAnimeLoadResponse(title, url, TvType.NSFW, true) {
             this.posterUrl = poster
             this.plot = description
             this.year = year
@@ -149,7 +149,7 @@ class Hentaila : MainAPI() {
         val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
-        return newAnimeSearchResponse(title, href, TvType.Anime) { this.posterUrl = posterUrl }
+        return newAnimeSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun loadLinks(

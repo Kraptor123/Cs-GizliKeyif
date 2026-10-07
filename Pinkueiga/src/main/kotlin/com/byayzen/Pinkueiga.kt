@@ -122,7 +122,7 @@ class Pinkueiga : MainAPI() {
 
             val posterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
 
-            newMovieSearchResponse(title, href, TvType.Movie) {
+            newMovieSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = posterUrl
             }
         }
@@ -131,7 +131,7 @@ class Pinkueiga : MainAPI() {
             ?.ifEmpty { return null }
             ?: return null
 
-        return newMovieLoadResponse(title, url, TvType.Movie, watchUrl) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, watchUrl) {
             this.posterUrl = posterUrl
             this.year = year
             this.plot = description
