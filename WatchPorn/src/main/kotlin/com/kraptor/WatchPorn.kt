@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import java.net.URLEncoder
 
 class WatchPorn : MainAPI() {
     override var mainUrl = "https://watchporn.to"
@@ -134,7 +135,7 @@ class WatchPorn : MainAPI() {
             it.toMainPageResult()
         }
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        return newMovieLoadResponse(title, url, TvType.NSFW, "$url|$title") {
             this.posterUrl = poster
             this.posterHeaders = mapOf(
                 "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -150,13 +151,101 @@ class WatchPorn : MainAPI() {
         }
     }
 
+    // --- Subtitle Cat & Subtitle Nexus Integration ---
+    private suspend fun fetchSubtitles(
+        query: String,
+        subtitleCallback: (SubtitleFile) -> Unit
+    ) {
+        if (query.isBlank()) return
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
+
+        // 1. Fetch from SubtitleCat (Hindi & English Subtitles)
+        try {
+            val catSearchUrl = "https://www.subtitlecat.com/index.php?search=$encodedQuery"
+            val catDoc = app.get(catSearchUrl, timeout = 15).document
+
+            val catLinks = catDoc.select("table.sub-table tbody tr td a, .sub-list a, td a")
+            for (item in catLinks.take(3)) {
+                val href = item.attr("href")
+                if (href.isNotBlank()) {
+                    val catPageUrl = fixUrlNull(href, "https://www.subtitlecat.com") ?: continue
+                    val subPageDoc = app.get(catPageUrl, timeout = 10).document
+
+                    val downloadElements = subPageDoc.select("a[href$=.srt], a[href$=.vtt], a#download_def, .sub-single a[href*='/sub/']")
+                    for (element in downloadElements) {
+                        val subUrl = fixUrlNull(element.attr("href"), "https://www.subtitlecat.com") ?: continue
+                        val parentText = element.parents().select(".sub-single span, td").text().trim()
+                            .replace(Regex("[\uD83D\uDC4D\uD83D\uDC4E]"), "")
+
+                        val langName = when {
+                            parentText.contains("hindi", ignoreCase = true) || subUrl.contains("-hi.") -> "Hindi"
+                            parentText.contains("english", ignoreCase = true) || subUrl.contains("-en.") -> "English"
+                            else -> parentText.ifBlank { "SubtitleCat" }
+                        }
+
+                        subtitleCallback(
+                            SubtitleFile(
+                                lang = "SubtitleCat ($langName)",
+                                url = subUrl
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.d("WatchPorn", "SubtitleCat Error: ${e.message}")
+        }
+
+        // 2. Fetch from SubtitleNexus
+        try {
+            val nexusSearchUrl = "https://subtitlenexus.com/?s=$encodedQuery"
+            val nexusDoc = app.get(nexusSearchUrl, timeout = 15).document
+
+            val nexusResults = nexusDoc.select("article a, h2.entry-title a, div.post-title a")
+            for (result in nexusResults.take(2)) {
+                val pageUrl = fixUrlNull(result.attr("href")) ?: continue
+                val pageDoc = app.get(pageUrl, timeout = 10).document
+
+                val subLinks = pageDoc.select("a[href$=.srt], a[href$=.vtt], a[href*=/download/]")
+                for (link in subLinks) {
+                    val subUrl = fixUrlNull(link.attr("href")) ?: continue
+                    val linkText = link.text().trim()
+                    val langName = when {
+                        linkText.contains("hindi", ignoreCase = true) -> "Hindi"
+                        else -> linkText.ifBlank { "English" }
+                    }
+                    subtitleCallback(
+                        SubtitleFile(
+                            lang = "SubtitleNexus ($langName)",
+                            url = subUrl
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.d("WatchPorn", "SubtitleNexus Error: ${e.message}")
+        }
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val pageHtml = app.get(data).text
-        return KtPlayerExtractor.getLinks(name, mainUrl, data, pageHtml, callback = callback)
+        val dataParts = data.split("|")
+        val streamUrl = dataParts[0]
+        val title = dataParts.getOrNull(1)
+
+        // Title milne par SubtitleCat aur SubtitleNexus se Subtitles fetch honge
+        if (!title.isNullOrBlank()) {
+            val cleanTitle = title.replace(Regex("""\[.*?\]"""), "").replace(Regex("[^a-zA-Z0-9 ]"), " ").trim()
+            if (cleanTitle.isNotBlank()) {
+                fetchSubtitles(cleanTitle, subtitleCallback)
+            }
+        }
+
+        val pageHtml = app.get(streamUrl).text
+        return KtPlayerExtractor.getLinks(name, mainUrl, streamUrl, pageHtml, callback = callback)
     }
 }
