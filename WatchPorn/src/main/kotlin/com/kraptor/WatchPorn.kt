@@ -115,7 +115,6 @@ class WatchPorn : MainAPI() {
 
         val response = app.get(url)
         val document = response.document
-        val cookies = response.cookies.toString()
 
         val title = document.selectFirst("h1.single__content-title")?.text()?.trim() ?: return null
         val poster = storedPoster ?: document.selectFirst("meta[property=og:image]")?.attr("content")
@@ -137,11 +136,6 @@ class WatchPorn : MainAPI() {
 
         return newMovieLoadResponse(title, url, TvType.NSFW, "$url|$title") {
             this.posterUrl = poster
-            this.posterHeaders = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-                "Referer" to "$mainUrl/",
-                "Cookie" to cookies
-            )
             this.tags = tags
             this.duration = totalMinutes
             this.recommendations = recommendations
@@ -159,7 +153,7 @@ class WatchPorn : MainAPI() {
         if (query.isBlank()) return
         val encodedQuery = URLEncoder.encode(query, "UTF-8")
 
-        // 1. Fetch from SubtitleCat (Hindi & English Subtitles)
+        // 1. Fetch from SubtitleCat
         try {
             val catSearchUrl = "https://www.subtitlecat.com/index.php?search=$encodedQuery"
             val catDoc = app.get(catSearchUrl, timeout = 15).document
@@ -237,7 +231,6 @@ class WatchPorn : MainAPI() {
         val streamUrl = dataParts[0]
         val title = dataParts.getOrNull(1)
 
-        // Title milne par SubtitleCat aur SubtitleNexus se Subtitles fetch honge
         if (!title.isNullOrBlank()) {
             val cleanTitle = title.replace(Regex("""\[.*?\]"""), "").replace(Regex("[^a-zA-Z0-9 ]"), " ").trim()
             if (cleanTitle.isNotBlank()) {
