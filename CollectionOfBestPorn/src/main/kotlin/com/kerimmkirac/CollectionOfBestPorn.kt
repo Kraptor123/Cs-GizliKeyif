@@ -1,4 +1,4 @@
-// ! Bu araç @kerimmkirac tarafından | @Cs-GizliKeyif için yazılmıştır.
+// ! Bu araç @kerimmkirac tarafından | @Gizlikeyif için yazılmıştır.
 
 package com.kerimmkirac
 
@@ -6,8 +6,6 @@ import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class CollectionOfBestPorn : MainAPI() {
     override var mainUrl              = "https://collectionofbestporn.com"
@@ -83,7 +81,7 @@ class CollectionOfBestPorn : MainAPI() {
         }
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(data: String): LoadResponse? {
         val (url, incomingPoster) = data.split("|").let {
@@ -122,77 +120,72 @@ class CollectionOfBestPorn : MainAPI() {
     }
 
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    Log.d("STF", "data » ${data}")
-    val document = app.get(data).document
-    
-    
-    val sources = document.select("video source")
-    Log.d("STF", "Found ${sources.size} sources")
-    
-    sources.forEach { source ->
-        val videoUrl = source.attr("src")
-        val quality = source.attr("res") 
-        val label = source.attr("label")
-        
-        if (videoUrl.isNotEmpty()) {
-            Log.d("STF", "Video URL: $videoUrl")
-            Log.d("STF", "Quality: $quality, Label: $label")
-            
-            
-            callback.invoke(
-                newExtractorLink(
-                    name = this.name,
-                    source = this.name,
-                    url = videoUrl,
-                    
-                    
-                    
-                    type = if (videoUrl.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                ){
-                    this.referer = "https://collectionofbestporn.com/"
-                    this.quality = when (quality) {
-                        "360" -> Qualities.P360.value
-                        "480" -> Qualities.P480.value
-                        "720" -> Qualities.P720.value
-                        "1080" -> Qualities.P1080.value
-                        else -> getQualityFromName(label) ?: Qualities.Unknown.value
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        Log.d("STF", "data » ${data}")
+        val document = app.get(data).document
+
+        val sources = document.select("video source")
+        Log.d("STF", "Found ${sources.size} sources")
+
+        sources.forEach { source ->
+            val videoUrl = source.attr("src")
+            val quality = source.attr("res")
+            val label = source.attr("label")
+
+            if (videoUrl.isNotEmpty()) {
+                Log.d("STF", "Video URL: $videoUrl")
+                Log.d("STF", "Quality: $quality, Label: $label")
+
+                callback.invoke(
+                    newExtractorLink(
+                        name = this.name,
+                        source = this.name,
+                        url = videoUrl,
+                        type = if (videoUrl.endsWith(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                    ) {
+                        this.referer = "https://collectionofbestporn.com/"
+                        this.quality = when (quality) {
+                            "360" -> Qualities.P360.value
+                            "480" -> Qualities.P480.value
+                            "720" -> Qualities.P720.value
+                            "1080" -> Qualities.P1080.value
+                            else -> getQualityFromName(label) ?: Qualities.Unknown.value
+                        }
+                        this.headers = mapOf(
+                            "Host" to "videos.collectionofbestporn.com",
+                            "Connection" to "keep-alive",
+                            "sec-ch-ua-platform" to "\"Android\"",
+                            "Accept-Encoding" to "identity;q=1, *;q=0",
+                            "User-Agent" to "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36",
+                            "sec-ch-ua" to "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"Brave\";v=\"138\"",
+                            "sec-ch-ua-mobile" to "?1",
+                            "Accept" to "*/*",
+                            "Sec-GPC" to "1",
+                            "Accept-Language" to "tr-TR,tr;q=0.9",
+                            "Sec-Fetch-Site" to "same-site",
+                            "Sec-Fetch-Mode" to "no-cors",
+                            "Sec-Fetch-Dest" to "video",
+                            "Referer" to "https://collectionofbestporn.com/",
+                            "Range" to "bytes=0-"
+                        )
                     }
-                    this.headers =  mapOf(
-                        "Host" to "videos.collectionofbestporn.com",
-                        "Connection" to "keep-alive",
-                        "sec-ch-ua-platform" to "\"Android\"",
-                        "Accept-Encoding" to "identity;q=1, *;q=0",
-                        "User-Agent" to "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36",
-                        "sec-ch-ua" to "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"Brave\";v=\"138\"",
-                        "sec-ch-ua-mobile" to "?1",
-                        "Accept" to "*/*",
-                        "Sec-GPC" to "1",
-                        "Accept-Language" to "tr-TR,tr;q=0.9",
-                        "Sec-Fetch-Site" to "same-site",
-                        "Sec-Fetch-Mode" to "no-cors",
-                        "Sec-Fetch-Dest" to "video",
-                        "Referer" to "https://collectionofbestporn.com/",
-                        "Range" to "bytes=0-"
-                    )
-                }
-            )
+                )
+            }
+        }
+
+        return sources.isNotEmpty()
+    }
+
+    private fun getQualityFromName(label: String?): Int? {
+        return when (label?.uppercase()) {
+            "SD" -> Qualities.P360.value
+            "HD" -> Qualities.P720.value
+            "FHD", "FULL HD" -> Qualities.P1080.value
+            else -> null
         }
     }
-    
-    return sources.isNotEmpty()
 }
-
-
-private fun getQualityFromName(label: String?): Int? {
-    return when (label?.uppercase()) {
-        "SD" -> Qualities.P360.value
-        "HD" -> Qualities.P720.value
-        "FHD", "FULL HD" -> Qualities.P1080.value
-        else -> null
-    }
-}}

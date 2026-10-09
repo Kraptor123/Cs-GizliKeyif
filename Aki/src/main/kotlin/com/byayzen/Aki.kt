@@ -18,64 +18,64 @@ class Aki : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/genre/3d/" to "3D",
-        "${mainUrl}/genre/ahegao/" to "Ahegao",
-        "${mainUrl}/genre/anal/" to "Anal",
-        "${mainUrl}/genre/bdsm/" to "BDSM",
-        "${mainUrl}/genre/big-boobs/" to "Big Boobs",
-        "${mainUrl}/genre/blow-job/" to "Blow Job",
-        "${mainUrl}/genre/bondage/" to "Bondage",
-        "${mainUrl}/genre/paizuri/" to "Paizuri",
-        "${mainUrl}/genre/yuri/" to "Yuri",
-        "${mainUrl}/genre/comedy/" to "Comedy",
-        "${mainUrl}/genre/cosplay/" to "Cosplay",
-        "${mainUrl}/genre/creampie/" to "Creampie",
-        "${mainUrl}/genre/big-breast/" to "Big breast",
-        "${mainUrl}/genre/yaoi/" to "Yaoi",
-        "${mainUrl}/genre/fantasy/" to "Fantasy",
+        "${mainUrl}/genre/3d/"                 to "3D",
+        "${mainUrl}/genre/ahegao/"             to "Ahegao",
+        "${mainUrl}/genre/anal/"               to "Anal",
+        "${mainUrl}/genre/bdsm/"               to "BDSM",
+        "${mainUrl}/genre/big-boobs/"          to "Big Boobs",
+        "${mainUrl}/genre/blow-job/"           to "Blow Job",
+        "${mainUrl}/genre/bondage/"            to "Bondage",
+        "${mainUrl}/genre/paizuri/"            to "Paizuri",
+        "${mainUrl}/genre/yuri/"               to "Yuri",
+        "${mainUrl}/genre/comedy/"             to "Comedy",
+        "${mainUrl}/genre/cosplay/"            to "Cosplay",
+        "${mainUrl}/genre/creampie/"           to "Creampie",
+        "${mainUrl}/genre/big-breast/"         to "Big breast",
+        "${mainUrl}/genre/yaoi/"               to "Yaoi",
+        "${mainUrl}/genre/fantasy/"            to "Fantasy",
         "${mainUrl}/genre/double-penetration/" to "Double penetration",
-        "${mainUrl}/genre/foot-job/" to "Foot Job",
-        "${mainUrl}/genre/futanari/" to "Futanari",
-        "${mainUrl}/genre/gangbang/" to "Gangbang",
-        "${mainUrl}/genre/hospital/" to "Hospital",
-        "${mainUrl}/genre/hand-job/" to "Hand Job",
-        "${mainUrl}/genre/harem/" to "Harem",
-        "${mainUrl}/genre/sex-toys/" to "Sex Toys",
-        "${mainUrl}/genre/family/" to "Family",
-        "${mainUrl}/genre/incest/" to "Incest",
-        "${mainUrl}/genre/romoance/" to "Romoance",
-        "${mainUrl}/genre/school/" to "School",
-        "${mainUrl}/genre/loli/" to "Loli",
-        "${mainUrl}/genre/maid/" to "Maid",
-        "${mainUrl}/genre/masturbation/" to "Masturbation",
-        "${mainUrl}/genre/milf/" to "Milf",
-        "${mainUrl}/genre/mind-break/" to "Mind Break",
-        "${mainUrl}/genre/mind-control/" to "Mind Control",
-        "${mainUrl}/genre/monster/" to "Monster",
-        "${mainUrl}/genre/bitch/" to "Bitch",
-        "${mainUrl}/genre/ntr/" to "NTR",
-        "${mainUrl}/genre/nurse/" to "Nurse",
-        "${mainUrl}/genre/drama/" to "Drama",
-        "${mainUrl}/genre/blackmail/" to "Blackmail",
-        "${mainUrl}/genre/pov/" to "POV",
-        "${mainUrl}/genre/virgin/" to "Virgin",
-        "${mainUrl}/genre/public-sex/" to "Public Sex",
-        "${mainUrl}/genre/rape/" to "Rape",
-        "${mainUrl}/genre/reverse-rape/" to "Reverse Rape",
-        "${mainUrl}/genre/demon/" to "Demon",
-        "${mainUrl}/genre/remove-censored/" to "Remove Censored",
-        "${mainUrl}/genre/bukkake/" to "Bukkake",
-        "${mainUrl}/genre/shota/" to "Shota",
-        "${mainUrl}/genre/softcore/" to "Softcore",
-        "${mainUrl}/genre/swimsuit/" to "Swimsuit",
-        "${mainUrl}/genre/teacher/" to "Teacher",
-        "${mainUrl}/genre/tentacles/" to "Tentacles",
-        "${mainUrl}/genre/threesome/" to "Threesome",
-        "${mainUrl}/genre/vanilla/" to "Vanilla",
-        "${mainUrl}/genre/trap/" to "Trap",
-        "${mainUrl}/genre/hardCore/" to "HardCore",
-        "${mainUrl}/genre/2d/" to "2D",
-        "${mainUrl}/genre/furry/" to "Furry"
+        "${mainUrl}/genre/foot-job/"           to "Foot Job",
+        "${mainUrl}/genre/futanari/"           to "Futanari",
+        "${mainUrl}/genre/gangbang/"           to "Gangbang",
+        "${mainUrl}/genre/hospital/"           to "Hospital",
+        "${mainUrl}/genre/hand-job/"           to "Hand Job",
+        "${mainUrl}/genre/harem/"              to "Harem",
+        "${mainUrl}/genre/sex-toys/"           to "Sex Toys",
+        "${mainUrl}/genre/family/"             to "Family",
+        "${mainUrl}/genre/incest/"             to "Incest",
+        "${mainUrl}/genre/romoance/"           to "Romoance",
+        "${mainUrl}/genre/school/"             to "School",
+        "${mainUrl}/genre/loli/"               to "Loli",
+        "${mainUrl}/genre/maid/"               to "Maid",
+        "${mainUrl}/genre/masturbation/"       to "Masturbation",
+        "${mainUrl}/genre/milf/"               to "Milf",
+        "${mainUrl}/genre/mind-break/"         to "Mind Break",
+        "${mainUrl}/genre/mind-control/"       to "Mind Control",
+        "${mainUrl}/genre/monster/"            to "Monster",
+        "${mainUrl}/genre/bitch/"              to "Bitch",
+        "${mainUrl}/genre/ntr/"                to "NTR",
+        "${mainUrl}/genre/nurse/"              to "Nurse",
+        "${mainUrl}/genre/drama/"              to "Drama",
+        "${mainUrl}/genre/blackmail/"          to "Blackmail",
+        "${mainUrl}/genre/pov/"                to "POV",
+        "${mainUrl}/genre/virgin/"             to "Virgin",
+        "${mainUrl}/genre/public-sex/"         to "Public Sex",
+        "${mainUrl}/genre/rape/"               to "Rape",
+        "${mainUrl}/genre/reverse-rape/"       to "Reverse Rape",
+        "${mainUrl}/genre/demon/"              to "Demon",
+        "${mainUrl}/genre/remove-censored/"    to "Remove Censored",
+        "${mainUrl}/genre/bukkake/"            to "Bukkake",
+        "${mainUrl}/genre/shota/"              to "Shota",
+        "${mainUrl}/genre/softcore/"           to "Softcore",
+        "${mainUrl}/genre/swimsuit/"           to "Swimsuit",
+        "${mainUrl}/genre/teacher/"            to "Teacher",
+        "${mainUrl}/genre/tentacles/"          to "Tentacles",
+        "${mainUrl}/genre/threesome/"          to "Threesome",
+        "${mainUrl}/genre/vanilla/"            to "Vanilla",
+        "${mainUrl}/genre/trap/"               to "Trap",
+        "${mainUrl}/genre/hardCore/"           to "HardCore",
+        "${mainUrl}/genre/2d/"                 to "2D",
+        "${mainUrl}/genre/furry/"              to "Furry"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -85,8 +85,8 @@ class Aki : MainAPI() {
             "${request.data.removeSuffix("/")}/page/$page/"
         }
 
-        val res = app.get(url)
-        val doc = res.document
+        val res  = app.get(url)
+        val doc  = res.document
         val home = doc.select("div.film_list-wrap div.flw-item").mapNotNull {
             it.toSearchResult()
         }
@@ -95,8 +95,8 @@ class Aki : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h3.film-name a")?.text() ?: return null
-        val href = fixUrlNull(this.selectFirst("a.film-poster-ahref")?.attr("href")) ?: return null
+        val title  = this.selectFirst("h3.film-name a")?.text() ?: return null
+        val href   = fixUrlNull(this.selectFirst("a.film-poster-ahref")?.attr("href")) ?: return null
         val poster = fixUrlNull(this.selectFirst("img.film-poster-img")?.attr("data-src"))
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
@@ -111,7 +111,7 @@ class Aki : MainAPI() {
             data = mapOf("q" to query, "page" to page.toString()),
             headers = mapOf(
                 "Content-Type" to "application/x-www-form-urlencoded",
-                "Referer" to "$mainUrl/"
+                "Referer"      to "$mainUrl/"
             )
         )
         val doc = res.document
@@ -123,71 +123,95 @@ class Aki : MainAPI() {
         return newSearchResponseList(search, hasNext = search.isNotEmpty())
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
-        val res = app.get(url)
-        val doc = res.document
-        val title = doc.selectFirst("h2.film-name.dynamic-name")?.text()?.trim()
-            ?: doc.selectFirst("h1")?.text()?.trim() ?: return null
+        val res   = app.get(url)
+        val doc   = res.document
+        val title = doc.selectFirst("h2.film-name.dynamic-name a")?.text()?.trim()
+            ?: doc.selectFirst("h2.film-name")?.text()?.trim()
+            ?: doc.selectFirst("h1")?.text()?.trim()
+            ?: return null
 
-        val poster = fixUrlNull(doc.selectFirst("div.anis-cover")?.attr("style")?.let {
-            Regex("""url\((.*)\)""").find(it)?.groupValues?.get(1)
-        } ?: doc.selectFirst("meta[property=og:image]")?.attr("content"))
+        val poster = fixUrlNull(
+            doc.selectFirst("div.anis-cover")?.attr("style")?.let {
+                Regex("""url\((.*)\)""").find(it)?.groupValues?.get(1)
+            } ?: doc.selectFirst("meta[property=og:image]")?.attr("content")
+        )
 
-        val plot = doc.selectFirst("div.item.item-title.w-hide div.text")?.text()?.trim()
-            ?: doc.selectFirst("div.film-description.readmore.js-readmore")?.text()?.trim()
+        val plot = doc.selectFirst("div.film-description div.text")?.text()?.trim()
+            ?: doc.selectFirst("div.item.item-title.w-hide div.text")?.text()?.trim()
             ?: doc.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        val yil = doc.selectFirst("div.item:contains(Premiered:) .name")?.text() ?:
-        doc.selectFirst("div.item:contains(Released:) .name")?.text()
+        val yil  = doc.selectFirst("div.item:contains(Premiered:) .name")?.text()
+            ?: doc.selectFirst("div.item:contains(Released:) .name")?.text()
         val year = Regex("""(\d{4})""").find(yil ?: "")?.groupValues?.get(1)?.toIntOrNull()
 
-        val tags = doc.select("div.item.item-list:contains(Genres:) a").map { it.text() }.ifEmpty {
-            doc.select("div.genres a").map { it.text() }
+        val tags = doc.select("div.item.item-list:contains(Genres:) a").map { it.text().trim() }.ifEmpty {
+            doc.select("div.genres a").map { it.text().trim() }
         }
 
         val scoreval = doc.selectFirst("span.item:contains(Score:) .name")?.text()?.trim()?.toDoubleOrNull()
-        val score = scoreval?.let { Score.from(it, 10) }
+        val score    = scoreval?.let { Score.from(it, 10) }
 
-        val actors = doc.select("div.cast-item").map {
-            Actor(it.selectFirst(".name")?.text() ?: "")
+        val actors = doc.select("div.cast-item").mapNotNull {
+            val actorName = it.selectFirst(".name")?.text()?.trim()?.ifEmpty { null } ?: return@mapNotNull null
+            Actor(actorName)
         }
 
-        val episodes = doc.select("div.live_content div.item, div.live__-wrap div.item").mapNotNull {
-            val name = it.selectFirst("h3.live-name a")?.text()?.trim() ?: ""
-            val href = fixUrlNull(it.selectFirst("a.live-thumbnail")?.attr("href")) ?: return@mapNotNull null
-            val thumb = it.selectFirst("img.live-thumbnail-img")?.attr("data-src")
-            val epnum = Regex("""(?:Vol|ตอนที่)\s*(\d+)""").find(name)?.groupValues?.get(1)?.toIntOrNull()
+        val epElements = doc.select("div.ss-list a.ssl-item, div.live_content div.item, div.live__-wrap div.item")
+        val parsedEpisodes = epElements.mapNotNull { element ->
+            val rawName = element.selectFirst("div.ep-name, h3.live-name a")?.text()?.trim()
+                ?: element.attr("title").trim()
+            val href = fixUrlNull(
+                element.selectFirst("h3.live-name a, a.live-thumbnail, a.ssl-item")?.attr("href")
+                    ?: element.attr("href")
+            ) ?: return@mapNotNull null
+
+            val thumb = fixUrlNull(
+                element.selectFirst("img.live-thumbnail-img, img")?.attr("data-src")
+                    ?: element.selectFirst("img")?.attr("src")
+            )
+            val epNum = Regex("""(?:Vol|ตอนที่|Ep|Episode)\s*(\d+)""", RegexOption.IGNORE_CASE).find(rawName)?.groupValues?.get(1)?.toIntOrNull()
+
+            var cleanName = rawName.replace(title, "", ignoreCase = true)
+                .trim()
+                .removePrefix("-")
+                .removePrefix(":")
+                .trim()
+
+            if (cleanName.isBlank()) {
+                cleanName = rawName
+            }
 
             newEpisode(href) {
-                this.name = name
-                this.episode = epnum
+                this.name      = cleanName
+                this.episode   = epNum
                 this.posterUrl = thumb
             }
-        }
+        }.distinctBy { it.data }
 
         val recommendations = doc.select("section.block_area_category div.flw-item").mapNotNull {
             it.toSearchResult()
         }
 
-        return if (episodes.size <= 1) {
-            newMovieLoadResponse(title, url, TvType.NSFW, episodes.firstOrNull()?.data ?: url) {
-                this.posterUrl = poster
-                this.plot = plot
-                this.year = year
-                this.tags = tags
-                this.score = score
+        return if (parsedEpisodes.isEmpty()) {
+            newMovieLoadResponse(title, url, TvType.NSFW, url) {
+                this.posterUrl       = poster
+                this.plot            = plot
+                this.year            = year
+                this.tags            = tags
+                this.score           = score
                 this.recommendations = recommendations
                 addActors(actors)
             }
         } else {
-            newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
-                this.posterUrl = poster
-                this.plot = plot
-                this.year = year
-                this.tags = tags
-                this.score = score
+            newTvSeriesLoadResponse(title, url, TvType.NSFW, parsedEpisodes) {
+                this.posterUrl       = poster
+                this.plot            = plot
+                this.year            = year
+                this.tags            = tags
+                this.score           = score
                 this.recommendations = recommendations
                 addActors(actors)
             }
@@ -200,68 +224,99 @@ class Aki : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("Aki", data)
-        val doc = app.get(data).document
+        Log.d(name, "data = $data")
+        val doc   = app.get(data).document
+        var count = 0
 
-        doc.select("div.item.server-item[data-type=dl] a.btn").forEach { el ->
-            val link = el.attr("href")
-            Log.d("Aki", link)
-            if (link.contains("gofile.io")) {
-                loadExtractor(link, this.mainUrl, subtitleCallback, callback)
+        doc.select("div.server-item[data-type=dl] a[href], div.ps__-list a[href]").forEach { el ->
+            val link = fixUrlNull(el.attr("href").ifEmpty { return@forEach }) ?: return@forEach
+            if (link.contains("gofile.io") || link.contains("rapidgator.net")) {
+                Log.d(name, "dl link = $link")
+                loadExtractor(link, data, subtitleCallback, callback)
+                count++
             }
         }
 
-        val script = doc.select("script").find { it.html().contains("window.displayvideo") }?.html() ?: ""
-        val id = Regex("""displayvideo\(\d+,\s*(\d+)\)""").find(script)?.groupValues?.get(1)
-        Log.d("Aki", id ?: "")
+        val html    = doc.html().replace("\\/", "/")
+        val videoId = Regex("""displayvideo\s*\(\s*\d+\s*,\s*(\d+)\s*\)""").find(html)?.groupValues?.get(1)
+            ?: doc.selectFirst(".server-item[data-server-id='1'], .server-item[data-id]")?.attr("data-id")?.ifEmpty { null }
 
-        id?.let { vid ->
-            val vurl = "https://v.aki-h.com/v/$vid"
-            Log.d("Aki", vurl)
+        Log.d(name, "videoId = $videoId")
+        if (videoId.isNullOrEmpty()) return count > 0
 
-            val vdoc = app.get(vurl, referer = this.mainUrl).document
-            val embedid = Regex("""var vid = '(.*?)'""").find(vdoc.html())?.groupValues?.get(1)
-            Log.d("Aki", embedid ?: "")
+        val videoPageUrl = fixUrl("/video/$videoId/")
+        Log.d(name, "videoPageUrl = $videoPageUrl")
 
-            embedid?.let { eid ->
-                val furl = "https://v.aki-h.com/f/$eid"
-                val fdoc = app.get(furl, referer = vurl).document
+        val videoDoc  = app.get(videoPageUrl, referer = data).document
+        val videoHtml = videoDoc.html().replace("\\/", "/")
 
-                val playurl = fdoc.select("script").mapNotNull { s ->
-                    val h = s.html()
-                    if (h.contains("streaming.aki.today/playback/")) Regex("""src\s*=\s*"(https://streaming\.aki\.today/playback/[^"]+)"""").find(h)?.groupValues?.get(1) ?: Regex("""iframe src="(https://streaming\.aki\.today/playback/[^"]+)"""").find(h)?.groupValues?.get(1) else null
-                }.firstOrNull()
+        val vUrlRaw = Regex(""""source"\s*:\s*\{[^}]*"url"\s*:\s*"([^"]+)"""").find(videoHtml)?.groupValues?.get(1)?.replace("\\/", "/")
+            ?: videoDoc.selectFirst("iframe[src*='v.aki-h.com']")?.attr("src")?.ifEmpty { null }
 
-                playurl?.let { purl ->
-                    Log.d("Aki", purl)
-                    val pdoc = app.get(purl, headers = mapOf("Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")).document
-                    val source = pdoc.selectFirst("iframe.embed-responsive-item")?.attr("src")
-                    Log.d("Aki", source ?: "")
+        Log.d(name, "vUrlRaw = $vUrlRaw")
+        if (vUrlRaw.isNullOrEmpty()) return count > 0
 
-                    source?.let { surl ->
-                        val sid = surl.split("/").lastOrNull { it.isNotEmpty() }
-                        if (sid != null) {
-                            val m3u8 = "https://aki-h.stream/file/$sid/"
-                            Log.d("Aki", m3u8)
+        val vUrl  = fixUrl(vUrlRaw)
+        val vDoc  = app.get(vUrl, referer = videoPageUrl).document
+        val vHtml = vDoc.html().replace("\\/", "/")
 
-                            callback.invoke(
-                                newExtractorLink(
-                                    this.name,
-                                    this.name,
-                                    m3u8,
-                                    ExtractorLinkType.M3U8
-                                ) {
-                                    this.referer = "https://aki-h.stream/v/$sid"
-                                    this.headers = mapOf(
-                                        "Accept" to "*/*",
-                                    )
-                                }
-                            )
-                        }
+        val fPath = vDoc.selectFirst("a#play, a.cover__link")?.attr("href")?.ifEmpty { null }
+            ?: Regex("""/f/([a-zA-Z0-9]+)""").find(vHtml)?.groupValues?.get(0)
+
+        Log.d(name, "fPath = $fPath")
+        if (fPath.isNullOrEmpty()) return count > 0
+
+        val fUrl     = fixUrl(if (fPath.startsWith("http")) fPath else "https://v.aki-h.com${if (fPath.startsWith("/")) "" else "/"}$fPath")
+        val fDoc     = app.get(fUrl, referer = vUrl).document
+        val fHtml    = fDoc.html().replace("\\/", "/")
+        val bootHtml = fDoc.selectFirst("script#boot")?.html()?.replace("\\/", "/") ?: fHtml
+
+        val serverUrls = Regex("""https?://streaming\.aki\.today/playback/[^"'\s\\]+""").findAll(bootHtml)
+            .map { it.value }
+            .distinct()
+            .toList()
+
+        Log.d(name, "serverUrls count = ${serverUrls.size}")
+
+        serverUrls.forEach { pUrl ->
+            try {
+                Log.d(name, "pUrl = $pUrl")
+                val pDoc  = app.get(pUrl, headers = mapOf("Referer" to "https://v.aki-h.com/")).document
+                val pHtml = pDoc.html().replace("\\/", "/")
+
+                val streamUrls = pDoc.select("iframe[src*='aki-h.stream']").mapNotNull { it.attr("src").ifEmpty { null } } +
+                        pDoc.select("div.noshow").map { it.text().trim() } +
+                        Regex("""https?://aki-h\.stream/v2?/[a-zA-Z0-9]+""").findAll(pHtml).map { it.value }.toList()
+
+                streamUrls.distinct().forEach { sUrl ->
+                    val cleanSurl = fixUrl(sUrl.replace("\\/", "/"))
+                    val sid       = cleanSurl.split("/").lastOrNull { it.isNotBlank() }
+                    if (!sid.isNullOrBlank()) {
+                        val m3u8Url = "https://aki-h.stream/file/$sid/"
+                        Log.d(name, "m3u8Url = $m3u8Url")
+
+                        callback(
+                            newExtractorLink(
+                                source = name,
+                                name   = name,
+                                url    = m3u8Url,
+                                type   = ExtractorLinkType.M3U8
+                            ) {
+                                this.referer = "https://aki-h.stream/v/$sid"
+                                this.headers = mutableMapOf(
+                                    "Referer" to "https://aki-h.stream/v/$sid",
+                                    "Accept"  to "*/*"
+                                )
+                            }
+                        )
+                        count++
                     }
                 }
+            } catch (e: Exception) {
+                Log.d(name, "pUrl error = $e")
             }
         }
-        return true
+
+        return count > 0
     }
 }

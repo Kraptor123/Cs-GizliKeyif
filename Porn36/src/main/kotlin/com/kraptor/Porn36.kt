@@ -7,7 +7,6 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class Porn36 : MainAPI() {
     override var mainUrl              = "https://www.porn36.com"
@@ -41,7 +40,7 @@ class Porn36 : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val response = app.get("${request.data}$page/")
         if (response.code == 403 || response.code == 503) {
-            throw ErrorLoadingException("Cloudflare 😒😒😒")
+            throw ErrorLoadingException("Cloudflare")
         }
         val document = response.document
         val home = document.select("div.item").mapNotNull { it.toMainPageResult() }
@@ -93,7 +92,7 @@ class Porn36 : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
         val document = app.get(url).document
@@ -128,21 +127,21 @@ class Porn36 : MainAPI() {
         Log.d("kraptor_$name", "data = ${data}")
         val document = app.get(data).document
 
-    document.select("source").forEach { video ->
-        val videoSrc = video?.attr("src").toString()
-        val videoQuality = video?.attr("label")
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = videoSrc,
-                type = ExtractorLinkType.VIDEO,
-                {
+        document.select("source").forEach { video ->
+            val videoSrc = video?.attr("src").toString()
+            val videoQuality = video?.attr("label")
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = videoSrc,
+                    type = ExtractorLinkType.VIDEO
+                ) {
                     this.referer = "${mainUrl}/"
                     this.quality = getQualityFromName(videoQuality)
-                })
-        )
-    }
-     return true
+                }
+            )
+        }
+        return true
     }
 }
