@@ -108,8 +108,8 @@ override suspend fun load(url: String): LoadResponse? {
             this.recommendations = recommendations
         }
     } else {
-        val dummyTitle = "Bu bir fotograf galerisi o yüzden çalışmıyor."
-        val dummyDescription = "Bu bir fotograf galerisi o yüzden çalışmıyor."
+        val dummyTitle = "This is a photo gallery, so it does not contain video."
+        val dummyDescription = "This is a photo gallery, so it does not contain video."
 
         newTvSeriesLoadResponse(dummyTitle, url, TvType.NSFW, emptyList()) {
             this.posterUrl = poster
