@@ -95,27 +95,46 @@ class Chatrubate : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val username = data.split("/").last { it.isNotEmpty() }
-        val apiUrl = "https://chaturbate.com/api/chatvideocontext/$username/"
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val username       = data.split("/").last { it.isNotEmpty() }
+        val apiUrl         = "https://chaturbate.com/api/chatvideocontext/$username/"
+        Log.d("Chatrubate", "apiUrl=$apiUrl")
 
-        val response = app.get(
+        val response       = app.get(
             apiUrl,
             headers = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
-                "Referer" to data,
-                "Accept" to "application/json"
+                "Referer"          to data,
+                "Accept"           to "application/json"
             )
         )
+        Log.d("Chatrubate", "responseTxt=${response.text}")
 
         val parsedResponse = response.parsedSafe<ChatResponse>()
-        val m3u8Url = parsedResponse?.hlsSource ?: return false
+        val rawHls         = parsedResponse?.hlsSource ?: return false
+        Log.d("Chatrubate", "rawHls=$rawHls")
 
-        M3u8Helper.generateM3u8(
-            name,
-            m3u8Url,
-            mainUrl
-        ).forEach(callback)
+        callback.invoke(
+            newExtractorLink(
+                source = name,
+                name   = name,
+                url    = rawHls,
+                type   = ExtractorLinkType.M3U8
+            ) {
+                this.referer = "https://chaturbate.com/$username/"
+                this.headers = mutableMapOf(
+                    "Referer"    to "https://chaturbate.com/$username/",
+                    "Origin"     to "https://chaturbate.com",
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+            }
+        )
+        Log.d("Chatrubate", "callback url=$rawHls")
 
         return true
     }
