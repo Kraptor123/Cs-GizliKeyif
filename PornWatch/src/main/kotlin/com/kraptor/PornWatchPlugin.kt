@@ -73,6 +73,7 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(RPMShare())
         registerExtractorAPI(Playmogo())
         registerExtractorAPI(Voe())
+        registerExtractorAPI(Vloe())
         registerExtractorAPI(Stape())
         registerExtractorAPI(StreamTAPE())
         registerExtractorAPI(ShaveTape())

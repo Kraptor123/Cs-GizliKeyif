@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.MixDrop
 import com.lagradost.cloudstream3.extractors.VidHidePro
 import com.lagradost.cloudstream3.extractors.VidStack
+import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -65,6 +66,11 @@ class Kamehaus : VidHidePro() {
 class Mxdrop : MixDrop() {
     override var name = "MixDrop"
     override var mainUrl = "https://mxdrop.to"
+}
+
+class Vloe : Voe() {
+    override var name = "Voe"
+    override var mainUrl = "https://vloe.tv"
 }
 
 

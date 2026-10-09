@@ -1338,6 +1338,11 @@ class Stevenfamilyedge : Voe() {
     override var mainUrl = "https://stevenfamilyedge.com"
 }
 
+class Vloe : Voe() {
+    override var name = "Voe"
+    override var mainUrl = "https://vloe.tv"
+}
+
 
 
 open class CloudWish : ExtractorApi() {

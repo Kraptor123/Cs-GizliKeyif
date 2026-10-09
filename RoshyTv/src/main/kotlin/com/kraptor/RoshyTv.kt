@@ -10,6 +10,9 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.jsoup.Jsoup
 
 class RoshyTv : MainAPI() {
@@ -45,9 +48,19 @@ class RoshyTv : MainAPI() {
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title = this.selectFirst("a")?.attr("title") ?: return null
-        val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val titleLink = this.selectFirst("h3.entry-title a, a.blog-img-link, a[title]") ?: this.selectFirst("a") ?: return null
+        val title = titleLink.attr("title").ifEmpty { titleLink.text() }.trim()
+        if (title.isEmpty()) return null
+
+        val href = fixUrlNull(titleLink.attr("href")) ?: return null
+
+        val img = this.selectFirst("img")
+        val posterUrl = fixUrlNull(
+            img?.attr("data-src")?.takeIf { it.isNotBlank() }
+                ?: img?.attr("src")?.takeIf { it.isNotBlank() && !it.startsWith("data:") }
+                ?: img?.attr("data-srcset")?.substringBefore(" ")?.takeIf { it.isNotBlank() }
+                ?: img?.attr("srcset")?.substringBefore(" ")?.takeIf { it.isNotBlank() }
+        )
 
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
@@ -66,29 +79,31 @@ class RoshyTv : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+        val document        = app.get(url).document
 
-        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
-        val description =
-            document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-        val tags =
-            document.select("div.main-block-wrapper a.category-item").map { it.attr("title") }
-        val recommendations =
-            document.select("div.site__row article[id*=post]").mapNotNull { it.toMainPageResult() }
-        val actors = document.select("div.cast-variant-items-wrapper a.blog-img-link").map {
-            Actor(
-                it.attr("title"),
-                it.selectFirst("img")?.attr("src")
+        val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content")?.ifEmpty { null })
+        val description     = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()?.ifEmpty { null }
+        val tags            = document.select("div.main-block-wrapper a.category-item").mapNotNull { it.attr("title").ifEmpty { null } }
+        val recommendations = document.select("div.site__row article[id*=post]").mapNotNull { it.toMainPageResult() }
+
+        val actors = document.select("div.cast-variant-items-wrapper a.blog-img-link").mapNotNull { el ->
+            val actorName  = el.attr("title").trim().ifEmpty { return@mapNotNull null }
+            val pictureEl  = el.selectFirst("picture")
+            val actorImage = fixUrlNull(
+                pictureEl?.selectFirst("source")?.attr("data-srcset")?.ifEmpty { null }
+                    ?: el.selectFirst("img")?.attr("src")?.ifEmpty { null }
             )
+            Actor(actorName, actorImage)
         }
 
-        val tumLinkler = document.select("div.btn-p-groups-items a").map { it.attr("href") }
+        val mirrorLinks  = document.select("div.btn-p-groups-items a[href]").mapNotNull { fixUrlNull(it.attr("href").ifEmpty { null }) }
+        val allPageLinks = (listOf(url) + mirrorLinks).distinct()
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, tumLinkler) {
-            this.posterUrl = poster
-            this.plot = description
-            this.tags = tags
+        return newMovieLoadResponse(title, url, TvType.NSFW, allPageLinks) {
+            this.posterUrl       = poster
+            this.plot            = description
+            this.tags            = tags
             this.recommendations = recommendations
             addActors(actors)
         }
@@ -100,28 +115,43 @@ class RoshyTv : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val linkler = mapper.readValue<List<String>>(data)
-
-        linkler.forEach { link ->
-            val document = app.get(link, referer = "${mainUrl}/").document
-            val script = document.selectFirst("div > script[src*=base64,c]")?.attr("src")
-                ?.substringAfter("base64,") ?: ""
-            val base64Coz = base64Decode(script)
-            val jsonCevir = base64Coz.substringAfter("pro_player(").substringBefore(");")
-            val mapperData = mapper.readValue<RoshyData>(jsonCevir)
-            val videoCevap = mapperData.video_url ?: ""
-            val iframe = Jsoup.parse(videoCevap).selectFirst("iframe")?.attr("src") ?: ""
-
-            Log.d("RoshyLink", "Found link: $link")
-            Log.d("RoshyIframe", "Extracted iframe: $iframe")
-
-            loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
+        val pageUrls  = try {
+            mapper.readValue<List<String>>(data)
+        } catch (e: Exception) {
+            listOf(data)
         }
-        return true
-    }
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class RoshyData(
-        val video_url: String?
-    )
+        var linkFound = false
+
+        coroutineScope {
+            val deferredIframes = pageUrls.map { pageUrl ->
+                async {
+                    try {
+                        val doc     = app.get(pageUrl, referer = "$mainUrl/").document
+                        val html    = doc.html().replace("\\/", "/").replace("\\\"", "\"")
+
+                        Regex("""(?:embedUrl["']\s*:\s*["']|src=["'])(https?://[^"'>\s]+)""")
+                            .findAll(html)
+                            .mapNotNull { match ->
+                                val rawUrl = match.groupValues.getOrNull(1)?.replace("&amp;", "&")
+                                fixUrlNull(rawUrl)
+                            }
+                            .filter { it.contains("/embed/") || it.contains("/e/") }
+                            .toList()
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                }
+            }
+
+            val uniqueIframes = deferredIframes.awaitAll().flatten().distinct()
+
+            uniqueIframes.forEach { iframe ->
+                loadExtractor(iframe, "$mainUrl/", subtitleCallback, callback)
+                linkFound = true
+            }
+        }
+
+        return linkFound
+    }
 }

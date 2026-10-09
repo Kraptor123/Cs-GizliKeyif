@@ -85,6 +85,7 @@ class JavGuruPlugin: BasePlugin() {
         registerExtractorAPI(LULUX08())
         // registerExtractorAPI(javclan())
         registerExtractorAPI(Stevenfamilyedge())
+        registerExtractorAPI(Vloe())
         registerExtractorAPI(KPFilemoonSx())
         registerExtractorAPI(KPFilemoonIn())
         registerExtractorAPI(KPFilemoonLink())

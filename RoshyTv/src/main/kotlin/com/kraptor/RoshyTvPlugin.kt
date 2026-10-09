@@ -1,6 +1,7 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 package com.kraptor
 
+import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
@@ -14,5 +15,7 @@ class RoshyTvPlugin: Plugin() {
         registerExtractorAPI(Cherrycams())
         registerExtractorAPI(Kamehaus())
         registerExtractorAPI(Mxdrop())
+        registerExtractorAPI(Voe())
+        registerExtractorAPI(Vloe())
     }
 }

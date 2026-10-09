@@ -74,6 +74,7 @@ class XXXParodyHDPlugin: Plugin() {
         registerExtractorAPI(RPMShare())
         registerExtractorAPI(Playmogo())
         registerExtractorAPI(Voe())
+        registerExtractorAPI(Vloe())
         registerExtractorAPI(Stape())
         registerExtractorAPI(StreamTAPE())
         registerExtractorAPI(ShaveTape())
