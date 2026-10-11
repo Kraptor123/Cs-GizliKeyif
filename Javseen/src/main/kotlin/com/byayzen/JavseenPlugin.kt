@@ -1,5 +1,6 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 package com.byayzen
+import com.kraptor.ortak.extractor.*
 
 import com.kraptor.*
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor

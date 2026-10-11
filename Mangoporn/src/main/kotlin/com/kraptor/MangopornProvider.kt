@@ -1,6 +1,7 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 
 package com.kraptor
+import com.kraptor.ortak.extractor.*
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
@@ -14,9 +15,9 @@ import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.extractors.Voe
 
 @CloudstreamPlugin
-class SpeedpornProvider: Plugin() {
+class MangopornProvider: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Speedporn())
+        registerMainAPI(Mangoporn())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(StreamTapeNet())
         registerExtractorAPI(StreamTapeXyz())
@@ -137,7 +138,7 @@ class SpeedpornProvider: Plugin() {
         registerExtractorAPI(Playmate())
 
         this.openSettings = { ctx: Context ->
-            SpeedAyarlar.showSettingsDialog(ctx as AppCompatActivity) {
+            MangoAyarlar.showSettingsDialog(ctx as AppCompatActivity) {
                 MainActivity.reloadHomeEvent.invoke(true)
             }
         }

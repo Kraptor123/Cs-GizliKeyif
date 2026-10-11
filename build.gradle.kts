@@ -51,6 +51,19 @@ fun Project.android(configuration: LibraryExtension.() -> Unit) {
     }
 }
 
+
+val ortakKaynaklar = mapOf(
+    "_ortak/extractor" to "ortak.extractor"
+)
+
+fun Project.ortakGerekiyorMu(simge: String): Boolean {
+    val kok = file("src/main/kotlin")
+    if (!kok.isDirectory) return false
+    return kok.walkTopDown().any { dosya ->
+        dosya.isFile && dosya.extension == "kt" && dosya.readText().contains(simge)
+    }
+}
+
 subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
@@ -98,6 +111,12 @@ subprojects {
         compileOptions {
             sourceCompatibility = JavaVersion.VERSION_17
             targetCompatibility = JavaVersion.VERSION_17
+        }
+
+        ortakKaynaklar.forEach { (dizin, simge) ->
+            if (project.ortakGerekiyorMu(simge)) {
+                sourceSets["main"].kotlin.srcDir(rootProject.file(dizin))
+            }
         }
     }
 

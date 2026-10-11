@@ -1,6 +1,10 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 package com.kraptor
+import com.kraptor.ortak.extractor.*
 
+import android.content.Context
+import androidx.appcompat.app.AppCompatActivity
+import com.lagradost.cloudstream3.MainActivity
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.extractors.FileMoonSx
 import com.lagradost.cloudstream3.extractors.Maxstream
@@ -8,11 +12,11 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class PornWatchPlugin: BasePlugin() {
-    override fun load() {
+class PornWatchPlugin: Plugin() {
+    override fun load(context: Context) {
         registerMainAPI(PornWatch())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(StreamTapeNet())
@@ -133,5 +137,11 @@ class PornWatchPlugin: BasePlugin() {
         registerExtractorAPI(KPByseSx())
         registerExtractorAPI(KPByseqekaho())
         registerExtractorAPI(Playmate())
+
+        this.openSettings = { ctx: Context ->
+            PornWatchAyarlar.showSettingsDialog(ctx as AppCompatActivity) {
+                MainActivity.reloadHomeEvent.invoke(true)
+            }
+        }
     }
 }

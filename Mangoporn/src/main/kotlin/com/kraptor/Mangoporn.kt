@@ -12,9 +12,9 @@ import kotlinx.coroutines.coroutineScope
 import org.jsoup.nodes.Element
 import kotlin.random.Random
 
-class Speedporn : MainAPI() {
+class Mangoporn : MainAPI() {
     override var mainUrl              = "https://mangoporn.net"
-    override var name                 = "Speedporn"
+    override var name                 = "Mangoporn"
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasDownloadSupport   = true
@@ -26,7 +26,7 @@ class Speedporn : MainAPI() {
     override val mainPage
         get() = mainPageOf(
             *(try {
-                SpeedAyarlar.getOrderedAndEnabledCategories().map { (path, name) ->
+                MangoAyarlar.getOrderedAndEnabledCategories().map { (path, name) ->
                     val cleanPath = path.trim().removePrefix("/").removeSuffix("/")
                     "$mainUrl/$cleanPath/" to name
                 }.toTypedArray()

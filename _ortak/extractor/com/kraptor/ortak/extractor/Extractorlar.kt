@@ -1,4 +1,4 @@
-package com.kraptor
+package com.kraptor.ortak.extractor
 
 import kotlinx.coroutines.yield
 import okhttp3.MediaType.Companion.toMediaTypeOrNull

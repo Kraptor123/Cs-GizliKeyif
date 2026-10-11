@@ -9,7 +9,9 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addDuration
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlin.random.Random
 import org.jsoup.nodes.Element
+import org.json.JSONArray
 
 class PornWatch : MainAPI() {
     override var mainUrl              = "https://pornwatch.ws"
@@ -19,94 +21,57 @@ class PornWatch : MainAPI() {
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
 
-    override val mainPage = mainPageOf(
-        "$mainUrl/movies/"                            to "Movies",
-        "$mainUrl/most-viewed/"                       to "Most Viewed",
-        "$mainUrl/most-rating/"                       to "Most Rating",
-        "$mainUrl/genre/appearance/"                  to "Appearance",
-        "$mainUrl/genre/international/"               to "International",
-        "$mainUrl/genre/ethnic/"                      to "Ethnic",
-        "$mainUrl/genre/gonzo/"                       to "Gonzo",
-        "$mainUrl/genre/big-tits/"                    to "Big Tits",
-        "$mainUrl/genre/oral/"                        to "Oral",
-        "$mainUrl/genre/age/"                         to "Age",
-        "$mainUrl/genre/cumshots/"                    to "Cumshots",
-        "$mainUrl/genre/anal/"                        to "Anal",
-        "$mainUrl/genre/big-dicks/"                   to "Big Dicks",
-        "$mainUrl/genre/amateur/"                     to "Amateur",
-        "$mainUrl/genre/blowjobs/"                    to "Blowjobs",
-        "$mainUrl/genre/shaved/"                      to "Shaved",
-        "$mainUrl/genre/european/"                    to "European",
-        "$mainUrl/genre/group-sex/"                   to "Group Sex",
-        "$mainUrl/genre/clothing/"                    to "Clothing",
-        "$mainUrl/genre/18-teens/"                    to "18 Teens",
-        "$mainUrl/genre/interracial/"                 to "Interracial",
-        "$mainUrl/genre/plot-oriented/"               to "Plot Oriented",
-        "$mainUrl/genre/brunettes/"                   to "Brunettes",
-        "$mainUrl/genre/threesomes/"                  to "Threesomes",
-        "$mainUrl/genre/character/"                   to "Character",
-        "$mainUrl/genre/small-tits/"                  to "Small Tits",
-        "$mainUrl/genre/sex-toy-play/"                to "Sex Toy Play",
-        "$mainUrl/genre/erotic-vignette/"             to "Erotic Vignette",
-        "$mainUrl/genre/facials/"                     to "Facials",
-        "$mainUrl/genre/blondes/"                     to "Blondes",
-        "$mainUrl/genre/big-butt/"                    to "Big Butt",
-        "$mainUrl/genre/fetish/"                      to "Fetish",
-        "$mainUrl/genre/naturally-busty/"             to "Naturally Busty",
-        "$mainUrl/genre/popular-with-women/"          to "Popular With Women",
-        "$mainUrl/genre/milf/"                        to "Milf",
-        "$mainUrl/genre/masturbation/"                to "Masturbation",
-        "$mainUrl/genre/compilation/"                 to "Compilation",
-        "$mainUrl/genre/pov/"                         to "Pov",
-        "$mainUrl/genre/tattoos/"                     to "Tattoos",
-        "$mainUrl/genre/lesbian/"                     to "Lesbian",
-        "$mainUrl/genre/asian/"                       to "Asian",
-        "$mainUrl/genre/language/"                    to "Language",
-        "$mainUrl/genre/stockings/"                   to "Stockings",
-        "$mainUrl/genre/pantyhose/"                   to "Pantyhose",
-        "$mainUrl/genre/settings/"                    to "Settings",
-        "$mainUrl/genre/bbc/"                         to "Bbc",
-        "$mainUrl/genre/interracial-black-men/"       to "Interracial Black Men",
-        "$mainUrl/genre/all-sex/"                     to "All Sex",
-        "$mainUrl/genre/interracial-caucasian-girls/" to "Interracial Caucasian Girls",
-        "$mainUrl/genre/bdsm/"                        to "Bdsm",
-        "$mainUrl/genre/niche/"                       to "Niche",
-        "$mainUrl/genre/creampie/"                    to "Creampie",
-        "$mainUrl/genre/japanese/"                    to "Japanese",
-        "$mainUrl/genre/redheads/"                    to "Redheads",
-        "$mainUrl/genre/mature/"                      to "Mature",
-        "$mainUrl/genre/family-roleplay/"             to "Family Roleplay",
-        "$mainUrl/genre/couples/"                     to "Couples",
-        "$mainUrl/genre/lingerie/"                    to "Lingerie",
-        "$mainUrl/genre/feature/"                     to "Feature",
-        "$mainUrl/genre/cunnilingus/"                 to "Cunnilingus",
-        "$mainUrl/genre/double-penetration/"          to "Double Penetration",
-        "$mainUrl/genre/petite/"                      to "Petite",
-        "$mainUrl/genre/black-women/"                 to "Black Women"
-    )
+    override val mainPage
+        get() = mainPageOf(
+            *(try {
+                PornWatchAyarlar.getOrderedAndEnabledCategories().map { (path, name) ->
+                    val cleanPath = path.trim().removePrefix("/").removeSuffix("/")
+                    val url = if (cleanPath.isEmpty()) "$mainUrl/" else "$mainUrl/$cleanPath/"
+                    url to name
+                }.toTypedArray()
+            } catch (_: Exception) {
+                arrayOf(
+                    "$mainUrl/" to "Latest"
+                )
+            })
+        )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page == 1) {
-            request.data
+        val dataUrl = request.data.removeSuffix("/")
+        val url = if (dataUrl.endsWith("random", ignoreCase = true)) {
+            val randomPage = Random.nextInt(1, 2001)
+            "$mainUrl/page/$randomPage/"
+        } else if (page == 1) {
+            "$dataUrl/"
         } else {
-            "${request.data.removeSuffix("/")}/page/$page/"
+            "$dataUrl/page/$page/"
         }
+
         val document = app.get(url).document
-        val home     = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
+        val home     = document.select("article.card").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(request.name, home)
     }
 
+
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2")?.text()?.trim()?.ifEmpty { null } ?: return null
+        val titleA = this.selectFirst("h2.card__t a, h3.card__t a")
+        val title  = titleA?.text()?.trim()?.ifEmpty { null } ?: return null
         if (title.contains(igrencRegex)) {
             return null
         }
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")?.ifEmpty { null }) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src")?.ifEmpty { null })
+        val href = fixUrlNull(titleA.attr("href").ifEmpty { null })
+            ?: fixUrlNull(this.selectFirst("a.card__th")?.attr("href")?.ifEmpty { null })
+            ?: return null
+        val posterUrl = fixUrlNull(
+            this.selectFirst("img.card__img")?.attr("src")?.ifEmpty { null }
+                ?: this.selectFirst("img.card__img")?.attr("data-src")?.ifEmpty { null },
+        )
+        val year = this.selectFirst("span.card__q")?.text()?.trim()?.toIntOrNull()
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
+            this.year      = year
         }
     }
 
@@ -117,7 +82,7 @@ class PornWatch : MainAPI() {
             "$mainUrl/page/$page/?s=$query"
         }
         val document = app.get(url).document
-        val results  = document.select("div.ml-item").mapNotNull { it.toSearchResult() }
+        val results  = document.select("article.card").mapNotNull { it.toSearchResult() }
 
         return newSearchResponseList(results, hasNext = true)
     }
@@ -128,25 +93,62 @@ class PornWatch : MainAPI() {
         val document = app.get(url).document
         val jsonLd   = document.select("script[type=application/ld+json]").firstNotNullOfOrNull { el -> el.data().takeIf { it.contains("VideoObject") } }
 
-        val posterFromJson = jsonLd?.let {
-            Regex(""""thumbnailUrl"\s*:\s*"([^"]+)"""").find(it)?.groupValues?.get(1)
-        }
-        val descriptionFromJson = jsonLd?.let {
-            Regex(""""description"\s*:\s*"([^"]+)"""").find(it)?.groupValues?.get(1)
+        val voBlock = jsonLd?.let { Regex("\"@type\"\\s*:\\s*\"VideoObject\".*?(?=\"keywords\")", RegexOption.DOT_MATCHES_ALL).find(it)?.value }
+        fun j(field: String): String? = voBlock?.let { Regex("\"$field\"\\s*:\\s*\\[?\"([^\"]+)\"").find(it)?.groupValues?.get(1) }
+        fun jArr(field: String): List<String>? = voBlock?.let {
+            Regex("\"$field\"\\s*:\\s*\\[([^\\]]*)\\]").find(it)?.groupValues?.get(1)
+                ?.split(",")?.map { it.trim().removeSurrounding("\"") }?.filter { it.isNotEmpty() }
         }
 
-        val title    = document.selectFirst("div.mvic-desc h3, div.data > h1, h1")?.text()?.trim()?.ifEmpty { null } ?: return null
-        val poster   = fixUrlNull(
+        val posterFromJson     = j("thumbnailUrl")
+        val descriptionFromJson = j("description")
+        val datePublished       = j("datePublished")
+        val durIso              = j("duration")
+        val tagsFromJson        = jArr("genre").orEmpty()
+
+        val rawTitle = j("name")
+            ?: document.selectFirst("h1.vid__t span.fit, h1 span.fit, h1")?.text()?.trim()?.ifEmpty { null }
+            ?: return null
+        val title = rawTitle
+            .removePrefix("Watch ")
+            .removeSuffix(" Porn Movie Online Free")
+            .removeSuffix(" Porn Full Movie Online Free")
+            .replace(Regex(" \\d{4} by .*$"), "")
+            .trim()
+            .ifEmpty { rawTitle }
+
+        val poster = fixUrlNull(
             posterFromJson?.ifEmpty { null }
-                ?: document.selectFirst("div.thumb img, div.poster > img")?.attr("data-wpfc-original-src")?.ifEmpty { null }
-                ?: document.selectFirst("div.thumb img, div.poster > img")?.attr("src")?.ifEmpty { null },
+                ?: document.selectFirst("meta[property=og:image]")?.attr("content")?.ifEmpty { null },
         )
-        val plot     = descriptionFromJson?.ifEmpty { null }
-            ?: document.selectFirst("div.mvic-desc div.desc, div.wp-content > p")?.text()?.trim()?.ifEmpty { null }
-        val year     = document.selectFirst("a[href*=/release-year/], span.textco a[rel=tag]")?.text()?.trim()?.toIntOrNull()
-        val tags     = document.select("div.mvici-left a[href*=/genre/], span.valors a[href*=/genre/]").map { it.text().trim() }.filter { it.isNotEmpty() }
-        val actors   = document.select("div.mvici-left a[href*=/director/], div.persons a[href*=/pornstar/]").map { Actor(it.text().trim()) }
-        val recommendations = document.select("div.mlw-related div.ml-item, div.sbox.srelacionados article, div.video-block").mapNotNull { it.toSearchResult() }
+
+        // Plot: prefer the clean .desc paragraph, fall back to jsonLd description
+        val plot = document.selectFirst("div.desc p")?.text()?.trim()?.ifEmpty { null }
+            ?: descriptionFromJson?.ifEmpty { null }
+
+        val year = document.selectFirst("a[href*=/release-year/]")?.text()?.trim()?.toIntOrNull()
+            ?: datePublished?.take(4)?.toIntOrNull()
+
+        val durationStr = durIso?.let { Regex("PT(?:(\\d+)H)?(\\d+)M").find(it)?.let { m ->
+            val h  = m.groupValues[1]
+            val mn = m.groupValues[2]
+            if (h.isBlank()) "$mn min" else "$h:$mn"
+        } }
+
+        // Actors from the Pornstars chips
+        val actors = document.select("a.chip--star, a[href*=/cast/]")
+            .map { Actor(it.text().trim()) }
+            .filter { it.name.isNotBlank() }
+
+        // Tags: genres + studio + category + released date from the info block, jsonLd genres as fallback
+        val genreTags   = document.select("div.info a.chip[href*=/genre/]").map { it.text().trim() }.filter { it.isNotEmpty() }
+        val studioTag   = document.selectFirst("div.info a.chip[href*=/director/]")?.text()?.trim()?.ifEmpty { null }
+        val categoryTag = document.selectFirst("div.info a.chip[href*=/category/]")?.text()?.trim()?.ifEmpty { null }
+        val releasedTag = document.selectFirst("div.row--text time")?.text()?.trim()?.ifEmpty { null }
+        val tags = (genreTags + listOfNotNull(studioTag, categoryTag, releasedTag)).ifEmpty { tagsFromJson }
+
+        // Recommendations from the related grid (article.card; ad cards are excluded automatically)
+        val recommendations = document.select("article.card").mapNotNull { it.toSearchResult() }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl       = poster
@@ -154,18 +156,47 @@ class PornWatch : MainAPI() {
             this.year            = year
             this.tags            = tags
             this.recommendations = recommendations
-            addDuration(document.selectFirst("span.mli-meta, span.duration")?.text()?.trim())
+            addDuration(durationStr)
             addActors(actors)
         }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         val document = app.get(data).document
-        val links    = document.select("div#pettabs div.Rtable1-cell a[href]").mapNotNull { fixUrlNull(it.attr("href").ifEmpty { null }) }
-        if (links.isEmpty()) return false
+        val hostLinks = mutableSetOf<String>()
+
+        // 1) Real streaming embeds from the player's data-servers JSON (LuluStream, DoodStream, MixDrop, ...)
+        document.select("section.hlm[data-servers]").forEach { sec ->
+            val raw = sec.attr("data-servers").ifEmpty { null } ?: return@forEach
+            runCatching {
+                val arr = org.json.JSONArray(raw)
+                for (i in 0 until arr.length()) {
+                    val u = arr.getJSONObject(i).optString("u").ifEmpty { null }
+                    if (!u.isNullOrBlank()) hostLinks.add(u)
+                }
+            }
+        }
+
+        // 2) Fallback: download / host buttons on the detail page
+        document.select("a.hlm-btn").mapNotNull { fixUrlNull(it.attr("href").ifEmpty { null }) }.forEach { hostLinks.add(it) }
+
+        // 3) Fallback: /video-embed/ page host links
+        val embedUrl = document.selectFirst("script[type=application/ld+json]")?.data()
+            ?.let { Regex("\"embedUrl\"\\s*:\\s*\"([^\"]+)\"").find(it)?.groupValues?.get(1) }
+            ?: document.selectFirst("a[href*=/video-embed/]")?.attr("href")?.ifEmpty { null }
+
+        embedUrl?.let { eu ->
+            runCatching { app.get(fixUrl(eu)).document }
+                .getOrNull()
+                ?.select("a.hlm-btn")
+                ?.mapNotNull { fixUrlNull(it.attr("href").ifEmpty { null }) }
+                ?.forEach { hostLinks.add(it) }
+        }
+
+        if (hostLinks.isEmpty()) return false
 
         return coroutineScope {
-            val jobs = links.map { linkUrl ->
+            val jobs = hostLinks.map { linkUrl ->
                 async {
                     try {
                         loadExtractor(linkUrl, "$mainUrl/", subtitleCallback, callback)
@@ -174,8 +205,7 @@ class PornWatch : MainAPI() {
                     }
                 }
             }
-            val results = jobs.awaitAll()
-            results.any { it }
+            jobs.awaitAll().any { it }
         }
     }
 }
