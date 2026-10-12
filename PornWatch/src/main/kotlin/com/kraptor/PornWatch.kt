@@ -2,16 +2,16 @@
 
 package com.kraptor
 
+import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addDuration
+import kotlin.random.Random
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlin.random.Random
 import org.jsoup.nodes.Element
-import org.json.JSONArray
 
 class PornWatch : MainAPI() {
     override var mainUrl              = "https://pornwatch.ws"
@@ -20,13 +20,24 @@ class PornWatch : MainAPI() {
     override var lang                 = "en"
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
+    override var getMainPageTimeoutMs = 10_000L
+
+    private val defaultHeaders = mapOf(
+        "User-Agent"      to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept"          to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language" to "en-US,en;q=0.5"
+    )
 
     override val mainPage
         get() = mainPageOf(
             *(try {
                 PornWatchAyarlar.getOrderedAndEnabledCategories().map { (path, name) ->
-                    val cleanPath = path.trim().removePrefix("/").removeSuffix("/")
-                    val url = if (cleanPath.isEmpty()) "$mainUrl/" else "$mainUrl/$cleanPath/"
+                    val cleanPath = path.trim().removePrefix("/")
+                    val url       = when {
+                        cleanPath.isEmpty() -> "$mainUrl/"
+                        cleanPath.startsWith("?") -> "$mainUrl/$cleanPath"
+                        else -> "$mainUrl/${cleanPath.removeSuffix("/")}/"
+                    }
                     url to name
                 }.toTypedArray()
             } catch (_: Exception) {
@@ -37,18 +48,46 @@ class PornWatch : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val dataUrl = request.data.removeSuffix("/")
-        val url = if (dataUrl.endsWith("random", ignoreCase = true)) {
-            val randomPage = Random.nextInt(1, 2001)
+        val dataUrl = request.data
+        val url     = if (dataUrl.contains("random", ignoreCase = true)) {
+            val randomPage = Random.nextInt(1, 3163)
             "$mainUrl/page/$randomPage/"
         } else if (page == 1) {
-            "$dataUrl/"
+            dataUrl
         } else {
-            "$dataUrl/page/$page/"
+            if (dataUrl.contains("?")) {
+                val parts = dataUrl.split("?", limit = 2)
+                val base  = parts[0].removeSuffix("/")
+                val query = parts[1]
+                if (base.isEmpty() || base == mainUrl) {
+                    "$mainUrl/page/$page/?$query"
+                } else {
+                    "$base/page/$page/?$query"
+                }
+            } else {
+                val base = dataUrl.removeSuffix("/")
+                if (base.isEmpty() || base == mainUrl) {
+                    "$mainUrl/page/$page/"
+                } else {
+                    "$base/page/$page/"
+                }
+            }
         }
 
-        val document = app.get(url).document
-        val home     = document.select("article.card").mapNotNull { it.toSearchResult() }
+        val home = try {
+            val document = app.get(url, headers = defaultHeaders, timeout = 10).document
+            document.select("article.card").mapNotNull { it.toSearchResult() }
+        } catch (e: Exception) {
+            Log.d("PornWatch",  "$url: ${e.message}")
+            try {
+                val fallbackUrl = if (page == 1) "$mainUrl/" else "$mainUrl/page/$page/"
+                val document    = app.get(fallbackUrl, headers = defaultHeaders, timeout = 10).document
+                document.select("article.card").mapNotNull { it.toSearchResult() }
+            } catch (fallbackEx: Exception) {
+                Log.d("PornWatch", "$url: ${fallbackEx.message}")
+                emptyList()
+            }
+        }
 
         return newHomePageResponse(request.name, home)
     }
@@ -81,7 +120,7 @@ class PornWatch : MainAPI() {
         } else {
             "$mainUrl/page/$page/?s=$query"
         }
-        val document = app.get(url).document
+        val document = app.get(url, headers = defaultHeaders, timeout = 10).document
         val results  = document.select("article.card").mapNotNull { it.toSearchResult() }
 
         return newSearchResponseList(results, hasNext = true)
@@ -90,7 +129,7 @@ class PornWatch : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+        val document = app.get(url, headers = defaultHeaders, timeout = 10).document
         val jsonLd   = document.select("script[type=application/ld+json]").firstNotNullOfOrNull { el -> el.data().takeIf { it.contains("VideoObject") } }
 
         val voBlock = jsonLd?.let { Regex("\"@type\"\\s*:\\s*\"VideoObject\".*?(?=\"keywords\")", RegexOption.DOT_MATCHES_ALL).find(it)?.value }
