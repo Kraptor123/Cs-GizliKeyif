@@ -93,7 +93,11 @@ class Hanime : MainAPI() {
         val home = document.select("div.grid.grid-cols-2 a[href^=/videos/hentai/]").mapNotNull {
             val href   = it.attr("href")
             val name   = it.selectFirst("h3")?.text() ?: return@mapNotNull null
-            val poster = it.selectFirst("img")?.attr("abs:src") ?: return@mapNotNull null
+            val img    = it.selectFirst("img")
+            val rawPoster = img?.attr("src")?.takeIf { s -> s.isNotBlank() }
+                ?: img?.attr("data-src")?.takeIf { s -> s.isNotBlank() }
+                ?: img?.attr("abs:src")
+            val poster = fixUrlNull(rawPoster) ?: return@mapNotNull null
             if (name.isBlank() || href.isBlank()) return@mapNotNull null
 
             newAnimeSearchResponse(
@@ -168,7 +172,10 @@ class Hanime : MainAPI() {
         return runCatching {
             val response = app.get(SEARCH_API, headers = HeaderAl()).text
             Log.d("HanimeTV", "HAM JSON (ilk 1000 karakter): ${response.take(1000)}")
-            parseJson<List<HvsVideo>>(response).also {
+            val parsedList = runCatching {
+                parseJson<SearchHvsResponse>(response).data
+            }.getOrNull() ?: parseJson<List<HvsVideo>>(response)
+            parsedList.also {
                 Log.d("HanimeTV", "API'den ${it.size} video çekildi.")
                 it.firstOrNull()?.let { first ->
                     Log.d("HanimeTV", "İlk öğe: name=${first.name}, posterUrl=${first.posterUrl}, coverUrl=${first.coverUrl}")
@@ -338,6 +345,11 @@ class Hanime : MainAPI() {
 
 
 
+
+    @Serializable
+    data class SearchHvsResponse(
+        val data: List<HvsVideo> = emptyList()
+    )
 
     @Serializable
     data class HvsVideo(
