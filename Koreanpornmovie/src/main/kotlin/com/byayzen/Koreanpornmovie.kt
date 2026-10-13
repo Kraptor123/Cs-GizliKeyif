@@ -11,7 +11,7 @@ class Koreanpornmovie : MainAPI() {
     override var mainUrl = "https://koreanpornmovie.com"
     override var name = "Koreanpornmovie"
     override val hasMainPage = true
-    override var lang = "en"
+    override var lang = "kr"
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
 

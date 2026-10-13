@@ -1,9 +1,9 @@
 // ! Bu araç @ByAyzen tarafından | @cs-gizlikeyif için yazılmıştır.
-version = 3
+version = 4
 
 cloudstream {
     authors     = listOf("ByAyzen")
-    language    = "tr"
+    language    = "kr"
     description = "KoreanPornMovie.com is a dedicated platform for fans of Korean adult films, offering a comprehensive collection of movies and clips from classic hits to the latest releases. Each title is carefully organized by genre, year, and performer, making it easy for visitors to find exactly what they are looking for."
 
     /**
