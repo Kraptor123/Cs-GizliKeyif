@@ -11,6 +11,7 @@ import android.util.Log
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import org.jsoup.Jsoup
 import java.net.URI
+import kotlin.random.Random
 
 
 class JavGuru : MainAPI() {
@@ -34,9 +35,11 @@ class JavGuru : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        mainUrl to "Home",
+        "$mainUrl/" to "Latest",
+        "$mainUrl/random" to "Random",
         "$mainUrl/most-watched-rank" to "Most Watched",
         "$mainUrl/category/jav-uncensored" to "Uncensored",
+        "$mainUrl/category/decensored" to "Decensored",
         "$mainUrl/category/amateur" to "Amateur",
         "$mainUrl/category/idol" to "Idol",
         "$mainUrl/category/english-subbed" to "English Subbed",
@@ -62,20 +65,22 @@ class JavGuru : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page == 1) {
-            "${request.data}/"
+        val dataUrl = request.data
+        val url = if (dataUrl.contains("random", ignoreCase = true)) {
+            val randomPage = Random.nextInt(1, 5710)
+            "${mainUrl.removeSuffix("/")}/page/$randomPage/"
+        } else if (page == 1) {
+            "${dataUrl.removeSuffix("/")}/"
         } else {
-            "${request.data.removeSuffix("/")}/page/$page/"
+            "${dataUrl.removeSuffix("/")}/page/$page/"
         }
 
-        Log.d("Cloudstream", "MainPage URL: $url")
+        Log.d("JavGuru", "page=$page url=$url")
 
         val document = app.get(url, headers = mainHeaders).document
-        val items = document.select("div.inside-article, article, div.tabcontent li, .item-list li")
-
-        val home = items.mapNotNull { it.toSearchResponse() }
-
-        val hasNext = home.isNotEmpty()
+        val items    = document.select("div.inside-article, article, div.tabcontent li, .item-list li")
+        val home     = items.mapNotNull { it.toSearchResponse() }
+        val hasNext  = home.isNotEmpty()
 
         return newHomePageResponse(
             list = HomePageList(
@@ -144,15 +149,17 @@ class JavGuru : MainAPI() {
 
         val recommendations = document.select("li").mapNotNull { it.toRecommendationResult() }
 
-        val actors =
-            document.select("li.w1 strong:not(:contains(tags)) ~ a").mapNotNull { Actor(it.text()) }
+        val metaContainer   = document.selectFirst("div.infometa") ?: document
+        val actresses       = metaContainer.select("a[href*=/actress/]").mapNotNull { el -> el.text().trim().takeIf { it.isNotEmpty() }?.let { Actor(it) } }
+        val maleActors      = metaContainer.select("a[href*=/actor/]").mapNotNull { el -> el.text().trim().takeIf { it.isNotEmpty() }?.let { Actor(it) } }
+        val actors          = (actresses + maleActors).distinctBy { it.name }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.posterHeaders = mainHeaders
-            this.plot = description
-            this.year = yearText
-            this.tags = tags
+            this.posterUrl       = poster
+            this.posterHeaders   = mainHeaders
+            this.plot            = description
+            this.year            = yearText
+            this.tags            = tags
             this.recommendations = recommendations
             addActors(actors)
         }
