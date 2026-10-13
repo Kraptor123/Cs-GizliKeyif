@@ -19,6 +19,7 @@ class PornHub : MainAPI() {
     override var lang                 = "en"
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
+    override var sequentialMainPage   = true
 
     private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
 
@@ -130,14 +131,22 @@ class PornHub : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = if (request.data.contains("video?")){
-            app.get("${request.data}&page=$page", referer = "${mainUrl}/", cookies = cookies).document
+        val url = if (request.data.contains("video?")) {
+            "${request.data}&page=$page"
         } else {
-            app.get("${request.data}?page=$page", referer = "${mainUrl}/", cookies = cookies).document
+            "${request.data}?page=$page"
         }
-        val home     = document.select("div.gridWrapper li.pcVideoListItem").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(HomePageList(request.name, home, true))
+        val document = try {
+            app.get(url, referer = "${mainUrl}/", cookies = cookies).document
+        } catch (e: Exception) {
+            Log.d(name, "getMainPage error: url=$url message=${e.message}")
+            return newHomePageResponse(HomePageList(request.name, emptyList(), false))
+        }
+
+        val home = document.select("div.gridWrapper li.pcVideoListItem").mapNotNull { it.toMainPageResult() }
+
+        return newHomePageResponse(HomePageList(request.name, home, home.isNotEmpty()))
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
@@ -232,7 +241,7 @@ class PornHub : MainAPI() {
 
         cevaplar?.forEach { cevap ->
             val video = cevap.videoUrl ?: ""
-            Log.d("kraptor_$name", "video = ${video}")
+            Log.d(name, "video=$video")
             val quality = cevap.quality.toString()
 
             val format = cevap.format ?: ""
