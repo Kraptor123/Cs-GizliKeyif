@@ -11,32 +11,50 @@ import kotlinx.coroutines.withContext
 import java.net.URLEncoder
 
 class Allpornstream : MainAPI() {
-    override var mainUrl = "https://allpornstream.com/"
-    override var name = "Allpornstream"
-    override val hasMainPage = true
-    override var lang = "en"
+    override var mainUrl        = "https://allpornstream.com"
+    override var name           = "Allpornstream"
+    override val hasMainPage    = true
+    override var lang           = "en"
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
-    override val vpnStatus = VPNStatus.MightBeNeeded
+    override val vpnStatus      = VPNStatus.MightBeNeeded
 
     private val appHeaders = mapOf(
-        "RSC" to "1",
-        "Accept" to "*/*",
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
+        "Accept"     to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:157.0) Gecko/20100101 Firefox/157.0"
     )
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/categories/brunette" to "Brunette",
-        "${mainUrl}/categories/shaved-pussy" to "Shaved Pussy",
-        "${mainUrl}/categories/anal" to "Anal",
-        "${mainUrl}/categories/interracial" to "Interracial",
-        "${mainUrl}/categories/small-tits" to "Small Tits",
-        "${mainUrl}/categories/latina" to "Latina",
-        "${mainUrl}/categories/pov" to "Pov",
-        "${mainUrl}/categories/asian" to "Asian",
-        "${mainUrl}/categories/masturbation" to "Masturbation",
-        "${mainUrl}/categories/naughtyamerica" to "Naughtyamerica",
-        "${mainUrl}/categories/casting" to "Casting"
+        "$mainUrl/producers/only-fans"            to "Only Fans",
+        "$mainUrl/producers/evil-angel"           to "Evil Angel",
+        "$mainUrl/producers/brazzers-exxtra"      to "Brazzers Exxtra",
+        "$mainUrl/producers/sex-mex"              to "Sex Mex",
+        "$mainUrl/producers/team-skeet"           to "Team Skeet",
+        "$mainUrl/producers/atk-girlfriends"      to "ATK Girlfriends",
+        "$mainUrl/producers/porn-world"           to "Porn World",
+        "$mainUrl/producers/jacquie-et-michel-tv" to "Jacquie Et Michel TV",
+        "$mainUrl/producers/brazzers"             to "Brazzers",
+        "$mainUrl/producers/elegant-angel"        to "Elegant Angel",
+        "$mainUrl/producers/taboo-heat"           to "Taboo Heat",
+        "$mainUrl/producers/japan-hdv"            to "Japan HDV",
+        "$mainUrl/producers/my-pervy-family"      to "My Pervy Family",
+        "$mainUrl/producers/private"              to "Private",
+        "$mainUrl/producers/penthouse-gold"       to "Penthouse Gold",
+        "$mainUrl/producers/bellesa-house"        to "Bellesa House",
+        "$mainUrl/producers/new-sensations"       to "New Sensations",
+        "$mainUrl/producers/jules-jordan"         to "Jules Jordan",
+        "$mainUrl/producers/naughty-america"      to "Naughty America",
+        "$mainUrl/producers/rocco-siffredi"       to "Rocco Siffredi",
+        "$mainUrl/producers/only-tarts"           to "Only Tarts",
+        "$mainUrl/producers/nubiles-porn"         to "Nubiles Porn",
+        "$mainUrl/producers/bang-bros"            to "Bang Bros",
+        "$mainUrl/producers/blacked"              to "Blacked",
+        "$mainUrl/producers/club-sweethearts"     to "Club Sweethearts",
+        "$mainUrl/producers/hussie-pass"          to "Hussie Pass",
+        "$mainUrl/producers/girls-way"            to "Girls Way",
+        "$mainUrl/producers/bellesa-blind-date"   to "Bellesa Blind Date",
+        "$mainUrl/producers/tadpole-x-studio"     to "Tadpole X Studio",
+        "$mainUrl/producers/nubile-films"         to "Nubile Films"
     )
 
     private fun posteriduzenle(url: String): String {
@@ -71,65 +89,141 @@ class Allpornstream : MainAPI() {
         return results.distinctBy { it.url }
     }
 
+    private fun parseItemList(html: String): List<SearchResponse> {
+        val results = mutableListOf<SearchResponse>()
+        try {
+            val jsonLd = Regex("""<script[^>]*type=["']application/ld\+json["'][^>]*>(.*?)</script>""", RegexOption.DOT_MATCHES_ALL)
+                .findAll(html)
+                .map { it.groupValues[1].trim() }
+                .firstOrNull { it.contains("itemListElement") }
+
+            if (jsonLd != null) {
+                val jsonObject = org.json.JSONObject(jsonLd)
+                val items      = jsonObject.optJSONArray("itemListElement")
+                if (items != null) {
+                    for (i in 0 until items.length()) {
+                        val item  = items.optJSONObject(i) ?: continue
+                        val title = item.optString("name").trim()
+                        val url   = item.optString("url").trim()
+                        if (title.isEmpty() || url.isEmpty()) continue
+
+                        val posterArray = item.optJSONArray("thumbnailUrl")
+                        val rawPoster   = if (posterArray != null && posterArray.length() > 0) {
+                            posterArray.optString(0)
+                        } else {
+                            item.optString("thumbnailUrl")
+                        }
+                        val posterUrl = if (rawPoster.isNotBlank()) posteriduzenle(rawPoster) else null
+
+                        results.add(newMovieSearchResponse(title, fixUrl(url), TvType.NSFW) {
+                            this.posterUrl = posterUrl
+                        })
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.d("Allpornstream", "parseItemListError=${e.message}")
+        }
+
+        if (results.isEmpty()) {
+            results.addAll(nextiparseet(html))
+        }
+
+        return results.distinctBy { it.url }
+    }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val res = app.get(request.data, headers = appHeaders)
-        val results = nextiparseet(res.text)
+        val url = if (page == 1) {
+            request.data
+        } else {
+            if (request.data.contains("?")) {
+                "${request.data}&page=$page"
+            } else {
+                "${request.data}?page=$page"
+            }
+        }
+        Log.d("Allpornstream", "page=$page url=$url")
+        val res     = app.get(url, headers = appHeaders)
+        val results = parseItemList(res.text)
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,
                 list = results,
                 isHorizontalImages = true
             ),
-            hasNext = false
+            hasNext = results.isNotEmpty()
         )
     }
-    override suspend fun search(query: String): List<SearchResponse> {
-        val url = "${mainUrl.removeSuffix("/")}/?search=${
-            withContext(Dispatchers.IO) {
-                URLEncoder.encode(query, "utf-8")
-            }
-        }"
-        val res = app.get(url, headers = appHeaders)
-        return nextiparseet(res.text)
+
+    override suspend fun search(query: String, page: Int): SearchResponseList {
+        val encodedQuery = withContext(Dispatchers.IO) {
+            URLEncoder.encode(query, "utf-8")
+        }
+        val url = if (page == 1) {
+            "${mainUrl.removeSuffix("/")}/posts?search=$encodedQuery"
+        } else {
+            "${mainUrl.removeSuffix("/")}/posts?search=$encodedQuery&page=$page"
+        }
+        Log.d("Allpornstream", "query=$query page=$page url=$url")
+        val res     = app.get(url, headers = appHeaders)
+        val results = parseItemList(res.text)
+        return newSearchResponseList(results, hasNext = results.isNotEmpty())
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
-    override suspend fun load(url: String): LoadResponse? {
-        val res = app.get(url, headers = appHeaders)
-        val restext = res.text
-
-        val postdata = restext.substringAfter("\"initialPost\":").substringBefore(",\"initialUrls\"")
+    private fun postdataAl(restext: String): String {
+        return restext.substringAfter("\"initialPost\":").substringBefore(",\"initialUrls\"")
             .replace("\\\"", "\"")
             .replace("\\\\", "\\")
+            .replace(Regex("""\\u([0-9a-fA-F]{4})""")) { match -> match.groupValues[1].toInt(16).toChar().toString() }
+    }
 
-        val title = Regex("""video_title":"(.*?)"""").find(postdata)?.groupValues?.get(1) ?: return null
-        val poster = Regex("""image_details":\["(.*?)"""").find(postdata)?.groupValues?.get(1)?.let { posteriduzenle(it) }
-        val plot = Regex("""description":"(.*?)"""").find(postdata)?.groupValues?.get(1)
-        val year = Regex("""item_publish_date":"(\d{4})""").find(postdata)?.groupValues?.get(1)?.toIntOrNull()
+    private fun linkleri(postdata: String): List<String> {
+        val linkdata = Regex(""""link":\[(.*?)],"direct"""").find(postdata)?.groupValues?.get(1).orEmpty()
+        return Regex("""\["[^"]*","(https://[^"]+)"]""").findAll(linkdata)
+            .map { it.groupValues[1] }
+            .distinct()
+            .toList()
+    }
+
+    override suspend fun load(url: String): LoadResponse? {
+        Log.d("Allpornstream", "url=$url")
+        val res     = app.get(url, headers = appHeaders)
+        val restext = res.text
+
+        val postdata = postdataAl(restext)
+
+        val title    = Regex("""video_title":"(.*?)"""").find(postdata)?.groupValues?.get(1) ?: return null
+        val poster   = Regex("""image_details":\["(.*?)"""").find(postdata)?.groupValues?.get(1)?.let { posteriduzenle(it) }
+        val plot     = Regex("""description":"(.*?)"""").find(postdata)?.groupValues?.get(1)
+        val year     = Regex("""item_publish_date":"(\d{4})""").find(postdata)?.groupValues?.get(1)?.toIntOrNull()
         val duration = Regex("""duration":"(\d+)m""").find(postdata)?.groupValues?.get(1)?.toIntOrNull()
 
-        val alllinks = Regex("""embed_url":"(.*?)"""").findAll(postdata)
-            .map { it.groupValues[1].replace("\\", "") }
-            .distinct()
-            .joinToString(",")
+        val alllinks = linkleri(postdata).joinToString(",")
 
         val tags = Regex("""categories":\[(.*?)]""").find(postdata)?.groupValues?.get(1)
             ?.split(",")?.map { it.trim().removeSurrounding("\"") }
 
-        val actors = Regex("""item_name":"(.*?)"""").findAll(postdata)
-            .map { Actor(it.groupValues[1]) }
+        val actors = Regex(""""actors":\[(.*?)],"producers"""").find(postdata)?.groupValues?.get(1).orEmpty()
+            .split("},{")
+            .mapNotNull { block ->
+                val name = Regex(""""item_name":"(.*?)"""").find(block)?.groupValues?.get(1) ?: return@mapNotNull null
+                val thumb = Regex(""""item_thumb_url":"(.*?)"""").find(block)?.groupValues?.get(1)
+                    ?.takeIf { it.startsWith("http") }
+                    ?.let { posteriduzenle(it) }
+                Actor(name, thumb)
+            }
             .distinctBy { it.name }
-            .toList()
 
-        val recs = nextiparseet(restext).filter { it.url != url }
+        val recs = parseItemList(restext).filter { it.url != url }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, alllinks.ifBlank { url }) {
-            this.posterUrl = poster
-            this.plot = plot
-            this.year = year
-            this.tags = tags
-            this.duration = duration
+            this.posterUrl       = poster
+            this.plot            = plot
+            this.year            = year
+            this.tags            = tags
+            this.duration        = duration
             this.recommendations = recs
             addActors(actors)
         }
@@ -141,21 +235,22 @@ class Allpornstream : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        Log.d("Allpornstream", "data=$data")
         val links = if (data.contains("/post/")) {
-            val res = app.get(data, headers = appHeaders).text
-            Regex("""embed_url":"(.*?)"""").findAll(res)
-                .map { it.groupValues[1].replace("\\", "") }
-                .toList()
+            linkleri(postdataAl(app.get(data, headers = appHeaders).text))
         } else {
             data.split(",")
         }
 
+        var found = false
         links.forEach { link ->
             val clean = link.trim()
             if (clean.isNotBlank()) {
-                loadExtractor(clean, mainUrl, subtitleCallback, callback)
+                if (loadExtractor(clean, mainUrl, subtitleCallback, callback)) {
+                    found = true
+                }
             }
         }
-        return true
+        return found
     }
 }
