@@ -102,6 +102,9 @@ class PornWatch : MainAPI() {
         val href = fixUrlNull(titleA.attr("href").ifEmpty { null })
             ?: fixUrlNull(this.selectFirst("a.card__th")?.attr("href")?.ifEmpty { null })
             ?: return null
+        if (href.contains(igrencRegex)) {
+            return null
+        }
         val posterUrl = fixUrlNull(
             this.selectFirst("img.card__img")?.attr("src")?.ifEmpty { null }
                 ?: this.selectFirst("img.card__img")?.attr("data-src")?.ifEmpty { null },
@@ -155,6 +158,8 @@ class PornWatch : MainAPI() {
             .replace(Regex(" \\d{4} by .*$"), "")
             .trim()
             .ifEmpty { rawTitle }
+
+        if (title.contains(igrencRegex) || url.contains(igrencRegex)) return null
 
         val poster = fixUrlNull(
             posterFromJson?.ifEmpty { null }
@@ -239,7 +244,8 @@ class PornWatch : MainAPI() {
                 async {
                     try {
                         loadExtractor(linkUrl, "$mainUrl/", subtitleCallback, callback)
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        Log.d("PornWatch", "linkUrl=$linkUrl error=${e.message}")
                         false
                     }
                 }
@@ -251,12 +257,13 @@ class PornWatch : MainAPI() {
 
 private val igrencKelimeler = listOf(
     "gay", "homosexual", "queer", "homo", "androphile", "femboy", "feminine boy", "effeminate", "trap",
-    "Trade", "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
+    "scat", "coprophilia", "coprophagia", "fecal", "poo", "shit", "crap", "bm play", "trans", "Trade",
+    "Vers", "Twink", "Otter", "Bear", "Femme", "Masc", "No fats, no fems", "Serving", "Gagged",
     "Receipts", "Kiki", "Kai Kai", "Werk", "Realness", "Hunty", "Snatched", "Beat",
     "Zaddy", "Chosen family", "Closet case", "Out and proud",
     "Henny", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
     "Situationship", "Pegging", "Anal Gape", "Sick", "Gross", "Femdom", "futa", "strap-on", "strapon", "tranny", "tribute", "crossdress",
-    "t-girl", "tgirl", "Bisexual", "Intersex", "LGBTQ", "Trans",
+    "t-girl", "tgirl", "Bisexual", "Intersex", "LGBTQ", "TS", "TGirl", "T-Boy", "Transsexual", "shemale",
 )
 
 private val igrencRegex = Regex("\\b(${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b", RegexOption.IGNORE_CASE)
