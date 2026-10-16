@@ -148,16 +148,7 @@ class PornWatch : MainAPI() {
         val durIso              = j("duration")
         val tagsFromJson        = jArr("genre").orEmpty()
 
-        val rawTitle = j("name")
-            ?: document.selectFirst("h1.vid__t span.fit, h1 span.fit, h1")?.text()?.trim()?.ifEmpty { null }
-            ?: return null
-        val title = rawTitle
-            .removePrefix("Watch ")
-            .removeSuffix(" Porn Movie Online Free")
-            .removeSuffix(" Porn Full Movie Online Free")
-            .replace(Regex(" \\d{4} by .*$"), "")
-            .trim()
-            .ifEmpty { rawTitle }
+        val title = document.selectFirst("h1.vid__t span.fit")?.text()?.trim()?.removePrefix("Watching: ")?.trim()?.ifEmpty { null } ?: return null
 
         if (title.contains(igrencRegex) || url.contains(igrencRegex)) return null
 
@@ -166,7 +157,6 @@ class PornWatch : MainAPI() {
                 ?: document.selectFirst("meta[property=og:image]")?.attr("content")?.ifEmpty { null },
         )
 
-        // Plot: prefer the clean .desc paragraph, fall back to jsonLd description
         val plot = document.selectFirst("div.desc p")?.text()?.trim()?.ifEmpty { null }
             ?: descriptionFromJson?.ifEmpty { null }
 
@@ -179,20 +169,25 @@ class PornWatch : MainAPI() {
             if (h.isBlank()) "$mn min" else "$h:$mn"
         } }
 
-        // Actors from the Pornstars chips
         val actors = document.select("a.chip--star, a[href*=/cast/]")
             .map { Actor(it.text().trim()) }
             .filter { it.name.isNotBlank() }
 
-        // Tags: genres + studio + category + released date from the info block, jsonLd genres as fallback
         val genreTags   = document.select("div.info a.chip[href*=/genre/]").map { it.text().trim() }.filter { it.isNotEmpty() }
         val studioTag   = document.selectFirst("div.info a.chip[href*=/director/]")?.text()?.trim()?.ifEmpty { null }
         val categoryTag = document.selectFirst("div.info a.chip[href*=/category/]")?.text()?.trim()?.ifEmpty { null }
         val releasedTag = document.selectFirst("div.row--text time")?.text()?.trim()?.ifEmpty { null }
         val tags = (genreTags + listOfNotNull(studioTag, categoryTag, releasedTag)).ifEmpty { tagsFromJson }
 
-        // Recommendations from the related grid (article.card; ad cards are excluded automatically)
         val recommendations = document.select("article.card").mapNotNull { it.toSearchResult() }
+
+        val sources = document.select("section.hlm[data-servers]").flatMap { sec ->
+            runCatching {
+                val arr = org.json.JSONArray(sec.attr("data-servers"))
+                (0 until arr.length()).map { arr.getJSONObject(it).optString("u") }.filter { it.isNotBlank() }
+            }.getOrDefault(emptyList())
+        }
+        if (sources.isEmpty()) throw ErrorLoadingException("NO sources found!")
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl       = poster
@@ -209,7 +204,6 @@ class PornWatch : MainAPI() {
         val document = app.get(data).document
         val hostLinks = mutableSetOf<String>()
 
-        // 1) Real streaming embeds from the player's data-servers JSON (LuluStream, DoodStream, MixDrop, ...)
         document.select("section.hlm[data-servers]").forEach { sec ->
             val raw = sec.attr("data-servers").ifEmpty { null } ?: return@forEach
             runCatching {
@@ -221,10 +215,8 @@ class PornWatch : MainAPI() {
             }
         }
 
-        // 2) Fallback: download / host buttons on the detail page
         document.select("a.hlm-btn").mapNotNull { fixUrlNull(it.attr("href").ifEmpty { null }) }.forEach { hostLinks.add(it) }
 
-        // 3) Fallback: /video-embed/ page host links
         val embedUrl = document.selectFirst("script[type=application/ld+json]")?.data()
             ?.let { Regex("\"embedUrl\"\\s*:\\s*\"([^\"]+)\"").find(it)?.groupValues?.get(1) }
             ?: document.selectFirst("a[href*=/video-embed/]")?.attr("href")?.ifEmpty { null }

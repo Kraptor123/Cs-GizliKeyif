@@ -34,7 +34,7 @@ class Mangoporn : MainAPI() {
     override val mainPage
         get() = mainPageOf(
             *(try {
-                MangoAyarlar.getOrderedAndEnabledCategories().map { (path, name) ->
+                val categories = MangoAyarlar.getOrderedAndEnabledCategories().map { (path, name) ->
                     val cleanPath = path.trim().removePrefix("/")
                     val url       = when {
                         cleanPath.isEmpty() -> "$mainUrl/"
@@ -43,7 +43,10 @@ class Mangoporn : MainAPI() {
                     }
                     url to name
                 }.toTypedArray()
-            } catch (_: Exception) {
+                Log.d("Mangoporn", "categoriesCount=${categories.size}")
+                categories
+            } catch (e: Exception) {
+                Log.d("Mangoporn", "categoriesError=${e.message}")
                 arrayOf(
                     "$mainUrl/" to "Latest Release"
                 )
@@ -77,17 +80,29 @@ class Mangoporn : MainAPI() {
             }
         }
 
+        Log.d("Mangoporn", "page=$page requestName=${request.name} dataUrl=$dataUrl url=$url")
+
         val home = try {
-            val document = app.get(url, headers = defaultHeaders, timeout = 10).document
-            document.select("article.card").mapNotNull { it.toSearchResult() }
+            val response = app.get(url, headers = defaultHeaders, timeout = 10)
+            Log.d("Mangoporn", "code=${response.code} url=${response.url}")
+            val cards    = response.document.select("article.card")
+            Log.d("Mangoporn", "cardsCount=${cards.size}")
+            val items    = cards.mapNotNull { it.toSearchResult() }
+            Log.d("Mangoporn", "itemsCount=${items.size}")
+            items
         } catch (e: Exception) {
-            Log.d("Mangoporn", "$url: ${e.message}")
+            Log.d("Mangoporn", "url=$url error=${e.message}")
             try {
                 val fallbackUrl = if (page == 1) "$mainUrl/" else "$mainUrl/page/$page/"
-                val document    = app.get(fallbackUrl, headers = defaultHeaders, timeout = 10).document
-                document.select("article.card").mapNotNull { it.toSearchResult() }
+                val response    = app.get(fallbackUrl, headers = defaultHeaders, timeout = 10)
+                Log.d("Mangoporn", "fallbackCode=${response.code} fallbackUrl=${response.url}")
+                val cards       = response.document.select("article.card")
+                Log.d("Mangoporn", "fallbackCardsCount=${cards.size}")
+                val items       = cards.mapNotNull { it.toSearchResult() }
+                Log.d("Mangoporn", "fallbackItemsCount=${items.size}")
+                items
             } catch (fallbackEx: Exception) {
-                Log.d("Mangoporn", "$url: ${fallbackEx.message}")
+                Log.d("Mangoporn", "fallbackUrl=$url fallbackError=${fallbackEx.message}")
                 emptyList()
             }
         }
@@ -96,7 +111,7 @@ class Mangoporn : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2.card__t")?.text()?.trim()?.ifEmpty { null } ?: return null
+        val title = this.selectFirst("h2.card__t, h3.card__t")?.text()?.trim()?.ifEmpty { null } ?: return null
 
         if (title.contains(igrencRegex)) return null
 
@@ -118,8 +133,11 @@ class Mangoporn : MainAPI() {
         } else {
             "$mainUrl/page/$page/?s=$query"
         }
-        val document = app.get(url, headers = defaultHeaders, timeout = 10).document
-        val results  = document.select("article.card, article, div.video-block, div.ml-item").mapNotNull { it.toSearchResult() }
+        Log.d("Mangoporn", "query=$query page=$page url=$url")
+        val response = app.get(url, headers = defaultHeaders, timeout = 10)
+        Log.d("Mangoporn", "code=${response.code} url=${response.url}")
+        val results  = response.document.select("article.card, article, div.video-block, div.ml-item").mapNotNull { it.toSearchResult() }
+        Log.d("Mangoporn", "resultsCount=${results.size}")
 
         return newSearchResponseList(results, hasNext = true)
     }
@@ -127,28 +145,21 @@ class Mangoporn : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url, headers = defaultHeaders, timeout = 10).document
-        val jsonLd   = document.select("script[type=application/ld+json]").firstNotNullOfOrNull { el -> el.data().takeIf { it.contains("VideoObject") } }
-
-        val posterFromJson = jsonLd?.let {
-            Regex(""""thumbnailUrl"\s*:\s*"([^"]+)"""").find(it)?.groupValues?.get(1)
-        }
-        val descriptionFromJson = jsonLd?.let {
-            Regex(""""description"\s*:\s*"([^"]+)"""").find(it)?.groupValues?.get(1)
-        }
-
-        val title           = document.selectFirst("div.mvic-desc h3, div.data > h1, h1")?.text()?.trim()?.ifEmpty { null } ?: return null
-        val poster          = fixUrlNull(
-            posterFromJson?.ifEmpty { null }
-                ?: document.selectFirst("div.thumb img, div.poster > img")?.attr("data-wpfc-original-src")?.ifEmpty { null }
-                ?: document.selectFirst("div.thumb img, div.poster > img")?.attr("src")?.ifEmpty { null }
-        )
-        val plot            = descriptionFromJson?.ifEmpty { null }
-            ?: document.selectFirst("div.mvic-desc div.desc, div.wp-content > p")?.text()?.trim()?.ifEmpty { null }
-        val year            = document.selectFirst("a[href*=/release-year/], span.textco a[rel=tag]")?.text()?.trim()?.toIntOrNull()
-        val tags            = document.select("div.mvici-left a[href*=/genre/], span.valors a[href*=/genre/]").map { it.text().trim() }.filter { it.isNotEmpty() }
-        val actors          = document.select("div.mvici-left a[href*=/director/], div.persons a[href*=/pornstar/]").map { Actor(it.text().trim()) }
-        val recommendations = document.select("article.card, article, div.mlw-related div.ml-item, div.sbox.srelacionados article, div.video-block").mapNotNull { it.toSearchResult() }
+        Log.d("Mangoporn", "url=$url")
+        val response        = app.get(url, headers = defaultHeaders, timeout = 10)
+        Log.d("Mangoporn", "code=${response.code} url=${response.url}")
+        val document        = response.document
+        val title           = document.selectFirst("span.bc__c")?.text()?.trim()?.ifEmpty { null } ?: return null
+        val poster          = fixUrlNull(document.selectFirst("img.hlm-screen__poster")?.attr("src")?.ifEmpty { null })
+        val plot            = document.selectFirst("div.desc > p")?.text()?.trim()?.ifEmpty { null }
+        val year            = document.selectFirst("span.st--year")?.text()?.trim()?.toIntOrNull()
+        val tags            = document.select("div.row--chips a[href*=/movies/genre/]").map { it.text().trim() }.filter { it.isNotEmpty() }
+        val actors          = document.select("div.row--stars a[href*=/movies/pornstar/]").map { Actor(it.text().trim()) }
+        val duration        = document.selectFirst("span.st--duration")?.text()?.trim()
+        val recommendations = document.select("section.sec article.card").mapNotNull { it.toSearchResult() }
+        val sources         = Regex(""""u":"([^"]+)"""").findAll(document.selectFirst("section.hlm[data-servers]")?.attr("data-servers").orEmpty()).toList()
+        if (sources.isEmpty()) throw ErrorLoadingException("NO sources found!")
+        Log.d("Mangoporn", "title=$title recommendationsCount=${recommendations.size}")
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl       = poster
@@ -157,14 +168,18 @@ class Mangoporn : MainAPI() {
             this.tags            = tags
             this.recommendations = recommendations
             this.posterHeaders   = imageHeaders
-            addDuration(document.selectFirst("span.mli-meta, span.duration")?.text()?.trim())
+            addDuration(duration)
             addActors(actors)
         }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val document = app.get(data, headers = defaultHeaders, timeout = 10).document
-        val links    = document.select("div#pettabs div.Rtable1-cell a[href], div#pettabs > ul a[href]").mapNotNull { fixUrlNull(it.attr("href").ifEmpty { null }) }
+        Log.d("Mangoporn", "data=$data")
+        val response = app.get(data, headers = defaultHeaders, timeout = 10)
+        Log.d("Mangoporn", "code=${response.code} url=${response.url}")
+        val document = response.document
+        val links    = Regex(""""u":"([^"]+)"""").findAll(document.selectFirst("section.hlm[data-servers]")?.attr("data-servers").orEmpty()).map { fixUrl(it.groupValues[1].replace("\\/", "/")) }.toList()
+        Log.d("Mangoporn", "linksCount=${links.size}")
         if (links.isEmpty()) return false
 
         return coroutineScope {
@@ -172,7 +187,8 @@ class Mangoporn : MainAPI() {
                 async {
                     try {
                         loadExtractor(linkUrl, "$mainUrl/", subtitleCallback, callback)
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        Log.d("Mangoporn", "linkUrl=$linkUrl error=${e.message}")
                         false
                     }
                 }
@@ -191,7 +207,7 @@ private val igrencKelimeler = listOf(
     "Zaddy", "Chosen family", "Closet case", "Out and proud",
     "Henny", "Queening out", "Slay", "Camp", "Fishy", "Cruising", "Bathhouse", "Power bottom",
     "Situationship", "Pegging", "Femdom", "futa", "strap-on", "strapon", "tranny", "tribute", "crossdress",
-    "t-girl", "tgirl", "Bisexual", "Intersex", "LGBTQ", "TS", "TGirl", "T-Boy", "Transsexual",
+    "t-girl", "tgirl", "Bisexual", "Intersex", "LGBTQ", "TS", "TGirl", "T-Boy", "Transsexual", "shemale",
 )
 
 private val igrencRegex = Regex("\\b(${igrencKelimeler.joinToString("|") { Regex.escape(it) }})\\w*\\b", RegexOption.IGNORE_CASE)
