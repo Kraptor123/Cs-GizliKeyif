@@ -148,7 +148,7 @@ class PornWatch : MainAPI() {
         val durIso              = j("duration")
         val tagsFromJson        = jArr("genre").orEmpty()
 
-        val title = document.selectFirst("h1.vid__t span.fit")?.text()?.trim()?.removePrefix("Watching: ")?.trim()?.ifEmpty { null } ?: return null
+        val title = document.selectFirst("span.bc__c")?.text()?.trim()?.ifEmpty { null } ?: return null
 
         if (title.contains(igrencRegex) || url.contains(igrencRegex)) return null
 

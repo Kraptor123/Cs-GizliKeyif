@@ -70,7 +70,7 @@ class WatchPorn : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) request.data else "${request.data}$page/"
         val document = app.get(url).document
-        val home = document.select("div.thumb.item").mapNotNull { it.toMainPageResult() }
+        val home = document.select("div.wp-card").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
             list = listOf(
@@ -84,10 +84,10 @@ class WatchPorn : MainAPI() {
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val title = this.selectFirst("span.thumb__title")?.text()?.trim() ?: return null
-        val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-webp") ?: this.selectFirst("img")?.attr("src"))
-        val rating = this.select("span.thumb__meta-item").lastOrNull()?.text()?.replace("%", "")?.trim()
+        val title = this.selectFirst("a.wp-card__link")?.attr("title")?.trim()?.ifEmpty { null } ?: return null
+        val href = fixUrlNull(this.selectFirst("a.wp-card__link")?.attr("href")) ?: return null
+        val posterUrl = fixUrlNull(this.selectFirst("img.thumb")?.attr("data-webp")?.ifEmpty { null } ?: this.selectFirst("img.thumb")?.attr("src"))
+        val rating = this.selectFirst("span.wp-r")?.text()?.replace("%", "")?.trim()
 
         return newMovieSearchResponse(title, "$href|$posterUrl", TvType.NSFW) {
             this.posterUrl = posterUrl
@@ -96,16 +96,17 @@ class WatchPorn : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = "${mainUrl}/search/?q=$query&mode=async&function=get_block&block_id=list_videos_videos_list_search_result&category_ids=&sort_by=&from_videos=$page"
+        val url = "${mainUrl}/search/?q=$query&from_videos=$page"
         val document = app.get(url).document
 
-        val aramaCevap = document.select("div.thumb.item").mapNotNull { it.toMainPageResult() }
-        val hasNext = document.selectFirst("li.next") != null
+        val aramaCevap = document.select("div.wp-card").mapNotNull { it.toMainPageResult() }
+        val totalPages = document.selectFirst("form.wp-pag__go")?.attr("data-total")?.toIntOrNull()
+        val hasNext = totalPages != null && page < totalPages
 
         return newSearchResponseList(aramaCevap, hasNext)
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query, 1).items
 
     override suspend fun load(data: String): LoadResponse? {
         val (url, storedPoster) = data.split("|").let {
@@ -116,13 +117,13 @@ class WatchPorn : MainAPI() {
         val document = response.document
         val cookies = response.cookies.toString()
 
-        val title = document.selectFirst("h1.single__content-title")?.text()?.trim() ?: return null
+        val title = document.selectFirst("h1.wp-vi__title")?.text()?.trim()?.ifEmpty { null } ?: return null
         val poster = storedPoster ?: document.selectFirst("meta[property=og:image]")?.attr("content")
 
-        val tags = document.select("div.single__info-row:contains(Tags:) a").map { it.text().trim() }
-        val actors = document.select("div.single__info-row:contains(Models:) a").map { Actor(it.text().trim()) }
+        val tags = document.select("div.wp-chips a, div.wp-tags a").map { it.text().trim() }
+        val actors = document.select("div.wp-castrow a.wp-cast span.wp-cast__n").map { Actor(it.text().trim()) }
 
-        val durationText = document.selectFirst("div.fp-time-duration")?.text()?.trim()
+        val durationText = document.select("div.wp-vmeta span").map { it.text().trim() }.firstOrNull { it.matches(Regex("\\d+:\\d+")) }
         val parts = durationText?.split(":")?.mapNotNull { it.toIntOrNull() }
         val totalMinutes = when (parts?.size) {
             3 -> (parts[0] * 60) + parts[1]
@@ -130,7 +131,7 @@ class WatchPorn : MainAPI() {
             else -> null
         }
 
-        val recommendations = document.select("div.related-videos div.thumb.item").mapNotNull {
+        val recommendations = document.select("div.related-videos div.wp-card").mapNotNull {
             it.toMainPageResult()
         }
 
@@ -146,7 +147,7 @@ class WatchPorn : MainAPI() {
             this.recommendations = recommendations
             addActors(actors)
 
-            Log.d("Cloudstream", "Loaded Video: $title")
+            Log.d(name, "Loaded Video: $title")
         }
     }
 
