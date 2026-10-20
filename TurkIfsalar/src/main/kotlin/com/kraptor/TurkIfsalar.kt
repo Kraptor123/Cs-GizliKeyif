@@ -2,12 +2,11 @@
 
 package com.kraptor
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class TurkIfsalar : MainAPI() {
     override var mainUrl              = "https://turkifsalar2.site"
@@ -47,7 +46,6 @@ class TurkIfsalar : MainAPI() {
         "${mainUrl}/kategori/bbc"                 to "BBC",
         "${mainUrl}/kategori/aldatan"             to "Aldatan",
         "${mainUrl}/kategori/swinger"             to "Swinger",
-        "${mainUrl}/kategori/gizli-cekim"         to "Gizli Çekim",
         "${mainUrl}/kategori/masaj"               to "Masaj",
     )
 
@@ -67,31 +65,44 @@ class TurkIfsalar : MainAPI() {
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("h3")?.text() ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
+        val rawHref   = this.attr("href").ifEmpty { this.selectFirst("a")?.attr("href") }
+        val href      = fixUrlNull(rawHref) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val jsonResponse = app.get("${mainUrl}/api/search?q=$query&sort=relevant", headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Safari/605.1.15",
-            "Accept" to "application/json",
-            "Referer" to mainUrl,
-        )).text
+        val apiResponse = app.get(
+            "${mainUrl}/api/search?q=$query&sort=relevant",
+            headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:158.0) Gecko/20100101 Firefox/158.0",
+                "Accept" to "application/json",
+                "Referer" to mainUrl,
+            )
+        ).parsedSafe<SearchApiResponse>()
 
-        val videoRegex = Regex("""\{"id":"[^"]+","title":"([^"]+)","slug":"([^"]+)"[^}]+?"thumbnail_url":"([^"]+)"""")
-
-        val aramaCevap = videoRegex.findAll(jsonResponse).map { match ->
-            val title = match.groupValues[1]
-            val slug = match.groupValues[2]
-            val posterUrl = match.groupValues[3].replace("\\/", "/")
+        val directVideos = apiResponse?.videos?.mapNotNull { video ->
+            val title     = video.title ?: return@mapNotNull null
+            val slug      = video.slug ?: return@mapNotNull null
             val videoHref = "$mainUrl/shorts/$slug"
+            val posterUrl = fixUrlNull(video.thumbnailUrl)
 
             newMovieSearchResponse(title, videoHref, TvType.NSFW) {
                 this.posterUrl = posterUrl
             }
-        }.toList()
+        }.orEmpty()
+
+        val starVideos = apiResponse?.stars?.mapNotNull { star ->
+            val slug    = star.slug ?: return@mapNotNull null
+            val starUrl = "$mainUrl/star/$slug"
+            runCatching {
+                val document = app.get(starUrl).document
+                document.select("a.video-card-hover").mapNotNull { it.toMainPageResult() }
+            }.getOrNull()?.distinctBy { it.url }
+        }?.flatten().orEmpty()
+
+        val aramaCevap = (directVideos + starVideos).distinctBy { it.url }
 
         return newSearchResponseList(aramaCevap, hasNext = false)
     }
@@ -130,7 +141,7 @@ class TurkIfsalar : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("kraptor_$name", "data = ${data}")
+        Log.d("kraptor_$name", "data = $data")
         val document = app.get(data).document
 
         val video = fixUrlNull(document.selectFirst("meta[property=og:video]")?.attr("content")).toString()
@@ -148,3 +159,23 @@ class TurkIfsalar : MainAPI() {
         return true
     }
 }
+
+private data class SearchStar(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("name") val name: String? = null,
+    @JsonProperty("slug") val slug: String? = null,
+    @JsonProperty("avatar_url") val avatarUrl: String? = null,
+    @JsonProperty("cover_url") val coverUrl: String? = null,
+)
+
+private data class SearchVideo(
+    @JsonProperty("id") val id: String? = null,
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("slug") val slug: String? = null,
+    @JsonProperty("thumbnail_url") val thumbnailUrl: String? = null,
+)
+
+private data class SearchApiResponse(
+    @JsonProperty("videos") val videos: List<SearchVideo>? = null,
+    @JsonProperty("stars") val stars: List<SearchStar>? = null,
+)
