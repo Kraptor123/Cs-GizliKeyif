@@ -64,6 +64,21 @@ open class Filemoon(
     companion object {
         private const val TAG = "FileMoonExtractor"
 
+        val DOMAINS = listOf(
+            "https://filemoon.to", "https://filemoon.sx", "https://filemoon.in", "https://filemoon.link",
+            "https://filemoon.wf", "https://filemoon.eu", "https://filemoon.art", "https://filemoon.nl",
+            "https://cinegrab.com", "https://moonmov.pro", "https://96ar.com", "https://kerapoxy.cc",
+            "https://furher.in", "https://1azayf9w.xyz", "https://81u6xl9d.xyz", "https://smdfs40r.skin",
+            "https://c1z39.com", "https://bf0skv.org", "https://z1ekv717.fun", "https://l1afav.net",
+            "https://222i8x.lol", "https://8mhlloqo.fun", "https://f51rm.com", "https://xcoic.com",
+            "https://boosteradx.online", "https://streamlyplayer.online", "https://streamlyplayero.online",
+            "https://bysewihe.com", "https://byselapuix.com", "https://embedplaybyse.top",
+            "https://sb1254w9megshle.org", "https://moflix-stream.link", "https://bysezoxexe.com",
+            "https://f16px.com", "https://bysesayeveum.com", "https://bysetayico.com", "https://bysevepoin.com",
+            "https://bysezejataos.com", "https://bysekoze.com", "https://bysesukior.com", "https://bysejikuar.com",
+            "https://bysefujedu.com", "https://bysedikamoum.com", "https://bysebuho.com", "https://byse.sx"
+        )
+
         private const val UA =
             "Mozilla/5.0 (Linux; Android 10; TX6s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
 
@@ -580,10 +595,22 @@ open class Filemoon(
 }
 
 
-open class Streamwish : ExtractorApi() {
+open class Streamwish(
+    override var mainUrl: String = "https://streamwish.to"
+) : ExtractorApi() {
     override var name = "Streamwish"
-    override var mainUrl = "https://streamwish.to"
     override val requiresReferer = false
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://streamwish.to",
+            "https://streamhihi.com",
+            "https://javsw.me",
+            "https://swhoi.com",
+            "https://javmoon.me",
+            "https://javclan.com"
+        )
+    }
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val responsecode = app.get(url)
@@ -617,11 +644,25 @@ open class Streamwish : ExtractorApi() {
 
 class Streamhihi : Streamwish() { override var name = "Streamhihi"; override var mainUrl = "https://streamhihi.com" }
 class Javsw : Streamwish() { override var mainUrl = "https://javsw.me"; override var name = "Javsw" }
+class Javclan : Streamwish() { override var mainUrl = "https://javclan.com"; override var name = "Javclan" }
+class StreamHQ : Streamwish() { override var mainUrl = "https://javclan.com"; override var name = "StreamHQ" }
 
-open class VidHidePro : ExtractorApi() {
+open class VidHidePro(
+    override var mainUrl: String = "https://vidhidepro.com"
+) : ExtractorApi() {
     override var name = "VidHidePro"
-    override var mainUrl = "https://vidhidepro.com"
     override val requiresReferer = true
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://vidhidepro.com", "https://vidhidevip.com", "https://javlion.xyz",
+            "https://filelions.live", "https://filelions.online", "https://filelions.to",
+            "https://kinoger.be", "https://vidhidepre.com", "https://vidhidehub.com",
+            "https://dhcplay.com", "https://smoothpre.com", "https://dhtpre.com",
+            "https://peytonepre.com", "https://movearnpre.com", "https://dintezuvio.com",
+            "https://hglink.to", "https://ryderjet.com", "https://mycloudz.cc"
+        )
+    }
 
     override suspend fun getUrl(
         url: String,
@@ -685,19 +726,7 @@ class Turboplayers : StreamTape() { override var mainUrl = "https://turboplayers
 
 
 
-class Javclan : ExtractorApi() {
-    override var name = "Javclan"
-    override var mainUrl = "https://javclan.com"
-    override val requiresReferer = true
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val res = app.get(url, referer = referer)
-        val script = res.document.selectFirst("script:containsData(sources)")?.data().toString()
-        Regex("file:\"(.*?)\"").find(script)?.groupValues?.get(1)?.let { link ->
-            return listOf(newExtractorLink(name, name, link, INFER_TYPE) { this.referer = referer ?: "" })
-        }
-        return null
-    }
-}
+
 
 class Javggvideo : ExtractorApi() {
     override var name = "Javgg Video"
@@ -845,10 +874,24 @@ open class Vidguardto : ExtractorApi() {
 }
 
 
-open class LULUBASE : ExtractorApi() {
+open class LULUBASE(
+    override val mainUrl: String = "https://luluvid.com"
+) : ExtractorApi() {
     override val name = "LuluStream"
-    override val mainUrl = "https://luluvid.com"
     override val requiresReferer = true
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://luluvid.com",
+            "https://lulustream.com",
+            "https://luluvdo.com",
+            "https://luluvdoo.com",
+            "https://lulupvp.com",
+            "https://lulu.dlc.ovh",
+            "https://lulu0.ovh",
+            "https://x08.ovh"
+        )
+    }
 
     override suspend fun getUrl(
         url: String,
@@ -938,6 +981,10 @@ class LULUX08 : LULUBASE() {
     override val mainUrl = "https://x08.ovh/"
 }
 
+class StreamHihiLulu : LULUBASE() {
+    override val name = "Lulustream"
+    override val mainUrl = "https://streamhihi.com"
+}
 
 class VidNest : ExtractorApi() {
     override val name = "VidNest"
@@ -1002,10 +1049,24 @@ class VidNest : ExtractorApi() {
 
 
 
-open class Player4Me : ExtractorApi() {
+open class Player4Me(
+    override var mainUrl: String = "https://my.player4me.online"
+) : ExtractorApi() {
     override var name = "Player4Me"
-    override var mainUrl = "https://my.player4me.online"
     override val requiresReferer = true
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://my.player4me.online",
+            "https://vip.player4me.vip",
+            "https://my.rpmplay.online",
+            "https://my.upns.online",
+            "https://my.embedseek.online",
+            "https://vip.seekplayer.vip",
+            "https://p.easyvidplayer.com",
+            "https://vip.easyvidplayer.com"
+        )
+    }
 
     override suspend fun getUrl(
         url: String,
@@ -1094,10 +1155,24 @@ class VipEasyVidPlayer : Player4Me() {
 
 
 
-open class DoodStream : ExtractorApi() {
+open class DoodStream(
+    override var mainUrl: String = "https://myvidplay.com"
+) : ExtractorApi() {
     override var name = "DoodStream"
-    override var mainUrl = "https://myvidplay.com"
     override val requiresReferer = true
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://myvidplay.com",
+            "https://playmogo.com",
+            "https://doply.net",
+            "https://dood.pm",
+            "https://vide0.net",
+            "https://ds2play.com",
+            "https://d000d.com",
+            "https://dooood.com"
+        )
+    }
 
     override suspend fun getUrl(
         url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit
@@ -1172,47 +1247,24 @@ class Dooood : DoodStream() {
 
 
 
-class javclan : ExtractorApi() {
-    override var name = "Javclan"
-    override var mainUrl = "https://javclan.com"
-    override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val responsecode=app.get(url,referer=referer)
-        if (responsecode.code==200) {
-            val serverRes = responsecode.document
-            val script = serverRes.selectFirst("script:containsData(sources)")?.data().toString()
-            val headers = mapOf(
-                "Accept" to "*/*",
-                "Connection" to "keep-alive",
-                "Sec-Fetch-Dest" to "empty",
-                "Sec-Fetch-Mode" to "cors",
-                "Sec-Fetch-Site" to "cross-site",
-                "Origin" to url,
-            )
-            Regex("file:\"(.*?)\"").find(script)?.groupValues?.get(1)?.let { link ->
-                return listOf(
-                    newExtractorLink(
-                        source = this.name,
-                        name = this.name,
-                        url = link,
-                        INFER_TYPE
-                    ) {
-                        this.referer = referer ?: ""
-                        this.quality = getQualityFromName("")
-                        this.headers = headers
-                    }
-                )
-            }
-        }
-        return null
-    }
-}
 
-open class StreamTAPE : ExtractorApi() {
+open class StreamTAPE(
+    override val mainUrl: String = "https://streamtape.com"
+) : ExtractorApi() {
     override val name = "Streamtape"
-    override val mainUrl = "https://streamtape.com"
     override val requiresReferer = true
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://streamtape.com",
+            "https://watchadsontape.com",
+            "https://stape.fun",
+            "https://streamtape.net",
+            "https://streamtape.xyz",
+            "https://shavetape.cash"
+        )
+    }
 
     private val stapeHeaders = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
@@ -1326,22 +1378,30 @@ class ShaveTape : StreamTAPE() {
     override var mainUrl = "https://shavetape.cash"
 }
 
-class Lancewhoisdifficult: Voe() {
-    override var mainUrl = "https://lancewhosedifficult.com"
-}
-
-class Javlesbians: Voe() {
-    override var mainUrl = "https://javlesbians.com"
-}
-
-class Stevenfamilyedge : Voe() {
-    override var mainUrl = "https://stevenfamilyedge.com"
-}
-
-class Vloe : Voe() {
+open class VOE(
+    override var mainUrl: String = "https://voe.sx"
+) : Voe() {
     override var name = "Voe"
-    override var mainUrl = "https://vloe.tv"
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://voe.sx",
+            "https://voe-unblock.com",
+            "https://voeunblock.com",
+            "https://lancewhosedifficult.com",
+            "https://javlesbians.com",
+            "https://stevenfamilyedge.com",
+            "https://vloe.tv",
+            "https://derricknationtop.com"
+        )
+    }
 }
+
+class Lancewhoisdifficult : VOE() { override var mainUrl = "https://lancewhosedifficult.com" }
+class Javlesbians : VOE() { override var mainUrl = "https://javlesbians.com" }
+class Stevenfamilyedge : VOE() { override var mainUrl = "https://stevenfamilyedge.com" }
+class Vloe : VOE() { override var mainUrl = "https://vloe.tv" }
+class Derricknationtop : VOE() { override var mainUrl = "https://derricknationtop.com" }
 
 
 
@@ -1670,3 +1730,168 @@ class KPBysedikamoum : Filemoon() { override var name = "Byse"; override var mai
 class KPBysebuho : Filemoon() { override var name = "Byse"; override var mainUrl = "https://bysebuho.com" }
 class KPByseSx : Filemoon() { override var name = "Byse"; override var mainUrl = "https://byse.sx" }
 class KPByseqekaho : Filemoon() { override var name = "Byse"; override var mainUrl = "https://byseqekaho.com" }
+
+open class Maxstream(
+    override var mainUrl: String = "https://maxstream.org"
+) : ExtractorApi() {
+    override var name             = "Maxstream"
+    override val requiresReferer  = true
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://maxstream.org",
+            "https://maxstream.7489.hk",
+            "https://maxstream.video",
+            "https://maxstream.online",
+            "https://maxstream.cx",
+            "https://maxstream.cc",
+            "https://maxstream.sbs"
+        )
+    }
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val embedUrl = getEmbedUrl(url)
+        val headers  = mapOf(
+            "User-Agent"      to USER_AGENT,
+            "Referer"         to "$mainUrl/",
+            "Origin"          to mainUrl,
+            "Accept"          to "*/*",
+            "Accept-Language" to "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+        )
+
+        val response = app.get(embedUrl, headers = headers, referer = referer ?: "$mainUrl/")
+        if (response.code != 200) return
+        val document = response.text
+
+        val script = if (!getPacked(document).isNullOrEmpty()) {
+            getAndUnpack(document)
+        } else {
+            document
+        }
+
+        val m3u8Url = Regex("""file\s*:\s*["']([^"']+)["']""").find(script)?.groupValues?.get(1)
+            ?: Regex("""["'](https?://[^"']+\.m3u8[^"']*)["']""").find(script)?.groupValues?.get(1)
+            ?: Regex("""file\s*:\s*["']([^"']+)["']""").find(document)?.groupValues?.get(1)
+            ?: return
+
+        val masterUrl = fixUrl(m3u8Url)
+        val masterRes = app.get(masterUrl, headers = headers)
+        if (masterRes.code != 200) return
+        val masterBody = masterRes.text
+
+        val indexUrl = Regex("""(https?://[^\s"']+\.m3u8[^\s"']*)""").find(masterBody)?.groupValues?.get(1)
+        val playUrl  = if (!indexUrl.isNullOrBlank()) fixUrl(indexUrl) else masterUrl
+
+        callback.invoke(
+            newExtractorLink(
+                source  = name,
+                name    = name,
+                url     = playUrl,
+                type    = ExtractorLinkType.M3U8
+            ) {
+                this.headers = headers
+                this.referer = "$mainUrl/"
+            }
+        )
+    }
+
+    private fun getEmbedUrl(url: String): String {
+        return if (!url.contains("/embed-") && !url.endsWith(".html")) {
+            val id = url.substringAfterLast("/")
+            "$mainUrl/embed-$id.html"
+        } else {
+            url
+        }
+    }
+}
+
+class Maxstream7489 : Maxstream() { override var mainUrl = "https://maxstream.7489.hk" }
+class MaxstreamVideo : Maxstream() { override var mainUrl = "https://maxstream.video" }
+class MaxstreamOnline : Maxstream() { override var mainUrl = "https://maxstream.online" }
+class MaxstreamCx : Maxstream() { override var mainUrl = "https://maxstream.cx" }
+class MaxstreamCc : Maxstream() { override var mainUrl = "https://maxstream.cc" }
+class MaxstreamSbs : Maxstream() { override var mainUrl = "https://maxstream.sbs" }
+
+open class Vinovo : ExtractorApi() {
+    override var name = "Vinovo"
+    override var mainUrl = "https://vinovo.to"
+    override val requiresReferer = true
+
+    companion object {
+        val DOMAINS = listOf(
+            "https://vinovo.to",
+            "https://vinovo.si"
+        )
+    }
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        Log.d("Vinovo", "url=$url referer=$referer")
+        val baseUrl = runCatching { URI(url).let { "${it.scheme}://${it.host}" } }.getOrDefault(mainUrl)
+        val res = app.get(
+            url,
+            referer = referer ?: "$baseUrl/",
+            headers = mapOf("User-Agent" to USER_AGENT)
+        )
+        Log.d("Vinovo", "code=${res.code}")
+        val doc = res.document
+        val fileCode = doc.selectFirst("meta[name=file_code]")?.attr("content")?.ifEmpty { null }
+            ?: Regex("""/e/([a-zA-Z0-9]+)""").find(url)?.groupValues?.get(1)
+            ?: run {
+                Log.d("Vinovo", "fileCode null")
+                return null
+            }
+        val token = doc.selectFirst("meta[name=token]")?.attr("content")?.ifEmpty { null } ?: run {
+            Log.d("Vinovo", "token null")
+            return null
+        }
+        val dataBase = doc.selectFirst("#video")?.attr("data-base")?.ifEmpty { null } ?: "https://fs-c30b01.vincdn.net"
+        Log.d("Vinovo", "fileCode=$fileCode token=$token dataBase=$dataBase")
+
+        val apiUrl = "$baseUrl/api/file/url/$fileCode"
+        val apiRes = app.post(
+            apiUrl,
+            headers = mapOf(
+                "Referer" to url,
+                "Origin" to baseUrl,
+                "X-Requested-With" to "XMLHttpRequest",
+                "User-Agent" to USER_AGENT
+            ),
+            cookies = res.cookies,
+            data = mapOf(
+                "recaptcha" to "",
+                "token" to token
+            )
+        )
+        Log.d("Vinovo", "apiCode=${apiRes.code} text=${apiRes.text}")
+
+        val json = runCatching { JSONObject(apiRes.text) }.getOrNull() ?: return null
+        val streamHash = json.optString("h").ifEmpty { json.optString("token").ifEmpty { null } }
+        if (!streamHash.isNullOrBlank()) {
+            val videoUrl = "${dataBase.removeSuffix("/")}/stream/$streamHash"
+            Log.d("Vinovo", "videoUrl=$videoUrl")
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = videoUrl,
+                    type = ExtractorLinkType.VIDEO
+                ) {
+                    this.referer = "$baseUrl/"
+                    this.headers = mapOf(
+                        "Referer" to "$baseUrl/",
+                        "Origin" to baseUrl,
+                        "User-Agent" to USER_AGENT
+                    )
+                }
+            )
+        } else {
+            Log.d("Vinovo", "apiStatus=${json.optString("status")} message=${json.optString("message")}")
+        }
+        return null
+    }
+}

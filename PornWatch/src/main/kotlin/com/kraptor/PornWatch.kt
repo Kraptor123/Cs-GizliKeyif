@@ -235,6 +235,7 @@ class PornWatch : MainAPI() {
             val jobs = hostLinks.map { linkUrl ->
                 async {
                     try {
+                        Log.d("PornWatch", "linkUrl=$linkUrl")
                         loadExtractor(linkUrl, "$mainUrl/", subtitleCallback, callback)
                     } catch (e: Exception) {
                         Log.d("PornWatch", "linkUrl=$linkUrl error=${e.message}")

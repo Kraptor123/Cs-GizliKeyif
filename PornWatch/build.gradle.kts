@@ -1,5 +1,5 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
-version = 26
+version = 27
 
 cloudstream {
     authors     = listOf("Kraptor")

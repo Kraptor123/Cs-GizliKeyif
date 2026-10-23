@@ -1,96 +1,35 @@
 // ! Bu araç @Kraptor123 tarafından | @Cs-GizliKeyif için yazılmıştır.
 package com.byayzen
-import com.kraptor.ortak.extractor.*
-import com.kraptor.ortak.extractor.StreamTapeNet
-import com.kraptor.ortak.extractor.StreamTapeXyz
-import com.kraptor.ortak.extractor.Turboplayers
-import com.kraptor.ortak.extractor.VidHidePro
-import com.kraptor.ortak.extractor.VidHidePro1
-import com.kraptor.ortak.extractor.VidHidePro2
-import com.kraptor.ortak.extractor.VidHidePro3
-import com.kraptor.ortak.extractor.VidHidePro4
-import com.kraptor.ortak.extractor.VidHidePro6
-import com.kraptor.ortak.extractor.VidHidePro7
-import com.kraptor.ortak.extractor.VidhideVIP
-import com.kraptor.ortak.extractor.CloudWish
-import com.kraptor.ortak.extractor.Dooood
-import com.kraptor.ortak.extractor.Javlion
-import com.kraptor.ortak.extractor.Dhcplay
-import com.kraptor.ortak.extractor.Smoothpre
-import com.kraptor.ortak.extractor.Dhtpre
-import com.kraptor.ortak.extractor.Peytonepre
-import com.kraptor.ortak.extractor.Movearnpre
-import com.kraptor.ortak.extractor.Dintezuvio
-import com.kraptor.ortak.extractor.Streamwish
-import com.kraptor.ortak.extractor.Streamhihi
-import com.kraptor.ortak.extractor.Javsw
-import com.kraptor.ortak.extractor.swhoi
-import com.kraptor.ortak.extractor.MixDropis
-import com.kraptor.ortak.extractor.Javggvideo
-import com.kraptor.ortak.extractor.DoodPmExtractor
-import com.kraptor.ortak.extractor.VidNest
-import com.kraptor.ortak.extractor.Playmogo
-import com.kraptor.ortak.extractor.ShaveTape
-import com.kraptor.ortak.extractor.Watchadsontape
-import com.kraptor.ortak.extractor.Playmate
 
+import com.kraptor.ortak.extractor.*
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import com.kraptor.*
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
-import com.lagradost.cloudstream3.extractors.Maxstream
-import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.extractors.VidStack
+import com.lagradost.cloudstream3.extractors.Voe
 
 @CloudstreamPlugin
 class SextbPlugin: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Sextb())
-        registerExtractorAPI(StreamTape())
-        registerExtractorAPI(StreamTapeNet())
-        registerExtractorAPI(StreamTapeXyz())
-        registerExtractorAPI(Turboplayers())
-        registerExtractorAPI(DoodStream())
-        registerExtractorAPI(DoodDoply())
-        registerExtractorAPI(DoodVideo())
-        registerExtractorAPI(Ds2Play())
-        registerExtractorAPI(d000d())
-        registerExtractorAPI(VidHidePro())
-        registerExtractorAPI(VidHidePro1())
-        registerExtractorAPI(VidHidePro2())
-        registerExtractorAPI(VidHidePro3())
-        registerExtractorAPI(VidHidePro4())
-        registerExtractorAPI(VidHidePro6())
-        registerExtractorAPI(VidHidePro7())
-        registerExtractorAPI(VidhideVIP())
+
+        Filemoon.DOMAINS.forEach { registerExtractorAPI(Filemoon(it)) }
+        VidHidePro.DOMAINS.forEach { registerExtractorAPI(VidHidePro(it)) }
+        Streamwish.DOMAINS.forEach { registerExtractorAPI(Streamwish(it)) }
+        LULUBASE.DOMAINS.forEach { registerExtractorAPI(LULUBASE(it)) }
+        Player4Me.DOMAINS.forEach { registerExtractorAPI(Player4Me(it)) }
+        DoodStream.DOMAINS.forEach { registerExtractorAPI(DoodStream(it)) }
+        StreamTAPE.DOMAINS.forEach { registerExtractorAPI(StreamTAPE(it)) }
+        Maxstream.DOMAINS.forEach { registerExtractorAPI(Maxstream(it)) }
+        VOE.DOMAINS.forEach { registerExtractorAPI(VOE(it)) }
+
         registerExtractorAPI(CloudWish())
-        registerExtractorAPI(Dooood())
-        registerExtractorAPI(Javlion())
-        registerExtractorAPI(Dhcplay())
-        registerExtractorAPI(Smoothpre())
-        registerExtractorAPI(Dhtpre())
-        registerExtractorAPI(Peytonepre())
-        registerExtractorAPI(Movearnpre())
-        registerExtractorAPI(Dintezuvio())
-        registerExtractorAPI(Streamwish())
-        registerExtractorAPI(Streamhihi())
-        registerExtractorAPI(Javsw())
-        registerExtractorAPI(swhoi())
         registerExtractorAPI(MixDropis())
-        //   registerExtractorAPI(Javclan())
-        registerExtractorAPI(Maxstream())
         registerExtractorAPI(Javggvideo())
         registerExtractorAPI(EmturbovidExtractor())
-        registerExtractorAPI(DoodPmExtractor())
         registerExtractorAPI(VidNest())
-        registerExtractorAPI(HgLink())
-        registerExtractorAPI(RyderJet())
-        registerExtractorAPI(UpnsOnline())
-        registerExtractorAPI(EmbedSeek())
-        registerExtractorAPI(VipSeekPlayer())
-        registerExtractorAPI(EasyVidPlayer())
-        registerExtractorAPI(VipEasyVidPlayer())
-        registerExtractorAPI(MyCloudZ())
         registerExtractorAPI(VidStack())
         registerExtractorAPI(StbP2P())
         registerExtractorAPI(Playerupnone())
@@ -98,70 +37,7 @@ class SextbPlugin: Plugin() {
         registerExtractorAPI(Turboviplay())
         registerExtractorAPI(MixDropAG())
         registerExtractorAPI(MixDropMy())
-        registerExtractorAPI(Player4Me())
-        registerExtractorAPI(Vip4me())
-        registerExtractorAPI(RPMShare())
-        registerExtractorAPI(Playmogo())
-        registerExtractorAPI(Voe())
-        registerExtractorAPI(Vloe())
-        registerExtractorAPI(Stape())
-        registerExtractorAPI(StreamTAPE())
-        registerExtractorAPI(ShaveTape())
-        registerExtractorAPI(Watchadsontape())
-        registerExtractorAPI(Lancewhoisdifficult())
-        registerExtractorAPI(Javlesbians())
-        registerExtractorAPI(LULUSTREAM())
-        registerExtractorAPI(LULUVDO())
-        registerExtractorAPI(LULUVDOO())
-        registerExtractorAPI(LULUPVP())
-        registerExtractorAPI(LULUDLC())
-        registerExtractorAPI(LULU0())
-        registerExtractorAPI(LULUX08())
-        registerExtractorAPI(KPFilemoonSx())
-        registerExtractorAPI(KPFilemoonIn())
-        registerExtractorAPI(KPFilemoonLink())
-        registerExtractorAPI(KPFilemoonWf())
-        registerExtractorAPI(KPFilemoonEu())
-        registerExtractorAPI(KPFilemoonArt())
-        registerExtractorAPI(KPFilemoonNl())
-        registerExtractorAPI(KPCinegrab())
-        registerExtractorAPI(KPMoonmov())
-        registerExtractorAPI(KPNineSixAr())
-        registerExtractorAPI(KPKerapoxy())
-        registerExtractorAPI(KPFurher())
-        registerExtractorAPI(KPOneAzayf9w())
-        registerExtractorAPI(KPEightOneU6xl9d())
-        registerExtractorAPI(KPSmdfs40r())
-        registerExtractorAPI(KPC1z39())
-        registerExtractorAPI(KPBf0skv())
-        registerExtractorAPI(KPZ1ekv717())
-        registerExtractorAPI(KPL1afav())
-        registerExtractorAPI(KPTwoTwoTwoi8x())
-        registerExtractorAPI(KPEightMhlloqo())
-        registerExtractorAPI(KPF51rm())
-        registerExtractorAPI(KPXcoic())
-        registerExtractorAPI(KPBoosteradx())
-        registerExtractorAPI(KPStreamlyplayer())
-        registerExtractorAPI(KPStreamlyplayero())
-        registerExtractorAPI(KPBysewihe())
-        registerExtractorAPI(KPByselapuix())
-        registerExtractorAPI(KPEmbedplaybyse())
-        registerExtractorAPI(KPSb1254w9megshle())
-        registerExtractorAPI(KPMoflixStream())
-        registerExtractorAPI(KPBysezoxexe())
-        registerExtractorAPI(KPF16px())
-        registerExtractorAPI(KPBysesayeveum())
-        registerExtractorAPI(KPBysetayico())
-        registerExtractorAPI(KPBysevepoin())
-        registerExtractorAPI(KPBysezejataos())
-        registerExtractorAPI(KPBysekoze())
-        registerExtractorAPI(KPBysesukior())
-        registerExtractorAPI(KPBysejikuar())
-        registerExtractorAPI(KPBysefujedu())
-        registerExtractorAPI(KPBysedikamoum())
-        registerExtractorAPI(KPBysebuho())
-        registerExtractorAPI(KPByseSx())
-        registerExtractorAPI(KPByseqekaho())
+        registerExtractorAPI(Vinovo())
         registerExtractorAPI(Playmate())
     }
 }
