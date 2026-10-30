@@ -85,19 +85,29 @@ class Aki : MainAPI() {
             "${request.data.removeSuffix("/")}/page/$page/"
         }
 
-        val res  = app.get(url)
-        val doc  = res.document
-        val home = doc.select("div.film_list-wrap div.flw-item").mapNotNull {
+        val res     = app.get(url)
+        val doc     = res.document
+        val home    = doc.select("div.ak-grid div.ak-card, div.ak-card, div.film_list-wrap div.flw-item").mapNotNull {
             it.toSearchResult()
         }
+        val hasNext = doc.selectFirst("nav.ak-pager a[title*='Next'], nav.ak-pager li a:contains(›), nav.ak-pager li.active + li a") != null || home.isNotEmpty()
 
-        return newHomePageResponse(request.name, home, hasNext = true)
+        return newHomePageResponse(request.name, home, hasNext = hasNext)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title  = this.selectFirst("h3.film-name a")?.text() ?: return null
-        val href   = fixUrlNull(this.selectFirst("a.film-poster-ahref")?.attr("href")) ?: return null
-        val poster = fixUrlNull(this.selectFirst("img.film-poster-img")?.attr("data-src"))
+        val title  = this.selectFirst("h3.ak-card__title a, h3.ak-card__title, h3.film-name a")?.text()?.trim()
+            ?: this.selectFirst("a.ak-card__poster")?.attr("title")?.trim()
+            ?: this.selectFirst("a")?.attr("title")?.trim()
+            ?: return null
+        val href   = fixUrlNull(
+            this.selectFirst("a.ak-card__poster, h3.ak-card__title a, a.film-poster-ahref, a")?.attr("href")
+        ) ?: return null
+        val imgEl  = this.selectFirst("img")
+        val poster = fixUrlNull(
+            imgEl?.attr("data-src")?.takeIf { it.isNotBlank() }
+                ?: imgEl?.attr("src")?.takeIf { it.isNotBlank() }
+        )
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = poster
@@ -105,22 +115,24 @@ class Aki : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = "$mainUrl/search/"
-        val res = app.post(
+        val url = if (page <= 1) {
+            "$mainUrl/?s=$query"
+        } else {
+            "$mainUrl/page/$page/?s=$query"
+        }
+        val res = app.get(
             url,
-            data = mapOf("q" to query, "page" to page.toString()),
             headers = mapOf(
-                "Content-Type" to "application/x-www-form-urlencoded",
-                "Referer"      to "$mainUrl/"
+                "Referer" to "$mainUrl/"
             )
         )
-        val doc = res.document
-
-        val search = doc.select("div.film_list-wrap div.flw-item").mapNotNull {
+        val doc    = res.document
+        val search = doc.select("div.ak-grid div.ak-card, div.ak-card, div.film_list-wrap div.flw-item").mapNotNull {
             it.toSearchResult()
         }
+        val hasNext = doc.selectFirst("nav.ak-pager a[title*='Next'], nav.ak-pager li a:contains(›)") != null || search.isNotEmpty()
 
-        return newSearchResponseList(search, hasNext = search.isNotEmpty())
+        return newSearchResponseList(search, hasNext = hasNext)
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
@@ -128,28 +140,33 @@ class Aki : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         val res   = app.get(url)
         val doc   = res.document
-        val title = doc.selectFirst("h2.film-name.dynamic-name a")?.text()?.trim()
-            ?: doc.selectFirst("h2.film-name")?.text()?.trim()
-            ?: doc.selectFirst("h1")?.text()?.trim()
+        val title = doc.selectFirst("h1.ak-detail__title")?.text()?.trim()
+            ?: doc.selectFirst("h2.film-name.dynamic-name a, h2.film-name, h1")?.text()?.trim()
             ?: return null
 
         val poster = fixUrlNull(
-            doc.selectFirst("div.anis-cover")?.attr("style")?.let {
-                Regex("""url\((.*)\)""").find(it)?.groupValues?.get(1)
-            } ?: doc.selectFirst("meta[property=og:image]")?.attr("content")
+            doc.selectFirst("div.ak-detail__poster img")?.attr("src")
+                ?: doc.selectFirst("div.ak-detail__poster img")?.attr("data-src")
+                ?: doc.selectFirst("div.anis-cover")?.attr("style")?.let {
+                    Regex("""url\((.*)\)""").find(it)?.groupValues?.get(1)
+                }
+                ?: doc.selectFirst("meta[property=og:image]")?.attr("content")
         )
 
-        val plot = doc.selectFirst("div.film-description div.text")?.text()?.trim()
+        val plot = doc.selectFirst("div.ak-detail__desc")?.text()?.trim()
+            ?: doc.selectFirst("div.film-description div.text")?.text()?.trim()
             ?: doc.selectFirst("div.item.item-title.w-hide div.text")?.text()?.trim()
             ?: doc.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        val yil  = doc.selectFirst("div.item:contains(Premiered:) .name")?.text()
+        val yil  = doc.selectFirst("div.ak-info__row:has(b:contains(Premiered))")?.text()
+            ?: doc.selectFirst("div.ak-info__row:has(b:contains(Aired))")?.text()
+            ?: doc.selectFirst("div.item:contains(Premiered:) .name")?.text()
             ?: doc.selectFirst("div.item:contains(Released:) .name")?.text()
         val year = Regex("""(\d{4})""").find(yil ?: "")?.groupValues?.get(1)?.toIntOrNull()
 
-        val tags = doc.select("div.item.item-list:contains(Genres:) a").map { it.text().trim() }.ifEmpty {
-            doc.select("div.genres a").map { it.text().trim() }
-        }
+        val tags = doc.select("span.ak-chips a, div.ak-info__row:has(b:contains(Genres)) a, div.item.item-list:contains(Genres:) a, div.genres a").map {
+            it.text().trim()
+        }.distinct()
 
         val scoreval = doc.selectFirst("span.item:contains(Score:) .name")?.text()?.trim()?.toDoubleOrNull()
         val score    = scoreval?.let { Score.from(it, 10) }
@@ -159,20 +176,22 @@ class Aki : MainAPI() {
             Actor(actorName)
         }
 
-        val epElements = doc.select("div.ss-list a.ssl-item, div.live_content div.item, div.live__-wrap div.item")
-        val parsedEpisodes = epElements.mapNotNull { element ->
-            val rawName = element.selectFirst("div.ep-name, h3.live-name a")?.text()?.trim()
+        val epElements = doc.select("div.ak-eps div.ak-ep, div.ak-ep, div.ss-list a.ssl-item, div.live_content div.item, div.live__-wrap div.item")
+        val parsedEpisodes = epElements.mapIndexedNotNull { index, element ->
+            val rawName = element.selectFirst("h3.ak-ep__title a, h3.ak-ep__title, div.ep-name, h3.live-name a")?.text()?.trim()
+                ?: element.selectFirst("a")?.attr("title")?.trim()
                 ?: element.attr("title").trim()
             val href = fixUrlNull(
-                element.selectFirst("h3.live-name a, a.live-thumbnail, a.ssl-item")?.attr("href")
+                element.selectFirst("a.ak-ep__thumb, h3.ak-ep__title a, h3.live-name a, a.live-thumbnail, a.ssl-item")?.attr("href")
                     ?: element.attr("href")
-            ) ?: return@mapNotNull null
+            ) ?: return@mapIndexedNotNull null
 
             val thumb = fixUrlNull(
-                element.selectFirst("img.live-thumbnail-img, img")?.attr("data-src")
-                    ?: element.selectFirst("img")?.attr("src")
+                element.selectFirst("img")?.attr("data-src")?.ifEmpty { null }
+                    ?: element.selectFirst("img")?.attr("src")?.ifEmpty { null }
             )
             val epNum = Regex("""(?:Vol|ตอนที่|Ep|Episode)\s*(\d+)""", RegexOption.IGNORE_CASE).find(rawName)?.groupValues?.get(1)?.toIntOrNull()
+                ?: (index + 1)
 
             var cleanName = rawName.replace(title, "", ignoreCase = true)
                 .trim()
@@ -181,7 +200,7 @@ class Aki : MainAPI() {
                 .trim()
 
             if (cleanName.isBlank()) {
-                cleanName = rawName
+                cleanName = "Episode $epNum"
             }
 
             newEpisode(href) {
@@ -191,12 +210,14 @@ class Aki : MainAPI() {
             }
         }.distinctBy { it.data }
 
-        val recommendations = doc.select("section.block_area_category div.flw-item").mapNotNull {
+        val recommendations = doc.select("div.ak-grid div.ak-card, div.ak-card, section.block_area_category div.flw-item").mapNotNull {
             it.toSearchResult()
         }
 
-        return if (parsedEpisodes.isEmpty()) {
-            newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        val movieDataUrl = parsedEpisodes.firstOrNull()?.data ?: url
+
+        return if (parsedEpisodes.size <= 1) {
+            newMovieLoadResponse(title, url, TvType.NSFW, movieDataUrl) {
                 this.posterUrl       = poster
                 this.plot            = plot
                 this.year            = year
@@ -225,7 +246,13 @@ class Aki : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         Log.d(name, "data = $data")
-        val doc   = app.get(data).document
+        var doc = app.get(data).document
+        if (!data.contains("/watch/")) {
+            val watchLink = fixUrlNull(doc.selectFirst("div.ak-eps a.ak-ep__thumb, h3.ak-ep__title a, a[href*='/watch/']")?.attr("href"))
+            if (watchLink != null) {
+                doc = app.get(watchLink).document
+            }
+        }
         var count = 0
 
         doc.select("div.server-item[data-type=dl] a[href], div.ps__-list a[href]").forEach { el ->

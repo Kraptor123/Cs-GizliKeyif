@@ -4,6 +4,7 @@ package com.byayzen
 
 import android.net.Uri
 import com.lagradost.api.Log
+import org.json.JSONObject
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -54,7 +55,14 @@ class WatchHentai : MainAPI() {
         val document = app.get(url).document
         val home     = document.select("div.items article").mapNotNull { it.toMainPageResult() }
 
-        return newHomePageResponse(list = HomePageList(request.name, home, false))
+        return newHomePageResponse(
+            list    = HomePageList(
+                name               = request.name,
+                list               = home,
+                isHorizontalImages = false
+            ),
+            hasNext = home.isNotEmpty()
+        )
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
@@ -62,29 +70,66 @@ class WatchHentai : MainAPI() {
         val href      = fixUrlNull(this.selectFirst("div.data h3 a")?.attr("href")) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+        return newTvSeriesSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
+    }
+
+    private var nonce: String? = null
+
+    private suspend fun getNonce(forceRefresh: Boolean = false): String? {
+        if (!forceRefresh) {
+            val current = nonce
+            if (!current.isNullOrBlank()) return current
+        }
+        val homeHtml  = app.get(mainUrl).text
+        val extracted = Regex(""""nonce"\s*:\s*"([a-zA-Z0-9]+)"""").find(homeHtml)?.groupValues?.get(1)
+        nonce = extracted
+        return extracted
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url      = if (page == 1) "${mainUrl}/?s=${query}" else "${mainUrl}/page/$page/?s=${query}"
-        val document = app.get(url).document
-        val results  = document.select("div.result-item").mapNotNull { it.toSearchResult() }
-
-        return newSearchResponseList(results, hasNext = document.selectFirst("#nextpagination") != null)
-    }
-
-    private fun Element.toSearchResult(): SearchResponse? {
-        val title     = this.selectFirst("div.title a")?.text() ?: return null
-        val href      = fixUrlNull(this.selectFirst("div.title a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("data-src"))
-
-        return newTvSeriesSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
+        var currentNonce = getNonce() ?: return newSearchResponseList(emptyList(), hasNext = false)
+        var response     = app.get(
+            url     = "$mainUrl/wp-json/dooplay/search/?keyword=$query&nonce=$currentNonce",
+            headers = mapOf(
+                "X-Requested-With" to "XMLHttpRequest",
+                "Referer"          to "$mainUrl/",
+                "User-Agent"       to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            )
+        )
+        var jsonText = response.text
+        if (jsonText.contains(""""error"""") && !jsonText.contains("no_posts")) {
+            currentNonce = getNonce(forceRefresh = true) ?: return newSearchResponseList(emptyList(), hasNext = false)
+            response     = app.get(
+                url     = "$mainUrl/wp-json/dooplay/search/?keyword=$query&nonce=$currentNonce",
+                headers = mapOf(
+                    "X-Requested-With" to "XMLHttpRequest",
+                    "Referer"          to "$mainUrl/",
+                    "User-Agent"       to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                )
+            )
+            jsonText = response.text
         }
+
+        if (jsonText.isBlank() || jsonText.contains("no_posts")) {
+            return newSearchResponseList(emptyList(), hasNext = false)
+        }
+
+        val jsonObject = JSONObject(jsonText)
+        val results    = jsonObject.keys().asSequence().mapNotNull { key ->
+            val item      = jsonObject.optJSONObject(key) ?: return@mapNotNull null
+            val title     = item.optString("title").trim().ifEmpty { return@mapNotNull null }
+            val href      = fixUrlNull(item.optString("url").ifEmpty { return@mapNotNull null }) ?: return@mapNotNull null
+            val posterUrl = fixUrlNull(item.optString("img").ifEmpty { null })
+
+            newTvSeriesSearchResponse(title, href, TvType.NSFW) {
+                this.posterUrl = posterUrl
+            }
+        }.toList()
+
+        return newSearchResponseList(results, hasNext = false)
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
-
+    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
         Log.d(name, "Load aşaması: $url")

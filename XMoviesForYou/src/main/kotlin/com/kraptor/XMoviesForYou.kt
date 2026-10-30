@@ -65,8 +65,8 @@ class XMoviesForYou : MainAPI() {
             "${request.data}?page=$page"
         }
 
-        val sayfa = app.get(link).document
-        val icerik = sayfa.select("a.group.flex.flex-col").mapNotNull { it.toMainPageResult() }
+        val sayfa  = app.get(link).document
+        val icerik = sayfa.select("div.grid a.card, a.card, a.group.flex.flex-col").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -80,10 +80,12 @@ class XMoviesForYou : MainAPI() {
 
     private fun Element.toMainPageResult(): SearchResponse? {
         val baslikelementi = this.selectFirst("h3")
-        val asilbaslik = baslikelementi?.text()?.trim() ?: return null
-        val baslik = asilbaslik.replace(Regex("""\[.*?\]"""), "").trim()
-        val adres = fixUrlNull(this.attr("href")) ?: return null
-        val afis = fixUrlNull(this.selectFirst("img")?.attr("src"))
+        val asilbaslik     = baslikelementi?.text()?.trim() ?: return null
+        val baslik         = asilbaslik.replace(Regex("""\[.*?\]"""), "").trim().ifEmpty { asilbaslik }
+        val adres          = fixUrlNull(this.attr("href")) ?: return null
+        val imgEl          = this.selectFirst("img")
+        val rawAfis        = imgEl?.attr("data-src")?.ifEmpty { null } ?: imgEl?.attr("src")?.ifEmpty { null }
+        val afis           = fixUrlNull(rawAfis)
 
         return newMovieSearchResponse(baslik, adres, TvType.NSFW) {
             this.posterUrl = afis
@@ -91,16 +93,16 @@ class XMoviesForYou : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val link = if (page == 1) {
-            "$mainUrl/search?q=$query"
+        val link = if (page <= 1) {
+            "$mainUrl/new-search?q=$query"
         } else {
-            "$mainUrl/search?q=$query&page=$page"
+            "$mainUrl/new-search?q=$query&sort=relevance&page=$page"
         }
 
-        val sayfa = app.get(link).document
-        val sonuclar = sayfa.select("a.group.flex.flex-col").mapNotNull { it.toMainPageResult() }
+        val sayfa    = app.get(link).document
+        val sonuclar = sayfa.select("div.grid a.card, a.card, a.group.flex.flex-col").mapNotNull { it.toMainPageResult() }
 
-        return newSearchResponseList(sonuclar, hasNext = true)
+        return newSearchResponseList(sonuclar, hasNext = sonuclar.isNotEmpty())
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)

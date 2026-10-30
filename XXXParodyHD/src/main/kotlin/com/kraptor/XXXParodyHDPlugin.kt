@@ -7,7 +7,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import com.lagradost.cloudstream3.extractors.EmturbovidExtractor
 import com.lagradost.cloudstream3.extractors.FileMoonSx
-import com.lagradost.cloudstream3.extractors.Maxstream
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.VidStack
 import com.lagradost.cloudstream3.extractors.Voe
@@ -74,14 +73,11 @@ class XXXParodyHDPlugin: Plugin() {
         registerExtractorAPI(Vip4me())
         registerExtractorAPI(RPMShare())
         registerExtractorAPI(Playmogo())
-        registerExtractorAPI(Voe())
-        registerExtractorAPI(Vloe())
+        VOE.DOMAINS.forEach { registerExtractorAPI(VOE(it)) }
         registerExtractorAPI(Stape())
         registerExtractorAPI(StreamTAPE())
         registerExtractorAPI(ShaveTape())
         registerExtractorAPI(Watchadsontape())
-        registerExtractorAPI(Lancewhoisdifficult())
-        registerExtractorAPI(Javlesbians())
         registerExtractorAPI(LULUSTREAM())
         registerExtractorAPI(LULUVDO())
         registerExtractorAPI(LULUVDOO())
@@ -134,6 +130,7 @@ class XXXParodyHDPlugin: Plugin() {
         registerExtractorAPI(KPBysebuho())
         registerExtractorAPI(KPByseSx())
         registerExtractorAPI(KPByseqekaho())
+        registerExtractorAPI(Vinovo())
         registerExtractorAPI(Playmate())
     }
 }

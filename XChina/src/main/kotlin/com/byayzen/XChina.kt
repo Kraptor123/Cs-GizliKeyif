@@ -2,112 +2,111 @@
 
 package com.byayzen
 
-import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 
 class XChina : MainAPI() {
-    override var mainUrl = "https://en.xchina.co"
-    override var name = "XChina"
-    override val hasMainPage = true
-    override var lang = "zh"
-    override val hasQuickSearch = false
-    override val supportedTypes = setOf(TvType.NSFW)
-    override val vpnStatus = VPNStatus.MightBeNeeded
-    companion object {
-        private var loadengel = 0
-    }
+    override var mainUrl              = "https://en.xchina.co"
+    override var name                 = "XChina"
+    override val hasMainPage          = true
+    override var lang                 = "zh"
+    override val hasQuickSearch       = false
+    override val supportedTypes       = setOf(TvType.NSFW)
+    override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "$mainUrl/videos/series-6395aba3deb74.html" to "Censored AV (6853)",
-        "$mainUrl/videos/series-5f904550b8fcc.html" to "Model Media (3558)",
-        "$mainUrl/videos/series-6395ab7fee104.html" to "Uncensored AV (2356)",
-        "$mainUrl/videos/series-61bf6e439fed6.html" to "Independent Creators (1933)",
-        "$mainUrl/videos/series-63963186ae145.html" to "Pans Videos (1885)",
-        "$mainUrl/videos/series-61014080dbfde.html" to "TXVLOG (1328)",
-        "$mainUrl/videos/series-5fe8403919165.html" to "Peach Media (1107)",
-        "$mainUrl/videos/series-6054e93356ded.html" to "Star Media (1006)",
-        "$mainUrl/videos/series-60153c49058ce.html" to "Timi Media (780)",
-        "$mainUrl/videos/series-5fe840718d665.html" to "91mv (627)"
+        "$mainUrl/video-series/4"  to "Censored JAV",
+        "$mainUrl/video-series/5"  to "Uncensored JAV",
+        "$mainUrl/video-series/21" to "Madou Media",
+        "$mainUrl/video-series/8"  to "Banana Video",
+        "$mainUrl/video-series/20" to "Tangxin Vlog",
+        "$mainUrl/video-series/62" to "Model Photoshoot",
+        "$mainUrl/video-series/44" to "Hot Dance",
+        "$mainUrl/video-series/15" to "Faphouse",
+        "$mainUrl/video-series/42" to "Jingdong Pictures",
+        "$mainUrl/video-series/55" to "PANS"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page <= 1) request.data else request.data.replace(".html", "/$page.html")
+        val url      = if (page <= 1) request.data else "${request.data.trimEnd('/')}/$page"
         val document = app.get(url).document
-        val home = document.select("div.item.video").mapNotNull { it.toSearchResult() }
+        val home     = document.select("div.grid a[href^='/video/'].group.block").mapNotNull { it.toSearchResult() }
+
         return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
+            list    = HomePageList(
+                name               = request.name,
+                list               = home,
                 isHorizontalImages = true
             ),
-            hasNext = true
+            hasNext = home.isNotEmpty()
         )
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = selectFirst("div.title a")?.text() ?: return null
-        val href = fixUrl(selectFirst("div.title a")?.attr("href") ?: return null)
-        val style = selectFirst("div.img")?.attr("style") ?: ""
-        val poster = Regex("""url\(['"]?(.*?)['"]?\)""").find(style)?.groupValues?.get(1) ?: selectFirst("img")?.attr("src") ?: selectFirst("img")?.attr("data-src")
+        val href   = fixUrl(attr("href").ifEmpty { return null })
+        val title  = selectFirst("span.line-clamp-2")?.text()?.trim()?.ifEmpty { null }
+            ?: selectFirst("img")?.attr("alt")?.trim()?.ifEmpty { null }
+            ?: return null
+        val poster = fixUrlNull(selectFirst("img")?.attr("src")?.ifEmpty { null }
+            ?: selectFirst("img")?.attr("data-src")?.ifEmpty { null })
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = poster
-            this.posterHeaders = mapOf("Referer" to mainUrl)
+            this.posterUrl     = poster
+            this.posterHeaders = mapOf("Referer" to "$mainUrl/")
         }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = if (page <= 1) "$mainUrl/videos/keyword-$query.html" else "$mainUrl/videos/keyword-$query/$page.html"
+        val url      = if (page <= 1) "$mainUrl/search?type=video&q=$query" else "$mainUrl/search?type=video&q=$query&page=$page"
         val document = app.get(url).document
-        val results = document.select("div.item.video").mapNotNull { it.toSearchResult() }
-        return newSearchResponseList(results, true)
+        val results  = document.select("div.grid a[href^='/video/'].group.block").mapNotNull { it.toSearchResult() }
+        return newSearchResponseList(results, results.isNotEmpty())
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        loadengel++
-        if (loadengel <= 3) {
-            return null
-        }
-        val document = app.get(url).document
-        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")
-        val volume = document.selectFirst("div.item:has(i.fa-hashtag) div.text")?.text()?.trim()
-        val plot = document.selectFirst(".info-card.video-detail .item .text")?.text()?.trim()
-        val tags = document.select(".info-card .item:has(i.fa-tags) .text, .info-card.video-detail .item .text a").map { it.text() }
-        val actors = document.select(".model-item").map { Actor(it.text()) }
-        val recommendations = document.select("div.item.video").mapNotNull { it.toSearchResult() }
+        val document        = app.get(url).document
+        val title           = document.selectFirst("h1")?.ownText()?.trim()?.ifEmpty { null }
+            ?: document.selectFirst("h1")?.text()?.trim()?.ifEmpty { null }
+            ?: return null
+        val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content")?.ifEmpty { null }
+            ?: document.selectFirst("div#video-player")?.attr("data-poster")?.ifEmpty { null })
+        val tags            = document.select("a[href*='category'], a[href*='series']").map { it.text().trim() }.filter { it.isNotEmpty() }
+        val recommendations = document.select("ul.space-y-3 a[href^='/video/']").mapNotNull { it.toSearchResult() }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = if (volume != null) "Code: $volume\n\n$plot" else plot
-            this.tags = tags
+            this.posterUrl       = poster
+            this.tags            = tags
             this.recommendations = recommendations
-            this.posterHeaders = mapOf("Referer" to mainUrl)
-            addActors(actors)
+            this.posterHeaders   = mapOf("Referer" to "$mainUrl/")
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val pageSource = app.get(data).text
-        val m3u8 = Regex("""src:\s*['"](https?://video\.xchina\.download/m3u8/.*?\.m3u8.*?)['"]""").find(pageSource)?.groupValues?.get(1)
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val document  = app.get(data).document
+        val videoDiv  = document.selectFirst("div#video-player") ?: return false
+        val dataSrc   = videoDiv.attr("data-src").ifEmpty { return false }
+        val streamUrl = fixUrl(dataSrc)
 
-        m3u8?.let { link ->
-            callback.invoke(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = link,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    this.referer = mainUrl
-                    this.quality = Qualities.Unknown.value
-                    this.headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                }
-            )
-        }
+        callback.invoke(
+            newExtractorLink(
+                source  = name,
+                name    = name,
+                url     = streamUrl,
+                type    = ExtractorLinkType.M3U8
+            ) {
+                this.referer = "$mainUrl/"
+                this.headers = mapOf(
+                    "Origin"  to mainUrl,
+                    "Referer" to "$mainUrl/"
+                )
+            }
+        )
         return true
     }
 }

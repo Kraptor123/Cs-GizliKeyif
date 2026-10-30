@@ -2,6 +2,8 @@
 
 package com.byayzen
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
@@ -146,15 +148,38 @@ class Javtiful : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        val sources = document.select("video source[src]")
+        val document          = app.get(data).document
+        val scriptContent     = document.selectFirst("script#watch-config")?.data()?.ifEmpty { null }
+            ?: document.selectFirst("script#watch-config")?.html()?.ifEmpty { null }
+            ?: return false
 
-        var found = false
-        sources.forEach { sourceEl ->
-            val src = fixUrlNull(sourceEl.attr("src").ifEmpty { return@forEach }) ?: return@forEach
-            val qualityStr = sourceEl.attr("size")
-            val quality = qualityStr.toIntOrNull() ?: Qualities.Unknown.value
-            val linkType = if (src.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+        val watchConfig       = AppUtils.tryParseJson<WatchConfig>(scriptContent) ?: return false
+        val playback          = watchConfig.playback ?: return false
+        val endpoint          = playback.endpoint?.ifEmpty { null } ?: return false
+        val ticket            = playback.ticket?.ifEmpty { null } ?: return false
+
+        val playbackUrl       = fixUrl(endpoint)
+        val postRes           = app.post(
+            url = playbackUrl,
+            data = mapOf("ticket" to ticket),
+            headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                "Accept" to "application/json",
+                "Content-Type" to "application/x-www-form-urlencoded;charset=UTF-8",
+                "X-Requested-With" to "XMLHttpRequest",
+                "Referer" to data,
+                "Origin" to mainUrl
+            )
+        )
+
+        val playbackResponse  = postRes.parsedSafe<PlaybackResponse>() ?: return false
+        val sources           = playbackResponse.sources ?: return false
+
+        var found             = false
+        sources.forEach { source ->
+            val src           = fixUrlNull(source.src?.ifEmpty { null }) ?: return@forEach
+            val quality       = source.size ?: Qualities.Unknown.value
+            val linkType      = if (src.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
 
             callback(
                 newExtractorLink(
@@ -165,12 +190,65 @@ class Javtiful : MainAPI() {
                 ) {
                     this.quality = quality
                     this.referer = "$mainUrl/"
-                    this.headers = mapOf("Referer" to "$mainUrl/", "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+                    this.headers = mapOf(
+                        "Referer" to "$mainUrl/",
+                        "Origin" to mainUrl,
+                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                    )
                 }
             )
             found = true
+
+            val fallbackSrc   = fixUrlNull(source.fallbackSrc?.ifEmpty { null })
+            if (fallbackSrc != null) {
+                val fallbackLinkType = if (fallbackSrc.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                callback(
+                    newExtractorLink(
+                        source = name,
+                        name = "$name - Backup",
+                        url = fallbackSrc,
+                        type = fallbackLinkType
+                    ) {
+                        this.quality = quality
+                        this.referer = "$mainUrl/"
+                        this.headers = mapOf(
+                            "Referer" to "$mainUrl/",
+                            "Origin" to mainUrl,
+                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                        )
+                    }
+                )
+                found = true
+            }
         }
 
         return found
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class WatchConfig(
+        @JsonProperty("playback") val playback: PlaybackInfo? = null
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PlaybackInfo(
+        @JsonProperty("endpoint") val endpoint: String? = null,
+        @JsonProperty("ticket")   val ticket: String? = null
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PlaybackResponse(
+        @JsonProperty("success")        val success: Boolean? = null,
+        @JsonProperty("sources")        val sources: List<PlaybackSource>? = null,
+        @JsonProperty("defaultQuality") val defaultQuality: Int? = null
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PlaybackSource(
+        @JsonProperty("src")         val src: String? = null,
+        @JsonProperty("type")        val type: String? = null,
+        @JsonProperty("fallbackSrc") val fallbackSrc: String? = null,
+        @JsonProperty("size")        val size: Int? = null,
+        @JsonProperty("label")       val label: String? = null
+    )
 }

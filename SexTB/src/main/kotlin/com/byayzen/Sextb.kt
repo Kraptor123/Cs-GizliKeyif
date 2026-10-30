@@ -15,6 +15,7 @@ import com.lagradost.cloudstream3.newSearchResponseList
 import com.lagradost.cloudstream3.fixUrl
 import com.lagradost.cloudstream3.fixUrlNull
 import org.jsoup.nodes.Element
+import java.net.URI
 
 class Sextb : MainAPI() {
     override var mainUrl = "https://sextb.net"
@@ -64,7 +65,7 @@ class Sextb : MainAPI() {
         }
 
         val document = app.get(url, headers = commonHeaders).document
-        val items = document.select("div.tray-item").mapNotNull {
+        val items    = document.select("div.tray-item:not(.ad-card)").mapNotNull {
             it.toSearchResult()
         }
 
@@ -98,10 +99,10 @@ class Sextb : MainAPI() {
         val matches = hitsRegex.findAll(json)
 
         val items = matches.mapNotNull { match ->
-            val code = match.groupValues[1]
-            val title = match.groupValues[2].replace("<mark>", "").replace("</mark>", "")
+            val code      = match.groupValues[1]
+            val title     = match.groupValues[2].replace("<mark>", "").replace("</mark>", "")
             val posterUrl = match.groupValues[3].replace("\\/", "/")
-            val fullHref = "$mainUrl/$code"
+            val fullHref  = "$mainUrl/$code"
 
             newMovieSearchResponse(title, fullHref, TvType.NSFW) {
                 this.posterUrl = posterUrl
@@ -109,22 +110,23 @@ class Sextb : MainAPI() {
         }.toList()
 
         val totalPagesRegex = """"totalPages":(\d+)""".toRegex()
-        val totalPages = totalPagesRegex.find(json)?.groupValues?.get(1)?.toIntOrNull() ?: 1
-        val hasNext = page < totalPages
+        val totalPages      = totalPagesRegex.find(json)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        val hasNext         = page < totalPages
 
         return newSearchResponseList(items, hasNext = hasNext)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
+        if (this.hasClass("ad-card") || this.selectFirst(".ad-card, a[href*='/advertise']") != null) return null
         val linkElement = this.selectFirst("a") ?: return null
-        val href = linkElement.attr("href")
-        if (href.startsWith("/search") || href.contains("javascript") || href.startsWith("/genre")) return null
-        val fullHref = fixUrl(href)
-        val title = this.selectFirst("div.tray-item-title")?.text()?.trim()
+        val href        = linkElement.attr("href")
+        if (href.startsWith("/search") || href.contains("javascript") || href.startsWith("/genre") || href.startsWith("/advertise")) return null
+        val fullHref    = fixUrl(href)
+        val title       = this.selectFirst("div.tray-item-title")?.text()?.trim()
             ?: this.selectFirst("img")?.attr("alt")?.trim()
             ?: return null
 
-        val posterUrl = fixUrlNull(
+        val posterUrl   = fixUrlNull(
             this.selectFirst("img")?.attr("data-src")?.takeIf { it.isNotBlank() }
                 ?: this.selectFirst("img")?.attr("src")
         )
@@ -135,55 +137,53 @@ class Sextb : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val res = app.get(url, headers = commonHeaders)
+        val res      = app.get(url, headers = commonHeaders)
         val document = res.document
 
-        val title = document.selectFirst("h1.film-info-title")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val title    = document.selectFirst("h1.film-info-title")?.text()?.trim() ?: return null
+        val poster   = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
             ?: fixUrlNull(document.selectFirst("#infomation img")?.attr("data-src"))
 
         val description = document.selectFirst("span.full-text-desc")?.text()?.trim()
-        val yearText = document.selectFirst("div.description:has(i.fa-calendar) strong")?.text()
-        val year =
-            yearText?.let { Regex("""(\d{4})""").find(it)?.groupValues?.get(1)?.toIntOrNull() }
-        val duration = document.selectFirst("div.description:has(i.fa-clock) strong")?.text()
+        val yearText    = document.selectFirst("div.description:has(i.fa-calendar) strong")?.text()
+        val year        = yearText?.let { Regex("""(\d{4})""").find(it)?.groupValues?.get(1)?.toIntOrNull() }
+        val duration    = document.selectFirst("div.description:has(i.fa-clock) strong")?.text()
             ?.replace(Regex("[^0-9]"), "")?.toIntOrNull()
-        val tags = document.select("div.description:has(i.fa-list) a").map { it.text() }
-        val actors = document.select("div.description:has(i.fa-users) a").map { Actor(it.text()) }
+        val tags        = document.select("div.description:has(i.fa-list) a").map { it.text() }
+        val actors      = document.select("div.description:has(i.fa-users) a").map { Actor(it.text()) }
 
         val recommendations = mutableListOf<SearchResponse>()
-        val filmId = Regex("""var filmId\s*=\s*(\d+)""").find(res.text)?.groupValues?.get(1)
+        val filmId          = Regex("""var filmId\s*=\s*(\d+)""").find(res.text)?.groupValues?.get(1)
 
         if (filmId != null) {
             try {
-                val apiRes =
-                    app.get("${mainUrl}/ajax/related/$filmId", headers = commonHeaders).text
+                val apiRes = app.get("${mainUrl}/ajax/related/$filmId", headers = commonHeaders).text
                 val apiDoc = org.jsoup.Jsoup.parse(apiRes)
-                apiDoc.select(".tray-item").forEach { el ->
-                    val recName =
-                        el.selectFirst(".tray-item-title")?.text()?.trim() ?: return@forEach
-                    val recHref = fixUrl(el.selectFirst("a")?.attr("href") ?: return@forEach)
+                apiDoc.select(".tray-item:not(.ad-card)").forEach { el ->
+                    if (el.hasClass("ad-card") || el.selectFirst("a[href*='/advertise']") != null) return@forEach
+                    val recName   = el.selectFirst(".tray-item-title")?.text()?.trim() ?: return@forEach
+                    val recHref   = fixUrl(el.selectFirst("a")?.attr("href") ?: return@forEach)
                     val recPoster = fixUrlNull(
-                        el.selectFirst("img")?.attr("data-src") ?: el.selectFirst("img")
-                            ?.attr("src")
+                        el.selectFirst("img")?.attr("data-src") ?: el.selectFirst("img")?.attr("src")
                     )
                     recommendations.add(
                         newMovieSearchResponse(
                             recName,
                             recHref,
                             TvType.NSFW
-                        ) { this.posterUrl = recPoster })
+                        ) { this.posterUrl = recPoster }
+                    )
                 }
             } catch (e: Exception) {
             }
         }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = description
-            this.year = year
-            this.tags = tags
-            this.duration = duration
+            this.posterUrl       = poster
+            this.plot            = description
+            this.year            = year
+            this.tags            = tags
+            this.duration        = duration
             this.recommendations = recommendations
             addActors(actors)
         }
@@ -195,34 +195,38 @@ class Sextb : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        Log.d("sextb", data)
         val res = app.get(data, headers = commonHeaders)
 
-        val filmid = Regex("""var filmId\s*=\s*(\d+)""").find(res.text)?.groupValues?.get(1)
+        val token  = res.document.selectFirst("meta#token, meta[name='_token']")?.attr("value")
+        val socket = res.document.selectFirst("meta#socket, meta[name='_socket']")?.attr("value")
+
+        val filmid    = Regex("""var filmId\s*=\s*(\d+)""").find(res.text)?.groupValues?.get(1)
         var currentpt = Regex("""__pt\s*=\s*['"](.*?)['"]""").find(res.text)?.groupValues?.get(1)
         var currentpk = Regex("""__pk\s*=\s*['"](.*?)['"]""").find(res.text)?.groupValues?.get(1)
 
-        Log.d("sextb", "$filmid")
-        Log.d("sextb", "$currentpt")
-
-        if (filmid == null || currentpt == null) {
+        if (filmid == null || currentpt == null || token.isNullOrEmpty() || socket.isNullOrEmpty()) {
             return false
         }
 
-        val episodes = res.document.select(".episode-list button.btn-player")
-        Log.d("sextb", "${episodes.size}")
+        val auth = "Basic " + base64Encode("$token:$socket".toByteArray())
+
+        val episodeButtons = res.document.select(".episode-list button.btn-player")
+        val episodeIds     = mutableListOf("0")
+        episodeButtons.forEach { btn ->
+            val id = btn.attr("data-id")
+            if (id.isNotEmpty() && id != "0" && !episodeIds.contains(id)) {
+                episodeIds.add(id)
+            }
+        }
+
         var foundanylink = false
 
-        for (ep in episodes) {
-            val episodeid = ep.attr("data-id")
-            val sourceid = ep.attr("data-source").ifEmpty { filmid }
-            Log.d("sextb", episodeid)
-
+        for (episodeid in episodeIds) {
             try {
-                val safept = currentpt ?: ""
+                val safept   = currentpt ?: ""
                 val postdata = mapOf(
                     "episode" to episodeid,
-                    "filmId" to sourceid,
+                    "filmId" to filmid,
                     "pt" to safept
                 )
 
@@ -231,51 +235,82 @@ class Sextb : MainAPI() {
                     headers = mapOf(
                         "Referer" to data,
                         "X-Requested-With" to "XMLHttpRequest",
-                        "Authorization" to "Basic Y1ZGUWNVSnROVlJOTUVWMlZsUldVMjlsWjBGelFUMDk6T0ZaNksxQmhjVTFhTHpCdFlWZDFNbE5CUm01Qlp6MDk=",
+                        "Authorization" to auth,
                         "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8",
                         "Accept" to "*/*",
                         "Origin" to mainUrl
                     ),
+                    cookies = res.cookies,
                     data = postdata
                 )
 
-                Log.d("sextb", ajaxresponse.text)
-
-                val responsedata = ajaxresponse.parsedSafe<PlayerResponse>()
+                val responsedata    = ajaxresponse.parsedSafe<PlayerResponse>()
                 val encryptedplayer = responsedata?.player_enc
-                val key = currentpk ?: ""
+                val key             = currentpk ?: ""
 
                 responsedata?.next_pt?.let { currentpt = it }
                 responsedata?.next_pk?.let { currentpk = it }
 
                 if (encryptedplayer != null && key.isNotEmpty()) {
                     val decryptedraw = decryptPlayer(encryptedplayer, key)
-                    Log.d("sextb", decryptedraw)
 
-                    val iframeurl = Regex("""src=\\?["'](https:.*?)(?:\?|\\?["']|["'])""")
+                    val iframeurl = Regex("""src=\\?["'](https:[^"'\\>\s]+)""")
                         .find(decryptedraw)?.groupValues?.get(1)
                         ?.replace("\\/", "/")
 
                     if (iframeurl != null && !iframeurl.contains("upgrade")) {
-                        val wasextracted = loadExtractor(iframeurl, data, subtitleCallback, callback)
-                        Log.d("sextb", "$wasextracted")
-                        if (wasextracted) foundanylink = true
+                        if (iframeurl.contains("f4s")) {
+                            try {
+                                val embedDoc = app.get(iframeurl, referer = data).document
+                                val dataApi  = embedDoc.selectFirst("div.player-wrap")?.attr("data-api")
+                                    ?: Regex("""data-api=["']([^"']+)["']""").find(embedDoc.html())?.groupValues?.get(1)
+
+                                if (dataApi != null) {
+                                    val baseEmbed  = URI(iframeurl).let { "${it.scheme}://${it.host}" }
+                                    val playApiUrl = "$baseEmbed$dataApi?ab=0&ad=0&r=https://sextb.net/&w=1"
+                                    val playRes    = app.get(playApiUrl, referer = iframeurl).text
+                                    val src        = Regex(""""src"\s*:\s*"([^"]+)"""").find(playRes)?.groupValues?.get(1)?.replace("\\/", "/")
+
+                                    if (src != null) {
+                                        callback.invoke(
+                                            newExtractorLink(
+                                                name   = "F4Stream",
+                                                source = "F4Stream",
+                                                url    = src,
+                                                type   = ExtractorLinkType.M3U8
+                                            ) {
+                                                this.referer = "$baseEmbed/"
+                                                this.headers = mapOf(
+                                                    "Origin" to baseEmbed,
+                                                    "Referer" to "$baseEmbed/"
+                                                )
+                                            }
+                                        )
+                                        foundanylink = true
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.d("sextb", "${e.message}")
+                            }
+                        } else {
+                            val wasextracted = loadExtractor(iframeurl, data, subtitleCallback, callback)
+                            if (wasextracted) foundanylink = true
+                        }
                     }
                 }
             } catch (e: Exception) {
                 Log.d("sextb", "${e.message}")
             }
         }
-        Log.d("sextb", "$foundanylink")
         return foundanylink
     }
 
     private fun decryptPlayer(encoded: String, key: String): String {
         return try {
             val decoded = base64Decode(encoded)
-            val result = StringBuilder()
+            val result  = StringBuilder()
             for (i in decoded.indices) {
-                result.append((decoded[i].toInt() xor key[i % key.length].toInt()).toChar())
+                result.append(((decoded[i].toInt() and 0xFF) xor key[i % key.length].code).toChar())
             }
             result.toString()
         } catch (e: Exception) {

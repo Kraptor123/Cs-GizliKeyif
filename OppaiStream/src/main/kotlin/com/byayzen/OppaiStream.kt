@@ -1,7 +1,5 @@
 // ! Bu araç @ByAyzen tarafından | @Cs-GizliKeyif için yazılmıştır.
 
-// ! Bu araç @ByAyzen tarafından | @Cs-GizliKeyif için yazılmıştır.
-
 package com.byayzen
 
 import org.jsoup.nodes.Element
@@ -18,131 +16,121 @@ class OppaiStream : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "ahegao" to "Ahegao",
-        "censored" to "Censored",
-        "comedy" to "Comedy",
-        "fantasy" to "Fantasy",
-        "filmed" to "Filmed",
-        "hd" to "HD",
-        "harem" to "Harem",
-        "incest" to "Incest",
-        "inflation" to "Inflation",
-        "lactation" to "Lactation",
-        "mindbreak" to "Mind Break",
-        "mindcontrol" to "Mind Control",
-        "monster" to "Monster",
-        "pov" to "POV",
-        "plot" to "Plot",
-        "tentacle" to "Tentacle",
-        "uncensored" to "Uncensored",
-        "vanilla" to "Vanilla",
-        "watersports" to "Watersports",
-        "x-ray" to "X-Ray",
-        "yuri" to "Yuri",
-        "anal" to "Anal",
-        "bdsm" to "BDSM",
-        "blowjob" to "BlowJob",
-        "bondage" to "Bondage",
-        "boobjob" to "BoobJob",
-        "cowgirl" to "Cowgirl",
-        "creampie" to "Creampie",
-        "doggy" to "Doggy",
-        "doublepenetration" to "Double Penetration",
-        "facial" to "Facial",
-        "footjob" to "FootJob",
-        "gangbang" to "Gangbang",
-        "handjob" to "HandJob",
-        "masturbation" to "Masturbation",
-        "missionary" to "Missionary",
-        "ntr" to "NTR",
-        "orgy" to "Orgy",
-        "publicsex" to "Public Sex",
-        "rape" to "Rape",
-        "bigboobs" to "Big Boobs",
-        "blackhair" to "Black Hair",
-        "blondehair" to "Blonde Hair",
-        "bluehair" to "Blue Hair",
-        "brownhair" to "Brown Hair",
-        "cosplay" to "Cosplay",
-        "darkskin" to "Dark Skin",
-        "futanari" to "Futanari",
-        "glasses" to "Glasses",
-        "greenhair" to "Green Hair",
-        "gyaru" to "Gyaru",
-        "loli" to "Loli",
-        "maid" to "Maid",
-        "milf" to "Milf",
-        "nurse" to "Nurse",
-        "pinkhair" to "Pink Hair",
-        "pregnant" to "Pregnant",
-        "purplehair" to "Purple Hair",
-        "redhair" to "Red Hair",
-        "schoolgirl" to "School Girl",
-        "shorthair" to "Short Hair",
-        "smallboobs" to "Small Boobs",
-        "succubus" to "Succubus",
-        "tsundere" to "Tsundere",
-        "whitehair" to "White Hair",
-        "shota" to "Shota",
-        "uglybastard" to "Ugly Bastard",
-        "virgin" to "Virgin"
+        "4k" to "4K",
+        "3D" to "3D",
+        "Ahegao" to "Ahegao",
+        "Beach" to "Beach",
+        "Blood" to "Blood",
+        "Censored" to "Censored",
+        "Comedy" to "Comedy",
+        "Fantasy" to "Fantasy",
+        "Filmed" to "Filmed",
+        "Gore" to "Gore",
+        "Harem" to "Harem",
+        "Horror" to "Horror",
+        "Incest" to "Incest",
+        "Lactation" to "Lactation",
+        "Mind Break" to "Mind Break",
+        "Mind Control" to "Mind Control",
+        "Monster" to "Monster",
+        "POV" to "POV",
+        "Plot" to "Plot",
+        "Softcore" to "Softcore",
+        "Tentacle" to "Tentacle",
+        "Uncensored" to "Uncensored",
+        "Vanilla" to "Vanilla",
+        "Watersports" to "Watersports",
+        "X-Ray" to "X-Ray"
     )
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = "$mainUrl/actions/search.php?text=&order=recent&page=$page&limit=35&genres=${request.data}&blacklist=&studio=&ibt=0&swa=1"
-        val document = app.get(url, referer = "$mainUrl/search?a=recent&p=$page&t=&g=${request.data}&b=&s=").document
-        val home = document.select("div[class*='in-grid']").mapNotNull { it.tosearchresult() }
+    private suspend fun searchApi(query: String = "", tag: String = "", page: Int = 1): SearchResponseList {
+        val res = app.post(
+            "$mainUrl/api/search.php",
+            data = mapOf(
+                "text"      to query,
+                "tags"      to tag,
+                "blacklist" to "",
+                "studios"   to "",
+                "order"     to "recent",
+                "limit"     to "16",
+                "page"      to page.toString(),
+                "classes"   to "smaller-episode-gap"
+            ),
+            headers = mapOf(
+                "Referer"          to "$mainUrl/search",
+                "Origin"           to mainUrl,
+                "X-Requested-With" to "XMLHttpRequest",
+                "User-Agent"       to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            )
+        )
+        val doc     = res.document
+        val results = doc.select("a.episode").mapNotNull { it.toSearchResponse() }
+        return newSearchResponseList(results, hasNext = results.isNotEmpty())
+    }
 
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val searchList = searchApi(tag = request.data, page = page)
         return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
+            list    = HomePageList(
+                name               = request.name,
+                list               = searchList.items,
                 isHorizontalImages = true
             ),
-            hasNext = home.isNotEmpty()
+            hasNext = searchList.hasNext
         )
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = "$mainUrl/actions/search.php?text=$query&order=recent&page=$page&limit=35&genres=&blacklist=&studio=&ibt=0&swa=1"
-        val document = app.get(url, referer = "$mainUrl/search?a=recent&p=$page&t=$query&g=&b=&s=").document
-        val results = document.select("div[class*='in-grid']").mapNotNull { it.tosearchresult() }
-        return newSearchResponseList(results, hasNext = true)
+        return searchApi(query = query, page = page)
     }
 
-    private fun Element.tosearchresult(): SearchResponse? {
-        val name = this.attr("name")
-        val ep = this.attr("ep")
-        val title = "$name $ep".trim().replaceFirstChar { it.uppercase() }
-        val href = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val img = this.selectFirst("img[class*='cover-img-in']")
-        val src = img?.attr("src") ?: img?.attr("original") ?: img?.attr("data-src")
-        val poster = src?.let { if (it.startsWith("//")) "https:$it" else it }
+    private fun Element.toSearchResponse(): SearchResponse? {
+        val rawTitle  = this.selectFirst("p.episode-title")?.text()?.trim()?.ifEmpty { null } ?: return null
+        val epNum     = this.selectFirst("p.episode-number")?.text()?.trim() ?: ""
+        val title     = if (epNum.isNotBlank()) "$rawTitle Episode $epNum" else rawTitle
+        val href      = fixUrlNull(this.attr("href").ifEmpty { return null }) ?: return null
+        val posterUrl = fixUrlNull(
+            this.selectFirst("img.cover")?.attr("data-src")?.ifEmpty { null }
+                ?: this.selectFirst("img.cover")?.attr("src")?.ifEmpty { null }
+                ?: this.selectFirst("noscript img")?.attr("src")?.ifEmpty { null }
+        )
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = poster
+            this.posterUrl     = posterUrl
             this.posterHeaders = mapOf("Referer" to "$mainUrl/")
         }
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
+    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
-        val title = document.selectFirst("h1")?.text()?.trim() ?: return null
-        val poster = fixUrlNull(document.selectFirst("meta[property='og:image']")?.attr("content"))
-        val plot = document.selectFirst("div.description h5")?.text()?.trim()
-        val tags = document.select("div.tags a.tag h5").map { it.text() }
-        val related = document.select("div.other-episodes div[class*='in-grid']").mapNotNull {
-            it.tosearchresult()
+        val document        = app.get(url).document
+        val title           = document.selectFirst("h1#episode-title")?.text()?.trim()?.ifEmpty { null }
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()?.ifEmpty { null }
+            ?: return null
+
+        val poster          = fixUrlNull(
+            document.selectFirst("meta[property=og:image]")?.attr("content")?.ifEmpty { null }
+                ?: document.selectFirst("img.cover")?.attr("src")?.ifEmpty { null }
+        )
+        val description     = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()?.ifEmpty { null }
+            ?: document.selectFirst("article#episode-description p.s5")?.text()?.trim()?.ifEmpty { null }
+
+        val yearText        = document.selectFirst("a#stats-released p")?.text()
+        val year            = Regex("(\\d{4})").find(yearText ?: "")?.groupValues?.get(1)?.toIntOrNull()
+
+        val tags            = document.select("div.wrap-genres a").map { it.text().trim() }
+        val recommendations = document.select("div#related-wrap a.episode").mapNotNull {
+            it.toSearchResponse()
         }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = plot
-            this.tags = tags
-            this.recommendations = related
-            this.posterHeaders = mapOf("Referer" to "$mainUrl/")
+            this.posterUrl       = poster
+            this.posterHeaders   = mapOf("Referer" to "$mainUrl/")
+            this.plot            = description
+            this.year            = year
+            this.tags            = tags
+            this.recommendations = recommendations
         }
     }
 
@@ -152,40 +140,36 @@ class OppaiStream : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val response = app.get(data)
-        val html = response.text
+        val document    = app.get(data).document
+        val scriptText  = document.select("script").map { it.data() }.firstOrNull { it.contains("var folder =") }
+        val folder      = Regex("""var\s+folder\s*=\s*["']([^"']+)["']""").find(scriptText ?: "")?.groupValues?.get(1)
+            ?: return false
+        val storageBase = Regex("""var\s+storageBase\s*=\s*["']([^"']+)["']""").find(scriptText ?: "")?.groupValues?.get(1)
+            ?.replace("\\/", "/") ?: "$mainUrl/videos"
 
-        response.document.select("track").forEach { track ->
-            val src = track.attr("src")
+        val manifestUrl = fixUrl("$storageBase/$folder/dash/manifest.mpd")
+
+        document.select("video#episode track, video track").forEach { track ->
+            val src  = fixUrlNull(track.attr("src").ifEmpty { return@forEach }) ?: return@forEach
             val lang = track.attr("label").ifBlank { "English" }
-            if (src.isNotBlank()) {
-                val suburl = fixUrl(src).replace(" ", "%20")
-                subtitleCallback(newSubtitleFile(lang = lang, url = suburl))
-            }
+            subtitleCallback(newSubtitleFile(lang = lang, url = src))
         }
 
-        val regex = Regex("""\"(\d+k?)\"\s*:\s*\"(https.*?)\"""")
-        regex.findAll(html).forEach { match ->
-            val quality = match.groupValues[1]
-            val videourl = match.groupValues[2].replace("\\/", "/").replace(" ", "%20")
-            val qualityid = when (quality) {
-                "4k" -> Qualities.P2160.value
-                "1080" -> Qualities.P1080.value
-                "720" -> Qualities.P720.value
-                else -> Qualities.Unknown.value
+        callback(
+            newExtractorLink(
+                source = name,
+                name   = name,
+                url    = manifestUrl,
+                type   = ExtractorLinkType.DASH
+            ) {
+                this.referer = "$mainUrl/"
+                this.headers = mapOf(
+                    "Referer"    to "$mainUrl/",
+                    "Origin"     to mainUrl,
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                )
             }
-            callback(
-                newExtractorLink(
-                    source = "OppaiStream",
-                    name = "OppaiStream",
-                    url = videourl,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.quality = qualityid
-                    this.referer = "$mainUrl/"
-                }
-            )
-        }
+        )
         return true
     }
 }
