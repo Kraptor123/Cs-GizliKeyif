@@ -174,6 +174,8 @@ Log.i("InfluencerChicks", "Video URL bulundu: $videoUrl")
             type = ExtractorLinkType.VIDEO
         ){
             this.referer = "$mainUrl/"
+            // CDN hotlink korumasi: Referer yoksa 404 donuyor, header olarak da acikca gonder
+            this.headers = mapOf("Referer" to "$mainUrl/")
             this.quality = Qualities.Unknown.value
         }
     )
