@@ -14,7 +14,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jsoup.Jsoup
 import java.util.Collections
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -44,13 +43,16 @@ class Coomer (val plugin: CoomerPlugin) : MainAPI() {
         "Accept" to "text/css"
     )
 
+    // 25MB'lik liste: Jsoup ile parse etmek ~30sn suruyordu; duz JSON olarak okunur ve bellekte tutulur.
+    @Volatile private var creatorsCache: List<Creator>? = null
+
     private suspend fun fetchCreators(): List<Creator> {
+        creatorsCache?.let { return it }
         val jsonText =
             app.get("https://raw.githubusercontent.com/Kraptor123/Cs-GizliKeyif/refs/heads/master/.github/commer.json")
                 .textLarge
-                .let { Jsoup.parse(it).body().text() }
 
-        return jacksonObjectMapper().readValue(jsonText)
+        return jacksonObjectMapper().readValue<List<Creator>>(jsonText).also { creatorsCache = it }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
