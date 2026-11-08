@@ -62,17 +62,22 @@ class Cumlouder : MainAPI() {
         }
     }
 
+    // Arama formu CSRF tokenli POST (/search/?q=...); GET bos sayfa donuyor.
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val document = if (page == 1) {
-            app.get("${mainUrl}/search/?q=${query}").document
-        } else {
-            app.get("${mainUrl}/page/$page/?s=${query}").document
-        }
+        if (page > 1) return newSearchResponseList(emptyList(), hasNext = false)
+        val home = app.get("$mainUrl/porn-videos/latina/1/")
+        val token = home.document.selectFirst("input[name=form[_token]]")?.attr("value").orEmpty()
+        val document = app.post(
+            "$mainUrl/search/?q=${java.net.URLEncoder.encode(query, "UTF-8")}",
+            data = mapOf("form[search]" to query, "form[_token]" to token),
+            cookies = home.cookies,
+            referer = "$mainUrl/"
+        ).document
 
         val aramaCevap =
             document.select("div.medida a.muestra-escena").mapNotNull { it.toMainPageResult() }
 
-        return newSearchResponseList(aramaCevap, hasNext = true)
+        return newSearchResponseList(aramaCevap, hasNext = false)
     }
 
 
