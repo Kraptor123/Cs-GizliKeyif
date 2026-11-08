@@ -173,6 +173,8 @@ class DirtyShip(val plugin: DirtyShipPlugin) : MainAPI() {
             {
                 quality = Qualities.Unknown.value
                 referer = "${mainUrl}/"
+                // CDN hotlink korumasi: Referer yoksa 404 donuyor, header olarak da acikca gonder
+                headers = mapOf("Referer" to "${mainUrl}/")
             }
         ))
         return true
