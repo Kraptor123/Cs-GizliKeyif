@@ -130,7 +130,7 @@ class Koreaye : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val response = app.get(data).document
-        val iframeUrl = response.selectFirst("iframe")?.attr("data-src") ?: return false
+        val iframeUrl = response.selectFirst("iframe")?.let { it.attr("data-src").ifBlank { it.attr("src") } }?.takeIf { it.isNotBlank() } ?: return false
 
         val iframeResponse = app.get(
             iframeUrl,
