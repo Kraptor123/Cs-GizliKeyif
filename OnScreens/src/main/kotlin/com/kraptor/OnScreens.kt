@@ -177,7 +177,7 @@ class OnScreens : MainAPI() {
 
         val videoId = url.substringAfter("//").substringAfter("/").substringBefore("/")
 
-        val iframe = document.selectFirst("iframe")?.attr("src") ?: ""
+        val iframe = document.selectFirst("iframe[src], [data-embed-src]")?.let { it.attr("src").ifEmpty { it.attr("data-embed-src") } } ?: ""
 
         val title           = document.selectFirst("h1")?.text()?.trim() ?: return null
         val poster          = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
@@ -237,7 +237,8 @@ class OnScreens : MainAPI() {
         Log.d("kraptor_$name", "data = ${data}")
         val document = app.get(data).document
 
-        val iframe = document.selectFirst("iframe")?.attr("src") ?: ""
+        // Oynatici artik tikla-oynat: iframe yok, embed adresi button[data-embed-src] icinde
+        val iframe = document.selectFirst("iframe[src], [data-embed-src]")?.let { it.attr("src").ifEmpty { it.attr("data-embed-src") } } ?: ""
 
          loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
 
