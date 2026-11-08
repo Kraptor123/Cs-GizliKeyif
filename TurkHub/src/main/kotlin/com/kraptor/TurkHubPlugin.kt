@@ -9,5 +9,7 @@ class TurkHubPlugin: Plugin() {
     override fun load() {
         registerMainAPI(TurkHub())
         registerExtractorAPI(AhPlayerExtractor())
+        registerExtractorAPI(VeevToExtractor())
+        registerExtractorAPI(UpnsLiveExtractor())
     }
 }

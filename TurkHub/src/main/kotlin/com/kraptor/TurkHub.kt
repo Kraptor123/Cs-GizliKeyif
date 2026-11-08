@@ -145,8 +145,11 @@ class TurkHub : MainAPI() {
             val links = Regex("""videoUrls\['[^']+'\]\s*=\s*'([^']+)'""").findAll(gatehtml).map { it.groupValues[1] }.toList()
 
             if (links.isNotEmpty()) {
-                links.forEach {
-                    loadExtractor(it, gateiframe, subtitleCallback, callback)
+                // Gate sayfasi JS'i: URL'deki #hash son linke eklenir (upns video ID'si hash'te)
+                val hash = gateiframe.substringAfter("#", "").takeIf { it.isNotEmpty() }?.let { "#$it" }.orEmpty()
+                links.forEachIndexed { index, link ->
+                    val fixed = if (index == links.lastIndex && hash.isNotEmpty() && !link.contains("#")) link + hash else link
+                    loadExtractor(fixed, gateiframe, subtitleCallback, callback)
                 }
             } else {
                 Jsoup.parse(gatehtml).select("iframe").forEach {
