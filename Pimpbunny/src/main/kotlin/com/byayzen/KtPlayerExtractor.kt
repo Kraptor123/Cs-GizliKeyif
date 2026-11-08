@@ -214,7 +214,7 @@ object KtPlayerExtractor {
         val (_, seen) = resolver.resolveUsingWebView(
             url             = pageUrl,
             referer         = mainUrl,
-            headers         = cookieHeaders,
+            headers         = cookieHeaders.filterKeys { !it.equals("User-Agent", true) },
             requestCallBack = { request ->
                 val url = request.url.toString()
                 if (isFreshMedia(url, siteHost, stale)) {

@@ -7,7 +7,6 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.network.CloudflareKiller
 
 class Pimpbunny : MainAPI() {
     override var mainUrl = "https://pimpbunny.com"
@@ -19,7 +18,18 @@ class Pimpbunny : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     private val tag             = "gizlikeyif_${name}"
-    private val cloudflareKiller = CloudflareKiller()
+    private val cloudflareKiller = BunnyShieldKiller()
+
+    // Bunny Shield, sadece UA+Referer ile gelen gorsel isteklerini 403'luyor; tarayici gibi basliklar gerekiyor.
+    private val imageHeaders = mapOf(
+        "User-Agent" to BunnyShieldKiller.USER_AGENT,
+        "Referer" to "$mainUrl/",
+        "Accept" to "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "Accept-Language" to "en-US,en;q=0.9",
+        "Sec-Fetch-Dest" to "image",
+        "Sec-Fetch-Mode" to "no-cors",
+        "Sec-Fetch-Site" to "same-origin"
+    )
 
     override val mainPage = mainPageOf(
         "${mainUrl}/videos" to "Newest Videos",
@@ -83,6 +93,21 @@ class Pimpbunny : MainAPI() {
         )
     }
 
+    // attr() eksik ozellikte "" doner (null degil), bu yuzden ?: zinciri calismaz; ilk dolu olani sec.
+    private fun pickImage(img: Element?): String? = rawPickImage(img)
+        // Android 11 AVIF cozemiyor; ?format=avif&quality=100 kalkinca duz .jpg gelir.
+        ?.replace(Regex("[?&]format=avif(&quality=\\d+)?"), "")
+
+    private fun rawPickImage(img: Element?): String? {
+        if (img == null) return null
+        for (a in listOf("data-original", "data-src", "data-webp", "data-lazy-src", "data-thumb", "src")) {
+            val v = img.attr(a).trim()
+            if (v.isNotEmpty() && !v.startsWith("data:")) return v
+        }
+        return listOf("data-srcset", "srcset").map { img.attr(it).trim() }.firstOrNull { it.isNotEmpty() }
+            ?.substringBefore(",")?.trim()?.substringBefore(" ")?.takeIf { it.isNotEmpty() && !it.startsWith("data:") }
+    }
+
     private fun Element.toSearchResult(isModel: Boolean = true): SearchResponse? {
         if (this.hasClass("item--adv-thumb") || this.hasClass("js-adv-thumb-item") || this.hasClass("is-adv-randomized") || this.selectFirst("div.qualtiy:contains(AD)") != null) return null
         val anchor = this.selectFirst("a.ui-card-link__KxRw6l, a")
@@ -95,39 +120,34 @@ class Pimpbunny : MainAPI() {
         val title = this.selectFirst(".ui-card-title__igirYJ, .text-truncate")?.text()?.trim()
             ?: return null
         val img = this.selectFirst("img.ui-card-thumbnail__8dZcLX, img")
-        val posterUrl = fixUrlNull(
-            img?.attr("data-original") ?: img?.attr("data-webp") ?: img?.attr("data-src")
-            ?: img?.attr("src")
-        )
+        val posterUrl = fixUrlNull(pickImage(img))
 
         return if (isModel || href.contains("/onlyfans-creators/")) {
             newTvSeriesSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = posterUrl
+                this.posterHeaders = imageHeaders
             }
         } else {
             newMovieSearchResponse(title, href, TvType.NSFW) {
                 this.posterUrl = posterUrl
+                this.posterHeaders = imageHeaders
             }
         }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val itemsPerPage = 30
-        val timestamp = System.currentTimeMillis()
-        val searchUrl =
-            "$mainUrl/search/$query/?mode=async&function=get_block&block_id=list_models_models_list_search_result&from_models=$page&sort_by=title&items_per_page=$itemsPerPage&models_per_page=$itemsPerPage&_=$timestamp"
-        val response = app.get(
+        val q = java.net.URLEncoder.encode(query, "UTF-8").replace("+", "%20")
+        val searchUrl = if (page <= 1) "$mainUrl/search/$q/" else "$mainUrl/search/$q/$page/"
+        val document = app.get(
             url = searchUrl,
             interceptor = cloudflareKiller,
-            headers = mapOf(
-                "Referer" to "$mainUrl/search/$query/",
-                "X-Requested-With" to "XMLHttpRequest"
-            )
-        )
-        val document = response.document
-        val results = document.select(".ui-card-root__0dWeQJ, .col").mapNotNull {
-            it.toSearchResult()
-        }.distinctBy { it.url }
+            headers = mapOf("Referer" to "$mainUrl/")
+        ).document
+        // Arama sayfasi video kartlarinin yaninda creator kartlari da icerir; sadece videolar.
+        val results = document.select(".col, .ui-card-root__0dWeQJ").mapNotNull {
+            it.toSearchResult(isModel = false)
+        }.filter { !it.url.contains("/onlyfans-creators/") && !it.url.contains("/onlyfans-models/") }
+            .distinctBy { it.url }
 
         return newSearchResponseList(results, hasNext = results.isNotEmpty())
     }
@@ -212,7 +232,7 @@ class Pimpbunny : MainAPI() {
                                 this.name = card.selectFirst(".ui-card-title__igirYJ")?.text()?.trim()
                                 val epImgElement = card.selectFirst("img")
                                 this.posterUrl = if (epImgElement != null) {
-                                    fixUrlNull(epImgElement.attr("data-original").ifEmpty { epImgElement.attr("src") })
+                                    fixUrlNull(pickImage(epImgElement))
                                 } else null
                             })
                         }
@@ -221,6 +241,7 @@ class Pimpbunny : MainAPI() {
 
             newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes.distinctBy { it.data }) {
                 this.posterUrl = mainPoster ?: actors.firstOrNull()?.image
+                this.posterHeaders = imageHeaders
                 this.plot = description
                 this.tags = tags
                 this.duration = duration
@@ -231,6 +252,7 @@ class Pimpbunny : MainAPI() {
         } else {
             newMovieLoadResponse(title, url, TvType.NSFW, url) {
                 this.posterUrl = mainPoster ?: actors.firstOrNull()?.image
+                this.posterHeaders = imageHeaders
                 this.plot = description
                 this.duration = duration
                 this.year = year
@@ -254,7 +276,7 @@ class Pimpbunny : MainAPI() {
             mainUrl            = mainUrl,
             pageUrl            = data,
             pageHtml           = response,
-            cookieHeaders      = cloudflareKiller.getCookieHeaders(data).associate { (key, value) -> key to value },
+            cookieHeaders      = cloudflareKiller.mediaHeaders(data),
             callback           = callback
         )
     }
