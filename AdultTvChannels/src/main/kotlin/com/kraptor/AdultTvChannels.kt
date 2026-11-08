@@ -81,12 +81,21 @@ class AdultTvChannels : MainAPI() {
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         Log.d(name, "data=$data")
-        val document = app.get(data, referer = "$mainUrl/").text
+        // Stream token'i sayfayi cekerken kullanilan UA'ya bagli: ayni UA ile al ve oynat.
+        val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0"
+        val document = app.get(data, referer = "$mainUrl/", headers = mapOf("User-Agent" to userAgent)).text
         val regex    = Regex(
             pattern = """(?:signedUrl =|file:)\s*"([^"]*)"""",
             options = setOf(RegexOption.IGNORE_CASE)
         )
-        val videoM3u8 = regex.find(document)?.groupValues?.get(1)?.ifBlank { null } ?: return false
+        // Link artik XOR ile gizleniyor: (function(){var k=23,a=[..]; ... String.fromCharCode(a[i]^k)})()
+        val xored = Regex("""var k=(\d+),a=\[([\d,\s]+)]""").find(document)?.let { m ->
+            val k = m.groupValues[1].toInt()
+            m.groupValues[2].split(",").mapNotNull { it.trim().toIntOrNull() }
+                .joinToString("") { (it xor k).toChar().toString() }
+        }
+        val videoM3u8 = xored?.takeIf { it.startsWith("http") }
+            ?: regex.find(document)?.groupValues?.get(1)?.ifBlank { null } ?: return false
 
         val duzeltilmis = if (videoM3u8.startsWith("https")) {
             videoM3u8
@@ -103,7 +112,7 @@ class AdultTvChannels : MainAPI() {
             type = ExtractorLinkType.M3U8
         ) {
             this.referer = "$mainUrl/"
-            this.headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0")
+            this.headers = mapOf("User-Agent" to userAgent)
         })
 
         return true
