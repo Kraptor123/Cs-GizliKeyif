@@ -253,7 +253,8 @@ class FullPorner(private val context: Context) : MainAPI() {
         val title     = document.selectFirst("div.video-block div.single-video-left div.single-video-title h2")?.text()?.trim().toString()
         val iframeUrl      = fixUrlNull(document.selectFirst("div.video-block div.single-video-left div.single-video iframe")?.attr("src")) ?: ""
 //        Log.d("kraptor_Fullporner","iframeUrl = $iframeUrl")
-        val videoID          = iframeUrl.substringAfter("video/").substringBefore("/")
+        // Gomme yolu /video/<id>/<flag> idi, site artik /player/ kullaniyor
+        val videoID          = Regex("""/(?:video|player)/([^/]+)/\d+""").find(iframeUrl)?.groupValues?.get(1) ?: iframeUrl.substringAfter("video/").substringBefore("/")
 //        Log.d("kraptor_Fullporner","videoID = $videoID")
         val reverseId        = videoID.reversed()
         val poster           = "https://xiaoshenke.net/vid/$reverseId/720/i"
@@ -285,6 +286,31 @@ class FullPorner(private val context: Context) : MainAPI() {
         val document       = app.get(data, interceptor = interceptor).document
         val iframeUrl      = fixUrlNull(document.selectFirst("div.video-block div.single-video-left div.single-video iframe")?.attr("src")) ?: ""
         Log.d("kraptor_$name","iframeurl = $iframeUrl")
+
+        // Gomme /player/<id>/<kalite bayragi>: WebView'siz dogrudan xiaoshenke linkleri (bit 1=360, 2=480, 4=720, 8=1080)
+        Regex("""/(?:video|player)/([^/]+)/(\d+)""").find(iframeUrl)?.let { m ->
+            val flag = m.groupValues[2].toInt()
+            val reversedId = m.groupValues[1].reversed()
+            val qualities = listOf(1 to 360, 2 to 480, 4 to 720, 8 to 1080).filter { (flag and it.first) != 0 }.map { it.second }
+            if (qualities.isNotEmpty()) {
+                qualities.forEach { q ->
+                    callback.invoke(
+                        newExtractorLink(
+                            source = "FullPorner",
+                            name = "FullPorner ${q}p",
+                            url = "https://xiaoshenke.net/vid/$reversedId/$q",
+                            type = ExtractorLinkType.VIDEO,
+                            {
+                                this.referer = "https://xiaoshenke.net/"
+                                // Referer olmadan CDN 404 donuyor
+                                this.headers = mapOf("Referer" to "https://xiaoshenke.net/")
+                                this.quality = q
+                            }
+                        ))
+                }
+                return@withContext true
+            }
+        }
 
         val iframeText = app.get(iframeUrl, interceptor = interceptor).text
 
