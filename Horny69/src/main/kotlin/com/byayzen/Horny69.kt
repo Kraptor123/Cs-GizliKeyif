@@ -78,7 +78,7 @@ class Horny69 : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         val linkTag   = this.selectFirst("a[href*=/videos/]") ?: return null
-        val title     = linkTag.selectFirst("h2, h3")?.text()?.trim() ?: return null
+        val title     = (this.selectFirst("h2, h3")?.text() ?: this.selectFirst("img")?.attr("alt"))?.trim()?.ifEmpty { null } ?: return null
         val href      = fixUrlNull(linkTag.attr("href").ifEmpty { return null }) ?: return null
         val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src")?.ifEmpty { null })
 
