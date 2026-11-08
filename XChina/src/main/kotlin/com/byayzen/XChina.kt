@@ -5,6 +5,7 @@ package com.byayzen
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.network.CloudflareKiller
 
 class XChina : MainAPI() {
     override var mainUrl              = "https://en.xchina.co"
@@ -14,6 +15,9 @@ class XChina : MainAPI() {
     override val hasQuickSearch       = false
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
+
+    // Site Cloudflare arkasinda; challenge cikarsa WebView ile cozulur
+    private val cloudflareKiller by lazy { CloudflareKiller() }
 
     override val mainPage = mainPageOf(
         "$mainUrl/video-series/4"  to "Censored JAV",
@@ -30,7 +34,7 @@ class XChina : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url      = if (page <= 1) request.data else "${request.data.trimEnd('/')}/$page"
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
         val home     = document.select("div.grid a[href^='/video/'].group.block").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
@@ -59,13 +63,13 @@ class XChina : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url      = if (page <= 1) "$mainUrl/search?type=video&q=$query" else "$mainUrl/search?type=video&q=$query&page=$page"
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
         val results  = document.select("div.grid a[href^='/video/'].group.block").mapNotNull { it.toSearchResult() }
         return newSearchResponseList(results, results.isNotEmpty())
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val document        = app.get(url).document
+        val document        = app.get(url, interceptor = cloudflareKiller).document
         val title           = document.selectFirst("h1")?.ownText()?.trim()?.ifEmpty { null }
             ?: document.selectFirst("h1")?.text()?.trim()?.ifEmpty { null }
             ?: return null
@@ -88,7 +92,7 @@ class XChina : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document  = app.get(data).document
+        val document  = app.get(data, interceptor = cloudflareKiller).document
         val videoDiv  = document.selectFirst("div#video-player") ?: return false
         val dataSrc   = videoDiv.attr("data-src").ifEmpty { return false }
         val streamUrl = fixUrl(dataSrc)
@@ -104,7 +108,7 @@ class XChina : MainAPI() {
                 this.headers = mapOf(
                     "Origin"  to mainUrl,
                     "Referer" to "$mainUrl/"
-                )
+                ) + cloudflareKiller.getCookieHeaders(mainUrl).associate { (k, v) -> k to v }
             }
         )
         return true
