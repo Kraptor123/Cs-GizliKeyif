@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Document
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.readValue
 
 @Suppress("ClassName")
@@ -24,7 +25,7 @@ class xHamster : MainAPI() {
         "${mainUrl}/most-viewed/monthly/" to "Monthly Most Viewed",
         "${mainUrl}/most-viewed/" to "All Time Most Viewed",
         "${mainUrl}/4k/" to "4K",
-        "${mainUrl}/hd/2?quality=1080p" to "1080p",
+        "${mainUrl}/hd?quality=1080p" to "1080p",
         "${mainUrl}/categories/teen" to "Teen",
         "${mainUrl}/categories/mom" to "Mom",
         "${mainUrl}/categories/milf" to "Milf",
@@ -44,14 +45,17 @@ class xHamster : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        // Sayfa numarasi path'e, varsa query (?quality=1080p) sonuna gider
+        val path     = request.data.substringBefore("?").removeSuffix("/")
+        val query    = request.data.substringAfter("?", "")
         val document = app.get(
-            "${request.data}/$page?geo=us",
+            "$path/$page?${if (query.isNotEmpty()) "$query&" else ""}geo=us",
             cookies = mapOf("video_titles_translation" to "0")
         ).document
 
         Log.d(name, "$page ${request.data}")
 
-        val home = document.select("div.thumb-list div.thumb-list__item, div.thumb-list__item, div.video-thumb")
+        val home = document.initialsResults() ?: document.select("div.thumb-list div.thumb-list__item, div.thumb-list__item, div.video-thumb")
             .mapNotNull { it.toSearchResult() }
 
         Log.d(name, "${home.size}")
@@ -82,6 +86,37 @@ class xHamster : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.NSFW) { this.posterUrl = posterUrl }
     }
 
+    // DOM kartlarinin cogu JS ile dolan iskelet; window.initials icindeki videoThumbProps listesi tum videolari tasir
+    private fun Document.initialsResults(): List<SearchResponse>? {
+        val marker = "window.initials="
+        val script = select("script").map { it.data() }.firstOrNull { it.contains(marker) } ?: return null
+        val root   = runCatching {
+            mapper.readTree(script.substringAfter(marker).trim().removeSuffix(";"))
+        }.getOrNull() ?: return null
+
+        var best: JsonNode? = null
+        fun walk(node: JsonNode) {
+            if (node.isObject) {
+                val list = node.get("videoThumbProps")
+                if (list != null && list.isArray && list.size() > (best?.size() ?: 0)) best = list
+                node.fields().forEach { (key, value) ->
+                    // performer sayfasindaki "recommended" blogu asil listeden uzun olabiliyor
+                    if (key != "extendedVideoSectionComponent") walk(value)
+                }
+            } else if (node.isArray) {
+                node.forEach { walk(it) }
+            }
+        }
+        walk(root)
+
+        return best?.mapNotNull { item ->
+            val href   = item.get("pageURL")?.asText()?.ifEmpty { null } ?: return@mapNotNull null
+            val title  = item.get("title")?.asText()?.ifEmpty { null } ?: return@mapNotNull null
+            val poster = (item.get("thumbURL") ?: item.get("imageURL"))?.asText()?.ifEmpty { null }
+            newMovieSearchResponse(title, fixUrl(href), TvType.NSFW) { this.posterUrl = poster }
+        }?.ifEmpty { null }
+    }
+
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val document =
             app.get(
@@ -94,7 +129,7 @@ class xHamster : MainAPI() {
                 cookies = mapOf("video_titles_translation" to "0")
             ).document
 
-        val aramaCevap = document.select("div.thumb-list div.thumb-list__item")
+        val aramaCevap = document.initialsResults() ?: document.select("div.thumb-list div.thumb-list__item")
             .mapNotNull { it.toSearchResult() }
 
         return newSearchResponseList(aramaCevap, hasNext = true)
@@ -104,16 +139,23 @@ class xHamster : MainAPI() {
         val document =
             app.get("${url}?geo=us", cookies = mapOf("video_titles_translation" to "0")).document
 
-        val title = document.selectFirst("div.with-player-container h1")?.text()?.trim().toString()
+        val title = (document.selectFirst("div.with-player-container h1") ?: document.selectFirst("h1"))?.text()?.trim().toString()
         val poster = fixUrlNull(
-            document.selectFirst("div.xp-preload-image")?.attr("style")?.substringAfter("https:")
+            document.selectFirst("meta[property=og:image]")?.attr("content")?.ifEmpty { null } ?: document.selectFirst("div.xp-preload-image")?.attr("style")?.substringAfter("https:")
                 ?.substringBefore("\');")
         )
-        val description = document.selectFirst("div.controls-info div.ab-info p")?.text()?.trim()
+        val description = (document.selectFirst("meta[property=og:description]")?.attr("content")
+            ?: document.selectFirst("div.controls-info div.ab-info p")?.text())?.trim()
             ?.replace("\\s+".toRegex(), " ")
 
-        val actors = document.select("a.entity-author-container__name").map { aTag ->
-            val name = aTag.selectFirst("span")?.text()?.trim() ?: ""
+        val actors = document.select(
+            "a.entity-author-container__name, " +
+            "a[href*='/creators/'][class*='border-radius-small'], " +
+            "a[href*='/pornstars/'][class*='border-radius-small'], " +
+            "a[href*='/celebrities/'][class*='border-radius-small']"
+        ).distinctBy { it.attr("href") }.mapNotNull { aTag ->
+            val name = (aTag.selectFirst("span")?.text() ?: aTag.selectFirst("img")?.attr("alt") ?: aTag.text())
+                .trim().ifEmpty { return@mapNotNull null }
             val image =
                 aTag.selectFirst("img")?.attr("src") ?: aTag.selectFirst("img")?.attr("data-src")
             Actor(name, image)
