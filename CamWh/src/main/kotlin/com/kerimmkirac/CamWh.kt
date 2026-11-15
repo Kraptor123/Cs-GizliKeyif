@@ -26,7 +26,7 @@ class CamWh : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val newUrl = request.data.replace(Regex("from=\\d+"), "from=$page")
+        val newUrl = if (page == 1) request.data else "${request.data}?from=$page"
         val document = app.get(newUrl).document
 
         val items = document.select("div.item").mapNotNull { it.toMainPageResult() }
@@ -46,7 +46,7 @@ class CamWh : MainAPI() {
         val href = fixUrlNull(anchor.attr("href")) ?: return null
 
         val imgElement = this.selectFirst("img")
-        val poster = fixUrlNull(imgElement?.attr("data-original").takeIf { !it.isNullOrBlank() })
+        val poster = fixUrlNull(listOf("data-original", "data-webp", "src").map { imgElement?.attr(it).orEmpty() }.firstOrNull { it.isNotBlank() && !it.startsWith("data:") })
 
 
 
@@ -136,7 +136,7 @@ class CamWh : MainAPI() {
                     source = name,
                     name = name,
                     url = url,
-                    type = ExtractorLinkType.VIDEO
+                    type = if (url.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                 ) {
                     this.referer = "$mainUrl/"
                     this.quality = Qualities.Unknown.value
