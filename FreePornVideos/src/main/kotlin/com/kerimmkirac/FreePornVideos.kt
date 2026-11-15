@@ -91,7 +91,7 @@ class FreePornVideos : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val searchquery= query.createSlug() ?:""
-        val document = app.get("${mainUrl}/search/$searchquery/1/").document
+        val document = app.get("${mainUrl}/search/$searchquery/$page/").document
         val aramaCevap = document.select("#custom_list_videos_videos_list_search_result_items > div.item").mapNotNull { it.toSearchResult() }
 
         return newSearchResponseList(aramaCevap, hasNext = true)
@@ -106,9 +106,9 @@ class FreePornVideos : MainAPI() {
         val title           = raw_title.removePrefix("- ").trim().removeSuffix("-").trim()
 
         val poster          = fixUrlNull(document.selectFirst("[property='og:image']")?.attr("content"))
-        val tags            = document.selectXpath("//div[contains(text(), 'Categories:')]/a").map { it.text() }
-        val description     = document.selectXpath("//div[contains(text(), 'Description:')]/em").text().trim()
-        val actors          = document.selectXpath("//div[contains(text(), 'Models:')]/a").map { it.text() }
+        val tags            = document.select("a.btn_tag").map { it.text() }
+        val description     = document.select("div.block-details em").text().trim()
+        val actors          = document.select("a.btn_model").map { it.text() }
         val recommendations = document.select("div#list_videos_related_videos_items div.item").mapNotNull { it.toSearchResult() }
 
         val year            = full_title.substring(full_title.length - 4).toIntOrNull()
