@@ -230,16 +230,22 @@ class PornHub : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val document = app.get(data, referer = "${mainUrl}/" , cookies = cookies).document
+        val response = app.get(data, referer = "${mainUrl}/" , cookies = cookies)
+        val document = response.document
 
         val script = document.selectFirst("script:containsData(var flashvars)")?.data()?.substringAfter(" = ")
             ?.substringBefore(";") ?: ""
 
-        val mapper = mapper.readValue<Phub>(script)
+        val cevaplar = mapper.readValue<Phub>(script).mediaDefinitions.orEmpty().flatMap { cevap ->
+            val video = cevap.videoUrl ?: return@flatMap emptyList()
+            // get_media bir JSON uc noktasi; dogrudan MP4 listesini dondurur (sayfa oturum cerezi gerekir)
+            if (!video.contains("/video/get_media")) return@flatMap listOf(cevap)
+            runCatching {
+                mapper.readValue<List<PhubVideo>>(app.get(video, referer = data, cookies = cookies + response.cookies).text)
+            }.getOrNull().orEmpty()
+        }
 
-        val cevaplar = mapper.mediaDefinitions
-
-        cevaplar?.forEach { cevap ->
+        cevaplar.forEach { cevap ->
             val video = cevap.videoUrl ?: ""
             Log.d(name, "video=$video")
             val quality = cevap.quality.toString()
