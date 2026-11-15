@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import android.util.Base64
+import com.lagradost.cloudstream3.network.CloudflareKiller
 
 class Pornslash : MainAPI() {
     override var mainUrl              = "https://www.pornslash.com"
@@ -16,6 +17,9 @@ class Pornslash : MainAPI() {
     override val hasQuickSearch       = true
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
+
+    // Dart app fetches site pages through its Cloudflare solver; only kicks in on a challenge
+    private val cloudflareKiller by lazy { CloudflareKiller() }
 
     override val mainPage = mainPageOf(
         "${mainUrl}/cat/3d-porn" to "3D Porn",
@@ -114,7 +118,7 @@ class Pornslash : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page <= 1) request.data else "${request.data}?p=$page"
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
         val home = document.select("div.video-item").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
@@ -139,7 +143,7 @@ class Pornslash : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url = if (page <= 1) "${mainUrl}/search/$query" else "${mainUrl}/search/$query?p=$page"
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
         val results = document.select("div.video-item").mapNotNull { it.toSearchResult() }
 
         return newSearchResponseList(results, hasNext = results.isNotEmpty())
@@ -148,7 +152,7 @@ class Pornslash : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
 
         val title = document.selectFirst("h1.video-page-title")?.text()?.trim() ?: return null
         val posterStyle = document.selectFirst(".cover-background")?.attr("style")
@@ -164,7 +168,7 @@ class Pornslash : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val document = app.get(data).document
+        val document = app.get(data, interceptor = cloudflareKiller).document
         val embedUrl = document.selectFirst("script[type=\"application/ld+json\"]")?.data()?.let { json ->
             Regex("\"embedUrl\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
         } ?: return false
