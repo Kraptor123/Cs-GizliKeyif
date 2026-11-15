@@ -21,24 +21,24 @@ class Koreaye : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl/" to "Son Videolar",
-        "$mainUrl/kategori/turk/" to "Türk",
-        "$mainUrl/kategori/turkce-altyazili/" to "Türkçe Altyazılı",
-        "$mainUrl/kategori/amator/" to "Amatör",
-        "$mainUrl/kategori/uvey-anne/" to "Üvey Anne",
-        "$mainUrl/kategori/milf/" to "Milf",
-        "$mainUrl/kategori/olgun/" to "Olgun",
-       // "$mainUrl/kategori/genç/" to "Genç",
-        "$mainUrl/kategori/ensest/" to "Ensest",
-        "$mainUrl/kategori/hizmetci/" to "Hizmetçi",
-        "$mainUrl/kategori/asyali/" to "Asyalı",
-        "$mainUrl/kategori/konulu/" to "Konulu",
-        "$mainUrl/kategori/anal/" to "Anal",
-        "$mainUrl/kategori/lezbiyen/" to "Lezbiyen",
-        "$mainUrl/kategori/hd/" to "HD"
+        "$mainUrl/bas/turk-porn/" to "Türk",
+        "$mainUrl/bas/turkce-altyazili-porn/" to "Türkçe Altyazılı",
+        "$mainUrl/bas/amator/" to "Amatör",
+        "$mainUrl/bas/uvey-anne/" to "Üvey Anne",
+        "$mainUrl/bas/milf/" to "Milf",
+        "$mainUrl/bas/olgun/" to "Olgun",
+        "$mainUrl/bas/genc/" to "Genç",
+        "$mainUrl/bas/ensest/" to "Ensest",
+        "$mainUrl/bas/hizmetci/" to "Hizmetçi",
+        "$mainUrl/bas/asyali/" to "Asyalı",
+        "$mainUrl/bas/konulu/" to "Konulu",
+        "$mainUrl/bas/anal/" to "Anal",
+        "$mainUrl/bas/lezbiyen/" to "Lezbiyen",
+        "$mainUrl/bas/hd/" to "HD"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("${request.data}/page/$page/").document
+        val document = app.get("${request.data}page/$page/").document
         val home = document.select("div.item-video").mapNotNull { it.toMainPageResult() }
 
         return newHomePageResponse(
