@@ -30,7 +30,7 @@ class Redgifs : MainAPI() {
     }
 
     override val mainPage = mainPageOf(
-        "https://api.redgifs.com/v2/gifs/search?type=g&order=trending&count=30&verified=y" to "Trending",
+        "https://api.redgifs.com/v2/gifs/search?type=g&order=trending&count=30" to "Trending",
         "https://api.redgifs.com/v2/gifs/search?type=g&order=latest&count=30" to "Latest",
         "https://api.redgifs.com/v2/gifs/search?type=g&order=top&count=30" to "Top"
     )
@@ -79,7 +79,7 @@ class Redgifs : MainAPI() {
 
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val searchurl = "https://api.redgifs.com/v2/gifs/search?type=g&order=score&count=40&page=$page&query=$query"
+        val searchurl = "https://api.redgifs.com/v2/gifs/search?type=g&order=score&count=40&page=$page&query=${java.net.URLEncoder.encode(query, "UTF-8")}"
         val data = coresearch(searchurl)
         val results = data?.gifs?.mapNotNull { it.toSearchResponse() } ?: emptyList()
         val hasmore = if (data?.total != null) (page * 40) < data.total else results.isNotEmpty()
