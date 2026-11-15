@@ -173,7 +173,8 @@ class Allpornstream : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query, 1).items
 
     private fun postdataAl(restext: String): String {
-        return restext.substringAfter("\"initialPost\":").substringBefore(",\"initialUrls\"")
+        // RSC payload escapes the keys (initialPost\":), so cut on the bare names
+        return restext.substringAfter("initialPost").substringBefore("initialUrls")
             .replace("\\\"", "\"")
             .replace("\\\\", "\\")
             .replace(Regex("""\\u([0-9a-fA-F]{4})""")) { match -> match.groupValues[1].toInt(16).toChar().toString() }
@@ -196,9 +197,9 @@ class Allpornstream : MainAPI() {
 
         val title    = Regex("""video_title":"(.*?)"""").find(postdata)?.groupValues?.get(1) ?: return null
         val poster   = Regex("""image_details":\["(.*?)"""").find(postdata)?.groupValues?.get(1)?.let { posteriduzenle(it) }
-        val plot     = Regex("""description":"(.*?)"""").find(postdata)?.groupValues?.get(1)
-        val year     = Regex("""item_publish_date":"(\d{4})""").find(postdata)?.groupValues?.get(1)?.toIntOrNull()
-        val duration = Regex("""duration":"(\d+)m""").find(postdata)?.groupValues?.get(1)?.toIntOrNull()
+        val plot     = Regex(""""video_description":"(.*?)"""").find(postdata)?.groupValues?.get(1)
+        val year     = Regex("""item_publish_date":"\D*(\d{4})""").find(postdata)?.groupValues?.get(1)?.toIntOrNull()
+        val duration = Regex(""""video_duration":(\d+)""").find(postdata)?.groupValues?.get(1)?.toIntOrNull()?.div(60)
 
         val alllinks = linkleri(postdata).joinToString(",")
 

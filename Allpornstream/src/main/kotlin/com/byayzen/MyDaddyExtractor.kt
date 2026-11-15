@@ -38,8 +38,14 @@ open class MyDaddyExtractor : ExtractorApi() {
                     type = ExtractorLinkType.VIDEO
                 ) {
                     this.referer = mainUrl
+                    this.quality = getQualityFromName(match.groupValues[2])
                 }
             )
         }
     }
+}
+
+// mixdrop.ag 301s here; built-in MixDrop subclasses don't cover this host
+class MxDropClick : com.lagradost.cloudstream3.extractors.MixDrop() {
+    override var mainUrl = "https://mxdrop.click"
 }

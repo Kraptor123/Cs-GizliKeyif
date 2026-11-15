@@ -10,5 +10,6 @@ class AllpornstreamPlugin: Plugin() {
     override fun load() {
         registerMainAPI(Allpornstream())
         registerExtractorAPI(MyDaddyExtractor())
+        registerExtractorAPI(MxDropClick())
     }
 }
