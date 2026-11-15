@@ -125,7 +125,7 @@ class Beeg : MainAPI() {
                 .getOrNull().orEmpty()
                 .mapNotNull { it.toSearchResponse() }
         } else {
-            val responseString = app.get("${request.data}${page * 48}", headers = headerlar).text
+            val responseString = app.get("${request.data}${(page - 1) * 48}", headers = headerlar).text
             mapper.readValue<List<ApiCevap>>(responseString).mapNotNull { it.toMainPageResult() }
         }
 
