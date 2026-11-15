@@ -318,7 +318,7 @@ class Hanime : MainAPI() {
         Log.d("HanimeTV", "sources=${handshakeResponse.sources.size}")
 
         for (source in handshakeResponse.sources) {
-            if (source.kind != "normal" || source.src.isBlank()) {
+            if (source.kind == "backup" || source.src.isBlank()) {
                 Log.d("HanimeTV", "skip kind=${source.kind} label=${source.label}")
                 continue
             }
@@ -332,7 +332,7 @@ class Hanime : MainAPI() {
                     source = "HanimeTV",
                     name = "Hanime - ${source.label.ifBlank { "${source.height}p" }}",
                     url = fullUrl,
-                    type = ExtractorLinkType.M3U8
+                    type = if (fullUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                 ) {
                     this.referer = "$mainUrl/"
                     this.quality = source.height
