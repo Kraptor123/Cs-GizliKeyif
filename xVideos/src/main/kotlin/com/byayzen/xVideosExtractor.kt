@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
@@ -24,13 +25,33 @@ open class xVideosExtractor : ExtractorApi() {
         val hlsRegex = Regex("""html5player\.setVideoHLS\(['"]([^'"]+)['"]""")
         val hlsUrl = hlsRegex.find(document)?.groupValues?.get(1)
 
-        hlsUrl?.let { videoUrl ->
+        if (hlsUrl != null) {
             callback(
                 newExtractorLink(
                     source = this.name,
                     name = this.name,
-                    url = videoUrl,
-                )
+                    url = hlsUrl,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "$mainUrl/"
+                }
+            )
+            return
+        }
+
+        // HLS yoksa dogrudan MP4 linkleri
+        listOf("High" to Qualities.P720.value, "Low" to Qualities.P360.value).forEach { (key, quality) ->
+            val mp4Url = Regex("""html5player\.setVideoUrl$key\(['"]([^'"]+)['"]""").find(document)?.groupValues?.get(1) ?: return@forEach
+            callback(
+                newExtractorLink(
+                    source = this.name,
+                    name = "${this.name} $key",
+                    url = mp4Url,
+                    type = ExtractorLinkType.VIDEO
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = quality
+                }
             )
         }
     }

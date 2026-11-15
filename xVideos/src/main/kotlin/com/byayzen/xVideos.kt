@@ -85,9 +85,10 @@ class xVideos : MainAPI() {
         return newHomePageResponse(homePages, hasNextPage)
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        return app.get("$mainUrl/?k=$query").document
+    override suspend fun search(query: String, page: Int): SearchResponseList {
+        val res = app.get("$mainUrl/?k=$query&p=${page - 1}").document
             .select("div.mozaique div.thumb-block").mapNotNull { it.toSearchResponse() }
+        return newSearchResponseList(res, res.isNotEmpty())
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -101,6 +102,7 @@ class xVideos : MainAPI() {
 
         val tags = d.select("div.video-tags-list li a.is-keyword").map { it.text() }.filter { it.isNotBlank() }
         val uploaderName = d.selectFirst("li.main-uploader a.uploader-tag span.name")?.text()
+        val models = d.select("li.model span.name").map { it.text() }.filter { it.isNotBlank() }
 
         val recs = mutableListOf<SearchResponse>()
         val scriptContent = d.select("script").find { it.html().contains("var video_related") }?.html()
@@ -125,7 +127,7 @@ class xVideos : MainAPI() {
             this.tags = tags
             this.recommendations = recs
             this.duration = d.selectFirst("h2.page-title span.duration")?.text()?.let { parseDuration(it) }
-            uploaderName?.let { addActors(listOf(it)) }
+            addActors(models.ifEmpty { listOfNotNull(uploaderName) })
         }
     }
 
