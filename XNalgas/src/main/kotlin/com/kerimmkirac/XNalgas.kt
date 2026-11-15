@@ -88,7 +88,7 @@ class XNalgas : MainAPI() {
     val document = app.get(url).document
 
     val title = document.selectFirst("h1")?.text()?.trim() ?: return null
-    val poster = posterCache[url]
+    val poster = posterCache[url] ?: fixUrlNull(document.selectFirst("video[poster]")?.attr("poster"))
     val description = document.selectFirst("li.descrip > span")?.text()?.trim()
 
    val recommendations = document.select("div.bBlue").mapNotNull { it.toRecommendationResult() }
