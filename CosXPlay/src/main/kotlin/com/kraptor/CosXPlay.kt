@@ -89,7 +89,7 @@ class CosXPlay : MainAPI() {
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("span.title")?.text() ?: return null
         val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val img = this.selectFirst("img.video-img")
+        val img = this.selectFirst("img.video-img") ?: this.selectFirst("img")
         val posterUrl = fixUrlNull(
             img?.attr("data-src")?.takeIf { it.isNotBlank() }
                 ?: img?.attr("src")?.takeIf { it.isNotBlank() }
@@ -146,22 +146,26 @@ class CosXPlay : MainAPI() {
         val document = app.get(data).document
 
         val videolar = document.select("div.responsive-player.video-player video source")
+            .ifEmpty { document.select("video source") }
 
-        videolar.map { video ->
-            val link = video?.attr("src").toString()
-            val title = video?.attr("title").toString()
+        videolar.forEach { video ->
+            val link = fixUrlNull(video.attr("src").trim()) ?: return@forEach
+            val title = video.attr("title").ifBlank { video.attr("res") }.trim()
             callback.invoke(newExtractorLink(
                 "${this.name} $title",
                 "${this.name} $title",
                 link,
-                ExtractorLinkType.VIDEO,
+                if (link.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO,
                 {
-                    this.referer = "${mainUrl}/"
+                    // CDN sayfa adresini referer, site kokunu origin olarak bekliyor
+                    this.referer = data
+                    this.quality = getQualityFromName(title)
+                    this.headers = mapOf("Origin" to mainUrl)
                 }
             )
             )
         }
 
-        return true
+        return videolar.isNotEmpty()
     }
 }
