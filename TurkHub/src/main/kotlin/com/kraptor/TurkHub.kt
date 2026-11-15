@@ -2,13 +2,9 @@
 
 package com.kraptor
 
-import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import org.jsoup.Jsoup
 
 class TurkHub : MainAPI() {
     override var mainUrl              = "https://turkhub7.lat"
@@ -19,30 +15,35 @@ class TurkHub : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/"                                 to "TurkHub En Son",
-        "${mainUrl}/category/liseli-porno/"           to "Liseli Porno",
-        "${mainUrl}/category/turk-ifsa/"              to "Türk ifşa",
-        "${mainUrl}/category/konusmali-porno/"        to "Konuşmalı Porno",
-        "${mainUrl}/category/turbanli-porno/"         to "Türbanlı Porno",
-        "${mainUrl}/category/cuckold-porno/"          to "Cuckold Porno",
-        "${mainUrl}/category/fetis-porno/"            to "Fetiş Porno",
-        "${mainUrl}/category/genc-porno/"             to "Genç Porno",
-        "${mainUrl}/category/konulu-porno/"           to "Konulu Porno",
-        "${mainUrl}/category/sert-porno/"             to "Sert Porno",
-        "${mainUrl}/category/canli-porno/"            to "Canlı Porno",
-        "${mainUrl}/category/grup-porno/"             to "Grup Porno",
-        "${mainUrl}/category/tango-ifsa/"             to "Tango ifşa",
-        "${mainUrl}/category/turkce-altyazili/"       to "Türkçe Altyazılı",
-        "${mainUrl}/category/sahibe-porno/"           to "Sahibe Porno",
-        "${mainUrl}/category/twitter/"                to "Twitter",
-        "${mainUrl}/category/zenci/"                  to "Zenci",
+        "${mainUrl}/"                             to "TurkHub En Son",
+        "${mainUrl}/kategori/18-yasinda-genc"     to "18 Yaşında / Genç",
+        "${mainUrl}/kategori/amator"              to "Amatör",
+        "${mainUrl}/kategori/turbanli"            to "Türbanlı",
+        "${mainUrl}/kategori/konulu"              to "Konulu",
+        "${mainUrl}/kategori/sahibe-kole"         to "Sahibe Köle",
+        "${mainUrl}/kategori/webcam"              to "Webcam",
+        "${mainUrl}/kategori/masturbation"        to "Masturbation",
+        "${mainUrl}/kategori/sakso"               to "Sakso",
+        "${mainUrl}/kategori/esmer"               to "Esmer",
+        "${mainUrl}/kategori/sarisin"             to "Sarışın",
+        "${mainUrl}/kategori/hard"                to "Hard",
+        "${mainUrl}/kategori/milf"                to "Milf",
+        "${mainUrl}/kategori/anal"                to "Anal",
+        "${mainUrl}/kategori/grup"                to "Grup",
+        "${mainUrl}/kategori/lezbiyen"            to "Lezbiyen",
+        "${mainUrl}/kategori/dildo"               to "Dildo",
+        "${mainUrl}/kategori/am-yalama"           to "Am Yalama",
+        "${mainUrl}/kategori/sisman"              to "Şişman",
+        "${mainUrl}/kategori/asmr"                to "ASMR",
+        "${mainUrl}/kategori/travesti"            to "Travesti",
+        "${mainUrl}/kategori/zenci"               to "Zenci",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page == 1) request.data else "${request.data}page/$page/"
+        val url = if (page == 1) request.data else "${request.data}?sayfa=$page"
         val document = app.get(url).document
 
-        val home = document.select("div.grid-item, article[id^=post-]").mapNotNull {
+        val home = document.select("article.video-card").mapNotNull {
             it.toMainPageResult()
         }.distinctBy { it.url }
 
@@ -50,84 +51,48 @@ class TurkHub : MainAPI() {
     }
 
     private fun Element.toMainPageResult(): SearchResponse? {
-        val entrytitle = this.selectFirst("h2.entry-title a")
-        val title      = entrytitle?.text()?.trim() ?: return null
-        val href       = fixUrlNull(entrytitle.attr("href")) ?: return null
-        val posterurl  = fixUrlNull(
-            this.selectFirst("figure.post-thumbnail img")?.attr("src")
-                ?: this.selectFirst("img.wp-post-image")?.attr("src")
-        )
+        val entrytitle = this.selectFirst("a.card-title")
+        val title      = entrytitle?.attr("title")?.ifBlank { null } ?: entrytitle?.text()?.trim() ?: return null
+        val href       = fixUrlNull(entrytitle?.attr("href")) ?: return null
+        val posterurl  = fixUrlNull(this.selectFirst("a.card-thumb img")?.attr("src"))
 
-        return newMovieSearchResponse(title, "$href|$posterurl", TvType.NSFW) {
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterurl
         }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = if (page == 1) "$mainUrl/?s=$query" else "$mainUrl/page/$page/?s=$query"
+        val url = if (page == 1) "$mainUrl/ara?q=$query" else "$mainUrl/ara?q=$query&sayfa=$page"
         val document = app.get(url).document
 
-        val aramacevap = document.select("div.grid-item, article[id^=post-]").mapNotNull {
+        val aramacevap = document.select("article.video-card").mapNotNull {
             it.toMainPageResult()
-        }.filter {
-            !it.name.contains("İçerik kaldırma", ignoreCase = true) &&
-                    !it.name.contains("Gizlilik Politikası", ignoreCase = true) &&
-                    !it.url.contains("/terms")
         }.distinctBy { it.url }
 
-        val hasnext = document.selectFirst("a.next.page-numbers") != null
+        val hasnext = document.selectFirst("a[href*=sayfa=${page + 1}]") != null
 
         return newSearchResponseList(aramacevap, hasnext)
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
-    override suspend fun load(data: String): LoadResponse? {
-        val (url, storedposter) = data.split("|").let {
-            it[0] to it.getOrNull(1)
-        }
+    override suspend fun load(url: String): LoadResponse? {
+        // eski kayıtlı içerikler "href|poster" formatında
+        val url      = url.substringBefore("|")
+        val document = app.get(url).document
 
-        val response = app.get(url).text
-        val document = Jsoup.parse(response)
-
-        val title = document.selectFirst("h1.entry-title")?.text()?.trim() ?: return null
-
-        val plot = document.selectFirst("div.entry-content")?.ownText()?.trim()
-            ?: document.selectFirst("div.entry-content p")?.text()?.trim()
-
-        val tags = document.select("span.categories-list a").map { it.text() }
-
-        val recs = mutableListOf<SearchResponse>()
-
-        document.select("nav.post-nav a").mapNotNull {
-            it.toRecommendationResult()
-        }.forEach { recs.add(it) }
-
-        document.select("div.related-posts li").mapNotNull {
-            val rectitle = it.selectFirst(".post-title a")?.text()?.trim() ?: return@mapNotNull null
-            val rechref = fixUrlNull(it.selectFirst("a")?.attr("href")) ?: return@mapNotNull null
-            val recposter = fixUrlNull(it.selectFirst("img")?.attr("src"))
-
-            newMovieSearchResponse(rectitle, "$rechref|$recposter", TvType.NSFW) {
-                this.posterUrl = recposter
-            }
-        }.forEach { recs.add(it) }
+        val title  = document.selectFirst("h1")?.text()?.trim() ?: return null
+        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val plot   = document.selectFirst("meta[name=description]")?.attr("content")?.trim()
+        val tags   = document.select("a.chip[href^=/kategori/]").map { it.text().trim() }
+        val recs   = document.select("article.video-card").mapNotNull { it.toMainPageResult() }
+            .filter { it.url != url }.distinctBy { it.url }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl       = storedposter
+            this.posterUrl       = poster
             this.plot            = plot
             this.tags            = tags
-            this.recommendations = recs.distinctBy { it.url }
-        }
-    }
-
-    private fun Element.toRecommendationResult(): SearchResponse? {
-        val title = this.selectFirst(".post-nav-title")?.text()?.trim() ?: return null
-        val href = fixUrlNull(this.attr("href")) ?: return null
-        val posterurl = fixUrlNull(this.selectFirst(".post-nav-thumb img")?.attr("src"))
-
-        return newMovieSearchResponse(title, "$href|$posterurl", TvType.NSFW) {
-            this.posterUrl = posterurl
+            this.recommendations = recs
         }
     }
 
@@ -137,29 +102,22 @@ class TurkHub : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        val gateiframes = document.select("iframe.wpve-iframe, iframe").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
+        val document = app.get(data.substringBefore("|")).document
+        // og:video -> /v/<token>, 302 ile mp4 CDN adresine yönlendiriyor
+        val gate = fixUrlNull(document.selectFirst("meta[property=og:video]")?.attr("content")) ?: return false
+        val video = app.get(gate, referer = "$mainUrl/", allowRedirects = false).headers["location"] ?: gate
 
-        gateiframes.forEach { gateiframe ->
-            val gatehtml = app.get(gateiframe).text
-            val links = Regex("""videoUrls\['[^']+'\]\s*=\s*'([^']+)'""").findAll(gatehtml).map { it.groupValues[1] }.toList()
-
-            if (links.isNotEmpty()) {
-                // Gate sayfasi JS'i: URL'deki #hash son linke eklenir (upns video ID'si hash'te)
-                val hash = gateiframe.substringAfter("#", "").takeIf { it.isNotEmpty() }?.let { "#$it" }.orEmpty()
-                links.forEachIndexed { index, link ->
-                    val fixed = if (index == links.lastIndex && hash.isNotEmpty() && !link.contains("#")) link + hash else link
-                    loadExtractor(fixed, gateiframe, subtitleCallback, callback)
-                }
-            } else {
-                Jsoup.parse(gatehtml).select("iframe").forEach {
-                    val src = it.attr("data-src").ifEmpty { it.attr("src") }
-                    if (src.isNotBlank() && !src.contains("ads")) {
-                        loadExtractor(src, gateiframe, subtitleCallback, callback)
-                    }
-                }
+        callback(
+            newExtractorLink(
+                source = this.name,
+                name   = this.name,
+                url    = video,
+                type   = ExtractorLinkType.VIDEO
+            ) {
+                this.referer = "$mainUrl/"
+                this.quality = Qualities.Unknown.value
             }
-        }
+        )
         return true
     }
 }
