@@ -60,7 +60,7 @@ class Chatrubate : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
 
-        val aramaCevap = app.get("$mainUrl/api/ts/roomlist/room-list/?keywords=$query&limit=90&offset=${page}", referer = "${mainUrl}/", headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
+        val aramaCevap = app.get("$mainUrl/api/ts/roomlist/room-list/?keywords=${java.net.URLEncoder.encode(query, "UTF-8")}&limit=90&offset=${90 * (page - 1)}", referer = "${mainUrl}/", headers = mapOf("X-Requested-With" to "XMLHttpRequest"))
             .parsedSafe<Response>()!!.rooms
             .filter { it.gender != "s" && it.gender != "m" }
             .map { room -> newLiveSearchResponse(
