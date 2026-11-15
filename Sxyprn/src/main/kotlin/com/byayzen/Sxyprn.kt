@@ -102,6 +102,12 @@ class Sxyprn : MainAPI() {
         val description =
             document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
+        // PT39M2S -> 39 dk
+        val duration = document.selectFirst("meta[itemprop=duration]")?.attr("content")
+            ?.let { Regex("""PT(?:(\d+)H)?(?:(\d+)M)?""").find(it) }
+            ?.let { (it.groupValues[1].toIntOrNull() ?: 0) * 60 + (it.groupValues[2].toIntOrNull() ?: 0) }
+            ?.takeIf { it > 0 }
+
         val tags = document.select("a.hash_link").map { it.text().trim().substring(1) }
 
         val recommendations = document.select("div.post_el_small").mapNotNull { element ->
@@ -123,6 +129,7 @@ class Sxyprn : MainAPI() {
             this.posterUrl = poster
             this.plot = description
             this.tags = tags
+            this.duration = duration
             this.recommendations = recommendations
         }
     }

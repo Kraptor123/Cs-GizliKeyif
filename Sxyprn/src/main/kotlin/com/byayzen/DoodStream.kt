@@ -15,6 +15,12 @@ class DoodDoply : DoodStream() {
     override var name = "DoodStream"
 }
 
+// myvidplay.com / doply.net / doodstream.com now 301 to playmogo.com
+class DoodPlaymogo : DoodStream() {
+    override var mainUrl = "https://playmogo.com"
+    override var name = "DoodStream"
+}
+
 open class DoodStream : ExtractorApi() {
     override var name = "DoodStream"
     override var mainUrl = "https://myvidplay.com"
@@ -32,10 +38,10 @@ open class DoodStream : ExtractorApi() {
         ).text
 
         val md5Regex = Regex("/pass_md5/([^/]*)/([^/']*)")
-        val md5Match = md5Regex.find(response)
-        val md5Path = md5Match?.value.toString()
-        val expiry = md5Match?.groupValues?.getOrNull(1) ?: ""
-        val token = md5Match?.groupValues?.getOrNull(2) ?: ""
+        val md5Match = md5Regex.find(response) ?: return
+        val md5Path = md5Match.value
+        val expiry = md5Match.groupValues.getOrNull(1) ?: ""
+        val token = md5Match.groupValues.getOrNull(2) ?: ""
         val md5Url = mainUrl + md5Path
 
         val md5Response = app.get(
