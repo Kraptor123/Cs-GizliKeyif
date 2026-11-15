@@ -114,7 +114,7 @@ class JavGuru : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
-        val url = "$mainUrl/page/$page/?s=$query"
+        val url = "$mainUrl/page/$page/?s=${java.net.URLEncoder.encode(query, "UTF-8")}"
 
         val document = app.get(url, headers = mainHeaders).document
         val items = document.select("div.inside-article, article")
@@ -283,8 +283,11 @@ class JavGuru : MainAPI() {
                 val cleanBase = cfgBase.trimEnd('/')
                 val finalUrl = "$cleanBase/?${cfgRtype}r=$reversed"
 
+                // javlesbians hops end on a rotating Voe domain; keep the javlesbians link as an extractor fallback
+                var hostUrl: String? = null
                 val currentEmbedUrl = if (finalUrl.contains("javlesbians.com")) {
                     Log.d("kraptor_$name", "[$sourceName] Processing javlesbians: $finalUrl")
+                    hostUrl = finalUrl
                     followRedirects(finalUrl, sourceName)
                 } else {
                     val redirectRes = app.get(finalUrl, mainHeaders, allowRedirects = false)
@@ -292,6 +295,7 @@ class JavGuru : MainAPI() {
                         redirectRes.headers["location"] ?: redirectRes.headers["Location"]
                         ?: redirectRes.headers["LOCATION"]
                     if (location != null && location.contains("javlesbians.com")) {
+                        hostUrl = location
                         followRedirects(location, sourceName)
                     } else {
                         location ?: finalUrl
@@ -324,8 +328,8 @@ class JavGuru : MainAPI() {
                             this.referer = "$cleanBase/"
                         }
                     )
-                } else {
-                    loadExtractor(currentEmbedUrl, data, subtitleCallback, callback)
+                } else if (!loadExtractor(currentEmbedUrl, data, subtitleCallback, callback) && hostUrl != null && hostUrl != currentEmbedUrl) {
+                    loadExtractor(hostUrl, data, subtitleCallback, callback)
                 }
 
             } catch (e: Exception) {
