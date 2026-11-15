@@ -40,89 +40,39 @@ class OnScreens : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val home = if (page == 1) {
-            val document = app.get("$mainUrl${request.data}", headers = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        // Sayfa 1 de API'den gelir: imlec (cursor) son videonun created_at degerinden kurulur.
+        val cursor = if (page == 1) null else cursorMap[request.name] ?: return newHomePageResponse(request.name, emptyList())
+        val tag = request.data.substringAfterLast("/")
+        val cursorParam = cursor?.let { "&cursor=" + java.net.URLEncoder.encode(it, "UTF-8") } ?: ""
+
+        val response = app.get(
+            "$mainUrl/v1/tag/$tag?limit=24$cursorParam",
+            headers = mapOf(
+                "User-Agent" to "OnScreens-Fetcher",
+                "Accept" to "application/json",
                 "Accept-Language" to "en-US,en;q=0.5",
                 "Referer" to "${mainUrl}/",
                 "Sec-GPC" to "1",
                 "Connection" to "keep-alive",
-                "Upgrade-Insecure-Requests" to "1",
-                "Sec-Fetch-Dest" to "document",
-                "Sec-Fetch-Mode" to "navigate",
-                "Sec-Fetch-Site" to "cross-site",
-                "Sec-Fetch-User" to "?1",
-                "Priority" to "u=0, i",
+                "Sec-Fetch-Dest" to "empty",
+                "Sec-Fetch-Mode" to "cors",
+                "Sec-Fetch-Site" to "same-origin",
+                "Priority" to "u=4",
                 "Pragma" to "no-cache",
                 "Cache-Control" to "no-cache",
                 "TE" to "trailers"
-            )).document
-
-            val articles = document.select("article.flex")
-
-            articles.lastOrNull()?.let { lastArticle ->
-                val href = lastArticle.selectFirst("a")?.attr("href") ?: ""
-                val videoId = href.removePrefix("/").substringBefore("/")
-                val timestamp = System.currentTimeMillis()
-                val adjustedTimestamp = timestamp - (6 * 3600 * 1000)
-                val formattedTime = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
-                    timeZone = java.util.TimeZone.getTimeZone("UTC")
-                }.format(java.util.Date(adjustedTimestamp))
-
-                val cursorData = "$formattedTime|$videoId"
-                val encodedCursor = base64Encode(cursorData.toByteArray())
-                cursorMap[request.name] = encodedCursor
-            }
-
-            articles.mapNotNull { it.toMainPageResult() }
-        } else {
-            val cursor = cursorMap[request.name] ?: return newHomePageResponse(request.name, emptyList())
-            val tag = request.data.substringAfterLast("/")
-
-            val response = app.get(
-                "$mainUrl/v1/tag/$tag?limit=24&cursor=$cursor",
-                headers = mapOf(
-                    "User-Agent" to "OnScreens-Fetcher",
-                    "Accept" to "application/json",
-                    "Accept-Language" to "en-US,en;q=0.5",
-                    "Referer" to "${mainUrl}/",
-                    "Sec-GPC" to "1",
-                    "Connection" to "keep-alive",
-                    "Sec-Fetch-Dest" to "empty",
-                    "Sec-Fetch-Mode" to "cors",
-                    "Sec-Fetch-Site" to "same-origin",
-                    "Priority" to "u=4",
-                    "Pragma" to "no-cache",
-                    "Cache-Control" to "no-cache",
-                    "TE" to "trailers"
-                )
-            ).parsed<ApiResponse>()
-            response.videos?.lastOrNull()?.let { lastVideo ->
-                val videoId = lastVideo.videoId ?: return@let
-                val createdAt = lastVideo.createdAt ?: return@let
-                val timestamp = if (createdAt.contains("+")) {
-                    createdAt.substringBefore("+") + "Z"
-                } else if (createdAt.lastIndexOf("-") > 10) {
-                    createdAt.substring(0, createdAt.lastIndexOf("-")) + "Z"
-                } else if (!createdAt.endsWith("Z")) {
-                    createdAt + "Z"
-                } else {
-                    createdAt
-                }
-
-                val cursorData = "$timestamp|$videoId"
-                val encodedCursor = base64Encode(cursorData.toByteArray())
-                cursorMap[request.name] = encodedCursor
-            }
-
-            response.videos?.mapNotNull { video ->
-                val videoId = video.videoId ?: return@mapNotNull null
-                val title = video.title ?: return@mapNotNull null
-                val slug = video.slug ?: return@mapNotNull null
-                video.toSearchResponse(videoId, title, slug)
-            } ?: emptyList()
+            )
+        ).parsed<ApiResponse>()
+        response.videos?.lastOrNull()?.let { lastVideo ->
+            cursorFor(lastVideo)?.let { cursorMap[request.name] = it }
         }
+
+        val home = response.videos?.mapNotNull { video ->
+            val videoId = video.videoId ?: return@mapNotNull null
+            val title = video.title ?: return@mapNotNull null
+            val slug = video.slug ?: return@mapNotNull null
+            video.toSearchResponse(videoId, title, slug)
+        } ?: emptyList()
 
         return newHomePageResponse(
             list = HomePageList(
@@ -134,14 +84,18 @@ class OnScreens : MainAPI() {
         )
     }
 
-    private fun Element.toMainPageResult(): SearchResponse? {
-        val title     = this.selectFirst("h3")?.text() ?: return null
-        val href      = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
+    // API imleci: base64("<UTC zaman, 6 haneli kesir>Z|<video_id>"). created_at "+01:00" ofsetli gelir, UTC'ye cevrilmeli.
+    private fun cursorFor(video: VideoData): String? {
+        val videoId = video.videoId ?: return null
+        val m = Regex("""^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?(Z|[+-]\d\d:?\d\d)?$""")
+            .find(video.createdAt ?: return null) ?: return null
+        val (base, fraction, offset) = m.destructured
+        val zone = if (offset.isEmpty() || offset == "Z") "+0000" else offset.replace(":", "")
+        val parsed = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", java.util.Locale.US).parse(base + zone) ?: return null
+        val utc = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.format(parsed)
+        return base64Encode("$utc.${fraction.take(6).padEnd(6, '0')}Z|$videoId".toByteArray())
     }
 
     private fun VideoData.toSearchResponse(videoId: String, title: String, slug: String): SearchResponse {
@@ -157,7 +111,7 @@ class OnScreens : MainAPI() {
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val offset = (page - 1) * 12
         val response = app.get(
-            "$mainUrl/v1/enhanced-search?q=$query&limit=12&offset=$offset&sort=created_at"
+            "$mainUrl/v1/enhanced-search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&limit=12&offset=$offset&sort=created_at"
         ).parsed<SearchApiResponse>()
 
         val results = response.videos?.mapNotNull { video ->
@@ -216,7 +170,7 @@ class OnScreens : MainAPI() {
             video.toSearchResponse(videoId, title, slug)
         } ?: emptyList()
 
-        val actors          = document.select("span.valor a").map { Actor(it.text()) }
+        val actors          = document.select("span.flex a[href^=/m/]").map { Actor(it.text()) }
 
         val trailer         = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)?.let { "https://www.youtube.com/embed/$it" }
 
