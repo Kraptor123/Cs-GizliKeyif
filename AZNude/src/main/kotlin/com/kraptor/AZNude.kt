@@ -11,6 +11,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 
 
 class AZNude : MainAPI() {
@@ -227,14 +228,16 @@ class AZNude : MainAPI() {
             val title = document.selectFirst("meta[name=title]")?.attr("content") ?: return null
             val poster = fixUrlNull(document.selectFirst("link[rel=preload][as=image]")?.attr("href"))
             val description = document.selectFirst("meta[name=description]")?.attr("content")
-            val tags = document.select("div.col-md-12 h2.video-tags a").map { it.text() }
-            val recommendations = document.select("div.col-lg-3 a.video").mapNotNull { it.toRecommendationResult() }
+            val tags = document.select(".single-video-tags a, .video-tags-container a").map { it.text().trim() }.filter { it.isNotEmpty() }.distinct()
+            val recommendations = document.select("#tab-related .media-list-item").mapNotNull { it.toMainPageResult() }
+            val actors = document.select(".single-video-title a[href*=/view/celeb/]").map { it.text().trim() }.filter { it.isNotEmpty() }.distinct()
 
             return newMovieLoadResponse(title, url, TvType.NSFW, url) {
                 this.posterUrl = poster
                 this.plot = description
                 this.tags = tags
                 this.recommendations = recommendations
+                addActors(actors)
             }
         }
     }
