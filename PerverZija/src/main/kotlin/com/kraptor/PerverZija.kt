@@ -112,7 +112,12 @@ class PerverZija : MainAPI() {
 
         Log.d("kraptor_$name", "iframe = ${iframe}")
 
-         loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
+        // XtremeStream alt alan adi degisiyor (perv., moviekh., pervl2.); mainUrl eslesmesine guvenme
+        if (iframe.contains("xtremestream") && iframe.contains("index.php")) {
+            PerverZijaExtractor().getUrl(iframe, "${mainUrl}/", subtitleCallback, callback)
+        } else {
+            loadExtractor(iframe, "${mainUrl}/", subtitleCallback, callback)
+        }
 
         return true
     }
