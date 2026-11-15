@@ -6,6 +6,7 @@ import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
@@ -19,6 +20,9 @@ class SpankBang : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     private val tag = "gizlikeyif_${name}"
+
+    // Site Cloudflare arkasinda; challenge cikarsa WebView ile cozulur
+    private val cloudflareKiller by lazy { CloudflareKiller() }
 
     override val mainPage = mainPageOf(
         "${mainUrl}/"               to "Recommended",
@@ -52,7 +56,7 @@ class SpankBang : MainAPI() {
             if (page <= 1) "${cleanUrl}/" else "${cleanUrl}/${page}/"
         }
 
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
         val allFiltre = document.select("div[data-testid=video-list] > div[data-testid=video-item]:not(.hidden)")
         val tamFiltre = if (cleanUrl != mainUrl && page <= 1 && allFiltre.size > 8) allFiltre.drop(8) else allFiltre
 
@@ -73,7 +77,7 @@ class SpankBang : MainAPI() {
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val cleanQuery = query.trim().replace(" ", "+")
         val url        = if (page <= 1) "${mainUrl}/s/${cleanQuery}/" else "${mainUrl}/s/${cleanQuery}/${page}/"
-        val document   = app.get(url).document
+        val document   = app.get(url, interceptor = cloudflareKiller).document
         val allFiltre   = document.select("div[data-testid=video-list] > div[data-testid=video-item]:not(.hidden)")
         val tamFiltre   = if (page <= 1 && allFiltre.size > 8) allFiltre.drop(8) else allFiltre
         val items      = tamFiltre
@@ -100,7 +104,7 @@ class SpankBang : MainAPI() {
 
 
     override suspend fun load(url: String): LoadResponse? {
-        val document        = app.get(url).document
+        val document        = app.get(url, interceptor = cloudflareKiller).document
 
         val title           = document.selectFirst("h1")?.text()?.trim()?.ifEmpty { null } ?: return null
         val posterUrl       = fixUrlNull(document.selectFirst("#player_cover_img")?.attr("src")?.ifEmpty { null })
@@ -155,19 +159,45 @@ class SpankBang : MainAPI() {
         callback         : (ExtractorLink) -> Unit
     ): Boolean {
         Log.d(name, "loadLinks data: $data")
-        val document     = app.get(data).document
+        val document     = app.get(data, interceptor = cloudflareKiller).document
         val html         = document.html()
-        val m3u8Url      = Regex("""'m3u8'\s*:\s*\[\s*'([^']+)'""").find(html)?.groupValues?.get(1) ?: return false
+        var found        = false
 
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name   = this.name,
-                url    = m3u8Url,
-                type   = ExtractorLinkType.M3U8
+        // stream_data icindeki dogrudan MP4 kaliteleri
+        listOf("4k", "2160p", "1080p", "720p", "480p", "360p", "240p").forEach { q ->
+            val qUrl = (Regex("""'$q'\s*:\s*\[\s*'([^']+)'""").find(html) ?: Regex(""""$q"\s*:\s*\[\s*"([^"]+)"""").find(html))
+                ?.groupValues?.get(1)?.takeIf { it.isNotEmpty() && !it.contains(".m3u8") } ?: return@forEach
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name   = "${this.name} ${q.uppercase()}",
+                    url    = qUrl,
+                    type   = ExtractorLinkType.VIDEO
+                ) {
+                    this.referer = "${mainUrl}/"
+                    this.quality = if (q == "4k") Qualities.P2160.value else getQualityFromName(q)
+                }
             )
-        )
+            found = true
+        }
 
-        return true
+        val m3u8Url      = (Regex("""'m3u8'\s*:\s*\[\s*'([^']+)'""").find(html) ?: Regex(""""m3u8"\s*:\s*\[\s*"([^"]+)"""").find(html))
+            ?.groupValues?.get(1)
+
+        if (m3u8Url != null) {
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name   = this.name,
+                    url    = m3u8Url,
+                    type   = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "${mainUrl}/"
+                }
+            )
+            found = true
+        }
+
+        return found
     }
 }
