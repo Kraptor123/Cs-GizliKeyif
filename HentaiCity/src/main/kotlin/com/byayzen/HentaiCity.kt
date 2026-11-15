@@ -18,6 +18,12 @@ class HentaiCity : MainAPI() {
 
     private val tag = "gizlikeyif_${name}"
 
+    // mypgallery ile ayni: tarayici UA + site referer
+    private val siteHeaders = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+        "Referer"    to "${mainUrl}/"
+    )
+
     override val mainPage = mainPageOf(
         "${mainUrl}/videos/straight/all-popular.html"         to "Most Popular",
         "${mainUrl}/videos/straight/all-recent.html"          to "Most Recent",
@@ -49,8 +55,8 @@ class HentaiCity : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         Log.d(tag, "getMainPage ${request.data} page=$page")
         val url      = if (page <= 1) request.data else request.data.replace(".html", "-$page.html")
-        val document = app.get(url).document
-        val items    = document.select("section.content div.thumb-list div.outer-item")
+        val document = app.get(url, headers = siteHeaders).document
+        val items    = document.select("div.thumb-list div.outer-item")
         val home     = items.mapNotNull { it.toMainPageResult() }
         Log.d(tag, "items=${items.size} parsed=${home.size}")
         return newHomePageResponse(
@@ -65,7 +71,7 @@ class HentaiCity : MainAPI() {
     private fun Element.toMainPageResult(): SearchResponse? {
         val title     = this.selectFirst("p a.video-title")?.text()?.trim() ?: return null
         val href      = fixUrlNull(this.selectFirst("a.thumb-img")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("div.thumb-ratio img")?.attr("src"))
+        val posterUrl = fixUrlNull(this.selectFirst("div.thumb-ratio img")?.let { it.attr("src").ifBlank { it.attr("data-src") } }?.replace(".md.", "."))
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
@@ -73,9 +79,10 @@ class HentaiCity : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         Log.d(tag, "search $query page=$page")
-        val url          = "${mainUrl}/search/video/${query}/$page/"
-        val document     = app.get(url).document
-        val searchAnswer = document.select("section.content div.thumb-list div.outer-item").mapNotNull { it.toMainPageResult() }
+        // 1. sayfa: /search/video/q (/1/ bos sayfa donuyor), sonrakiler /q/N/
+        val url          = if (page <= 1) "${mainUrl}/search/video/${query}" else "${mainUrl}/search/video/${query}/$page/"
+        val document     = app.get(url, headers = siteHeaders).document
+        val searchAnswer = document.select("div.thumb-list div.outer-item").mapNotNull { it.toMainPageResult() }
         return newSearchResponseList(searchAnswer)
     }
 
@@ -83,7 +90,7 @@ class HentaiCity : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         Log.d(tag, "Load : $url")
-        val document         = app.get(url).document
+        val document         = app.get(url, headers = siteHeaders).document
 
         val title            = document.selectFirst("h1")?.text()?.trim() ?: return null
         val poster           = fixUrlNull(document.selectFirst("video")?.attr("poster"))
@@ -121,16 +128,16 @@ class HentaiCity : MainAPI() {
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         Log.d(tag, "data = ${data}")
-        val document      = app.get(data).document
-        val sourceElement = document.selectFirst("video#video-id source") ?: return false
+        val document      = app.get(data, headers = siteHeaders).document
+        val sourceElement = document.selectFirst("video#video-id source") ?: document.selectFirst("video source") ?: return false
         val videoUrl      = sourceElement.attr("src").ifEmpty { return false }
 
         callback(
             newExtractorLink(
                 source = this.name,
                 name   = this.name,
-                url    = videoUrl,
-                type   = INFER_TYPE
+                url    = fixUrl(videoUrl),
+                type   = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
             ) {
                 this.referer = "${mainUrl}/"
                 this.quality = Qualities.Unknown.value
