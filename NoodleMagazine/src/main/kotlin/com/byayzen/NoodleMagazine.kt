@@ -6,6 +6,7 @@ import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -16,17 +17,20 @@ class NoodleMagazine : MainAPI() {
     override var lang = "en"
     override val supportedTypes = setOf(TvType.NSFW)
 
+    // Site Cloudflare arkasinda; challenge cikarsa WebView ile cozulur
+    private val cloudflareKiller by lazy { CloudflareKiller() }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val pages = mutableListOf<HomePageList>()
 
         if (page <= 1) {
             try {
-                val tagsDoc = app.get("$mainUrl/video/a").document
+                val tagsDoc = app.get("$mainUrl/video/a", interceptor = cloudflareKiller).document
                 tagsDoc.select("div.tags-scroll a").take(10).forEach { tag ->
                     val tagTitle = tag.text()
                     val tagHref = fixUrl(tag.attr("href"))
                     val items =
-                        app.get(tagHref).document.select("div.item").mapNotNull { it.toRes() }
+                        app.get(tagHref, interceptor = cloudflareKiller).document.select("div.item").mapNotNull { it.toRes() }
                     if (items.isNotEmpty()) pages.add(HomePageList(tagTitle, items, isHorizontalImages = true))
                 }
             } catch (e: Exception) {
@@ -36,7 +40,7 @@ class NoodleMagazine : MainAPI() {
         if (pages.isEmpty() || page > 1) {
             val latestUrl = if (page > 1) "$mainUrl/video/?p=${page - 1}" else "$mainUrl/video/"
             val latestItems =
-                app.get(latestUrl).document.select("div.item").mapNotNull { it.toRes() }
+                app.get(latestUrl, interceptor = cloudflareKiller).document.select("div.item").mapNotNull { it.toRes() }
             pages.add(HomePageList("Latest Videos", latestItems, isHorizontalImages = true))
         }
 
@@ -61,12 +65,12 @@ class NoodleMagazine : MainAPI() {
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val q = query.trim().replace(" ", "-")
         val url = if (page > 1) "$mainUrl/video/$q?p=${page - 1}" else "$mainUrl/video/$q"
-        val res = app.get(url).document.select("div.item").mapNotNull { it.toRes() }
+        val res = app.get(url, interceptor = cloudflareKiller).document.select("div.item").mapNotNull { it.toRes() }
         return newSearchResponseList(res, res.isNotEmpty())
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val doc = app.get(url).document
+        val doc = app.get(url, interceptor = cloudflareKiller).document
         val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             posterUrl = fixUrlNull(doc.selectFirst("meta[property=og:image]")?.attr("content"))
@@ -81,7 +85,7 @@ class NoodleMagazine : MainAPI() {
         sub: (SubtitleFile) -> Unit,
         cb: (ExtractorLink) -> Unit
     ): Boolean {
-        val text = app.get(data).text
+        val text = app.get(data, interceptor = cloudflareKiller).text
 
         val jsonString = Regex(
             """window\.playlist\s*=\s*(\{.*?\});""",
