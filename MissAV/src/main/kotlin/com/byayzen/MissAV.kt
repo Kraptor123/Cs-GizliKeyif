@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.network.CloudflareKiller
 
 class MissAV : MainAPI() {
     override var mainUrl = "https://missav.live"
@@ -16,36 +17,37 @@ class MissAV : MainAPI() {
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.NSFW)
     val subtitleCatUrl = "https://www.subtitlecat.com"
+    private val cloudflareKiller by lazy { CloudflareKiller() }
 
     override val mainPage = mainPageOf(
-        "$mainUrl/dm169/en/weekly-hot?sort=weekly_views" to "Weekly Hot",
-        "$mainUrl/dm263/en/monthly-hot?sort=views" to "Monthly Hot",
+        "$mainUrl/en/weekly-hot?sort=weekly_views" to "Weekly Hot",
+        "$mainUrl/en/monthly-hot?sort=views" to "Monthly Hot",
         "$mainUrl/en/new?sort=published_at" to "Newly Added",
         "$mainUrl/en/english-subtitle" to "English Subtitles",
-        "$mainUrl/dm628/en/uncensored-leak" to "Uncensored Leak",
-        "$mainUrl/dm150/en/fc2" to "FC2",
-        "$mainUrl/dm35/en/madou" to "Madou",
+        "$mainUrl/en/uncensored-leak" to "Uncensored Leak",
+        "$mainUrl/en/fc2" to "FC2",
+        "$mainUrl/en/madou" to "Madou",
         "$mainUrl/en/klive" to "K-Live",
         "$mainUrl/en/clive" to "C-Live",
-        "$mainUrl/dm29/en/tokyohot" to "Tokyo Hot",
-        "$mainUrl/dm1198483/en/heyzo" to "HEYZO",
-        "$mainUrl/dm2469695/en/1pondo" to "1pondo",
-        "$mainUrl/dm3959622/en/caribbeancom" to "Caribbeancom",
-        "$mainUrl/dm48032/en/caribbeancompr" to "Caribbeancom Premium",
-        "$mainUrl/dm3710098/en/10musume" to "10musume",
-        "$mainUrl/dm1342558/en/pacopacomama" to "Pacopacomama",
-        "$mainUrl/dm136/en/gachinco" to "Gachinco",
-        "$mainUrl/dm29/en/xxxav" to "XXX-AV",
-        "$mainUrl/dm24/en/marriedslash" to "Married Slash",
-        "$mainUrl/dm20/en/naughty4610" to "Naughty 4610",
-        "$mainUrl/dm22/en/naughty0930" to "Naughty 0930"
+        "$mainUrl/en/tokyohot" to "Tokyo Hot",
+        "$mainUrl/en/heyzo" to "HEYZO",
+        "$mainUrl/en/1pondo" to "1pondo",
+        "$mainUrl/en/caribbeancom" to "Caribbeancom",
+        "$mainUrl/en/caribbeancompr" to "Caribbeancom Premium",
+        "$mainUrl/en/10musume" to "10musume",
+        "$mainUrl/en/pacopacomama" to "Pacopacomama",
+        "$mainUrl/en/gachinco" to "Gachinco",
+        "$mainUrl/en/xxxav" to "XXX-AV",
+        "$mainUrl/en/marriedslash" to "Married Slash",
+        "$mainUrl/en/naughty4610" to "Naughty 4610",
+        "$mainUrl/en/naughty0930" to "Naughty 0930"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val separator = if (request.data.contains("?")) "&" else "?"
         val url = "${request.data}${separator}page=$page"
 
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
 
         val home = document.select("div.grid.grid-cols-2 > div, div.thumbnail.group")
             .mapNotNull { it.toMainPageResult() }
@@ -101,10 +103,10 @@ class MissAV : MainAPI() {
             "${mainUrl}/en/search/${query}?page=$page"
         }
 
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
 
         val aramaCevap =
-            document.select("div.grid.grid-cols-2 > div").mapNotNull { it.toMainPageResult() }
+            document.select("div.grid.grid-cols-2 > div, div.thumbnail.group").mapNotNull { it.toMainPageResult() }.distinctBy { it.url }
 
 
         return newSearchResponseList(aramaCevap, hasNext = true)
@@ -113,7 +115,7 @@ class MissAV : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
+        val document = app.get(url, interceptor = cloudflareKiller).document
 
         val title = document.selectFirst("h1.text-base")?.text()?.trim() ?: return null
         val poster = fixUrlNull(document.selectFirst("meta[property='og:image']")?.attr("content"))
@@ -137,7 +139,7 @@ class MissAV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val response = app.get(data)
+        val response = app.get(data, interceptor = cloudflareKiller)
         getAndUnpack(response.text).let { unpacked ->
             val playlistId = """/([a-f0-9\-]{36})/""".toRegex().find(unpacked)?.groupValues?.get(1)
 
