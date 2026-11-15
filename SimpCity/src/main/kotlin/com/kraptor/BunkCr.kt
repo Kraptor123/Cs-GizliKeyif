@@ -50,7 +50,7 @@ open class BunkrCrExtractor : ExtractorApi() {
         pageUrl: String,
         referer: String?,
         callback: (ExtractorLink) -> Unit
-    ) {
+    ): Boolean {
         val doc = app.get(pageUrl, referer = referer).text
         val cdnUrl = Regex("""var\s+jsCDN\s*=\s*"([^"]+)"""")
             .find(doc)?.groupValues?.getOrNull(1)
@@ -76,11 +76,11 @@ open class BunkrCrExtractor : ExtractorApi() {
                         this.quality = Qualities.Unknown.value
                     }
                 )
-                return
+                return true
             }
-            return
+            return false
         }
-        signAndCallback(cdnUrl, signApiUrl, pageUrl, callback)
+        return signAndCallback(cdnUrl, signApiUrl, pageUrl, callback)
     }
 
     private suspend fun handleOldCdnUrl(
@@ -88,16 +88,11 @@ open class BunkrCrExtractor : ExtractorApi() {
         referer: String?,
         callback: (ExtractorLink) -> Unit
     ) {
-        val slug = cdnUrl.substringAfterLast("/")
-        val fPageUrl = "https://bunkr.cr/f/$slug"
-        try {
-            fetchPageAndSign(fPageUrl, referer, callback)
-        } catch (e: Exception) {
-            try {
-                val altPageUrl = "https://bunkr.ru/f/$slug"
-                fetchPageAndSign(altPageUrl, referer, callback)
-            } catch (e2: Exception) {
-            }
+        val slug = cdnUrl.substringBefore("?").substringAfterLast("/")
+        // Sayfa bir alan adinda yoksa (hata ya da link yok) siradakini dene
+        for (host in listOf("bunkr.cr", "bunkr.ru", "bunkr.si")) {
+            val ok = try { fetchPageAndSign("https://$host/f/$slug", referer, callback) } catch (e: Exception) { false }
+            if (ok) return
         }
     }
 
@@ -106,7 +101,7 @@ open class BunkrCrExtractor : ExtractorApi() {
         signApiUrl: String,
         referer: String,
         callback: (ExtractorLink) -> Unit
-    ) {
+    ): Boolean {
         val cdnUri = URI(cdnUrl)
         val path = cdnUri.path
         val signResponse = app.get(
@@ -123,7 +118,7 @@ open class BunkrCrExtractor : ExtractorApi() {
             .find(signJson)?.groupValues?.getOrNull(1)
 
         if (token.isNullOrBlank() || ex.isNullOrBlank()) {
-            return
+            return false
         }
         val signedUrl = "$cdnUrl?token=$token&ex=$ex"
         callback.invoke(
@@ -137,6 +132,7 @@ open class BunkrCrExtractor : ExtractorApi() {
                 this.quality = Qualities.Unknown.value
             }
         )
+        return true
     }
 
     private fun String.unescapeJs(): String {

@@ -137,8 +137,33 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
     }
 
     private val imageExtRegex = Regex("""\.(jpe?g|png|gif|webp)(\?[^"\s<>]*)?$""", RegexOption.IGNORE_CASE)
-    private val videoExtRegex = Regex("""\.(mp4|m4v|m3u8)(\?[^"\s<>]*)?$""", RegexOption.IGNORE_CASE)
-    private val imageCdnRegex = Regex("""/images\d*/""")
+    private val videoExtRegex = Regex("""\.(mp4|m4v|m3u8|webm|mov)(\?|#|$)""", RegexOption.IGNORE_CASE)
+    private val supportedHostRegex = Regex("""bunkr\.|(^|\.)cdn\.cr|scdn\.st|turbo\.cr|fileditchfiles\.me""")
+    private val gatedHostRegex = Regex("""(^|\.)fileditchvids\.""")
+
+    // Forum dis linkleri /redirect/?to=<url>[&m=b64] icine sariyor.
+    private fun unwrapRedirect(href: String): String {
+        if (!href.contains("/redirect/")) return href
+        val clean = href.replace("&amp;", "&")
+        val to = Regex("""[?&]to=([^&#]+)""").find(clean)?.groupValues?.get(1)
+            ?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: return href
+        val target = if (Regex("""[?&]m=b64(&|$)""").containsMatchIn(clean)) {
+            runCatching { base64Decode(to.replace('-', '+').replace('_', '/')) }.getOrNull() ?: return href
+        } else to
+        return if (target.startsWith("http")) target else href
+    }
+
+    private fun isVideoUrl(url: String): Boolean {
+        val host = Regex("""^https?://([^/?#]+)""").find(url)?.groupValues?.get(1) ?: return false
+        if (gatedHostRegex.containsMatchIn(host)) return false
+        val path = url.substringAfter(host).substringBefore("?").substringBefore("#")
+        if (videoExtRegex.containsMatchIn(path)) return true
+        if (!supportedHostRegex.containsMatchIn(host)) return false
+        if (host.contains("bunkr.")) {
+            return path.startsWith("/f/") || path.startsWith("/v/") || Regex("""^/[^/]+$""").matches(path)
+        }
+        return true
+    }
 
     private fun extractImages(doc: org.jsoup.nodes.Document): List<String> {
         val rawUrls = mutableListOf<String>()
@@ -163,16 +188,15 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
     }
 
     private fun extractVideos(doc: org.jsoup.nodes.Document): List<String> {
-        val directVideos = videoExtRegex.findAll(doc.toString())
-            .map { it.value }
-            .distinctBy { it.substringBefore("?") }
-            .filter { vUrl -> !imageCdnRegex.containsMatchIn(vUrl) }
-            .toList()
+        val directVideos = doc.select(".bbWrapper a[href], .bbWrapper iframe[src], .bbWrapper video[src], .bbWrapper source[src]")
+            .map { el -> unwrapRedirect(el.attr("href").ifBlank { el.attr("src") }.trim()) }
+            .map { if (it.startsWith("//")) "https:$it" else it.replace("&amp;", "&") }
+            .filter { isVideoUrl(it) }
 
         val iframeVideos = doc.select("iframe.saint-iframe")
             .mapNotNull { it.attr("src").ifBlank { null } }
 
-        return iframeVideos + directVideos
+        return (iframeVideos + directVideos).distinctBy { it.substringBefore("?") }
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -232,7 +256,10 @@ class SimpCity(private val plugin: SimpCityPlugin) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        loadExtractor(data, subtitleCallback, callback)
-        return true
+        if (videoExtRegex.containsMatchIn(data.substringBefore("?"))) {
+            callback(newExtractorLink(name, "Direct", data, INFER_TYPE) { this.referer = "$mainUrl/" })
+            return true
+        }
+        return loadExtractor(data, "$mainUrl/", subtitleCallback, callback)
     }
 }

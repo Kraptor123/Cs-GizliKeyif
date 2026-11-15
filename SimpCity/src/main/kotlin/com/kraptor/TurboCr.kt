@@ -20,7 +20,7 @@ class TurboCr : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         val videoId = Regex("""turbo\.cr/(?:v|embed)/([a-zA-Z0-9_-]+)""")
-            .find(url)?.groupValues?.getOrNull(1)
+            .find(url)?.groupValues?.getOrNull(1) ?: return
 
         val response = app.get(
             "https://turbo.cr/api/sign?v=$videoId",
@@ -36,12 +36,13 @@ class TurboCr : ExtractorApi() {
             ?.replace("\\u0026", "&")
             ?.replace("\\/", "/")
             ?.replace("&amp;", "&")
+            ?: return
 
         callback.invoke(
             newExtractorLink(
                 source = "TurboCr",
                 name = "TurboCr",
-                url = signedUrl.toString(),
+                url = signedUrl,
                 type = INFER_TYPE
             ) {
                 this.referer = "https://turbo.cr/"
