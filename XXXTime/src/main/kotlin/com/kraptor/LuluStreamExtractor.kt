@@ -76,3 +76,13 @@ class LuluPvp : LuluBase() {
     override val name = "LuluPvp"
     override val mainUrl = "https://lulupvp.com"
 }
+
+class Lulu0 : LuluBase() {
+    override val name = "LuluStream"
+    override val mainUrl = "https://lulu0.ovh"
+}
+
+class StreamHiHi : LuluBase() {
+    override val name = "StreamHiHi"
+    override val mainUrl = "https://streamhihi.com"
+}

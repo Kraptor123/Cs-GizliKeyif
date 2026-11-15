@@ -14,5 +14,8 @@ class XXXTimePlugin: Plugin() {
         registerExtractorAPI(LuluVid())
         registerExtractorAPI(LuluVdo())
         registerExtractorAPI(LuluPvp())
+        registerExtractorAPI(Lulu0())
+        registerExtractorAPI(StreamHiHi())
+        registerExtractorAPI(DoodPlaymogo())
     }
 }
