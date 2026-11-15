@@ -75,9 +75,9 @@ class RouVideo : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url = if (page <= 1) {
-            "$mainUrl/search?q=$query"
+            "$mainUrl/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}"
         } else {
-            "$mainUrl/search?q=$query&page=$page"
+            "$mainUrl/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&page=$page"
         }
 
         val document = app.get(url).document
@@ -116,30 +116,8 @@ class RouVideo : MainAPI() {
             it.text().removePrefix("#").trim().ifEmpty { null }
         }
 
-        val recommendations = mutableListOf<SearchResponse>()
-        val scriptElements = document.select("script")
-        for (script in scriptElements) {
-            val scriptData = script.data()
-            if (scriptData.contains("\"coverImageUrl\"") && scriptData.contains("\"name\"")) {
-                val matches =
-                    Regex("""\{"id":"([^"]+)".*?"name":"([^"]+)".*?"coverImageUrl":"([^"]+)"""").findAll(
-                        scriptData
-                    )
-                for (match in matches) {
-                    val recId = match.groupValues[1]
-                    val recTitle = match.groupValues[2]
-                    val recPoster = fixUrlNull(match.groupValues[3].replace("\\/", "/"))
-                    val recHref = fixUrlNull("/v/$recId") ?: continue
-
-                    recommendations.add(
-                        newMovieSearchResponse(recTitle, recHref, TvType.NSFW) {
-                            this.posterUrl = recPoster
-                        }
-                    )
-                }
-                if (recommendations.isNotEmpty()) break
-            }
-        }
+        // related list is server-rendered in <aside>; the serialized state no longer quotes its keys
+        val recommendations = document.select("aside a[href^='/v/']").mapNotNull { it.toSearchResult() }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = posterUrl
@@ -157,18 +135,22 @@ class RouVideo : MainAPI() {
     ): Boolean {
         val html = app.get(data).text
 
-        val ev = Regex("""ev:(?:\$\w+\[\d+]=)?\{d:"([^"]+)",k:(\d+)\}""").find(html) ?: return false
-        val encrypted = ev.groupValues[1]
-        val key = ev.groupValues[2].toInt()
+        val ev = Regex("""ev:(?:\$\w+\[\d+]=)?\{d:"([^"]+)",k:(\d+)\}""").find(html)
+        val videoUrlRegex = Regex(""""videoUrl":"([^"]+)"""")
 
-        val decoded = try {
-            val bytes = Base64.decode(encrypted, Base64.DEFAULT)
-            String(bytes.map { ((it.toInt() and 0xFF) - key).toByte() }.toByteArray(), Charsets.ISO_8859_1)
-        } catch (_: Throwable) {
-            return false
+        val decoded = ev?.let {
+            try {
+                val key = it.groupValues[2].toInt()
+                val bytes = Base64.decode(it.groupValues[1], Base64.DEFAULT)
+                String(bytes.map { b -> ((b.toInt() and 0xFF) - key).toByte() }.toByteArray(), Charsets.ISO_8859_1)
+            } catch (_: Throwable) {
+                null
+            }
         }
 
-        val videoUrl = Regex(""""videoUrl":"([^"]+)"""").find(decoded)?.groupValues?.get(1) ?: return false
+        // videoUrl is not always inside the ev blob
+        val videoUrl = decoded?.let { videoUrlRegex.find(it)?.groupValues?.get(1) }
+            ?: videoUrlRegex.find(html)?.groupValues?.get(1) ?: return false
 
         val signedUrl = app.get(
             fixUrl(videoUrl),
