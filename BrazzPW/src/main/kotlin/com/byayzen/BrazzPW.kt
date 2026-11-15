@@ -101,7 +101,8 @@ class BrazzPW : MainAPI() {
         val m3u8Url   = when {
             m3u8Path.startsWith("http") -> m3u8Path
             m3u8Path.startsWith("/")    -> "$mainUrl$m3u8Path"
-            else                        -> "${playerUrl.substringBeforeLast("/")}/$m3u8Path"
+            // p= sorgusu base64 ve '/' icerebilir; son '/'dan kesmek yerine URI ile coz
+            else                        -> java.net.URI(playerUrl).resolve(m3u8Path).toString()
         }
 
         callback.invoke(
