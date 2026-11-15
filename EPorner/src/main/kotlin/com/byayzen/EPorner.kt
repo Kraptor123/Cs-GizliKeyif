@@ -172,7 +172,7 @@ class EPorner : MainAPI() {
                         name = name,
                         source = "${name}:HLS",
                         url = hlsmatch.groupValues[1],
-                        type = ExtractorLinkType.VIDEO
+                        type = ExtractorLinkType.M3U8
                     ) {
                         this.referer = mainUrl
                         this.quality = Qualities.P1080.value
