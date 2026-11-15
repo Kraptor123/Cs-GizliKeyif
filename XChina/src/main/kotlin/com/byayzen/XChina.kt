@@ -19,6 +19,14 @@ class XChina : MainAPI() {
     // Site Cloudflare arkasinda; challenge cikarsa WebView ile cozulur
     private val cloudflareKiller by lazy { CloudflareKiller() }
 
+    // Kisa UA: tam tarayici UA'si "blocked" sayfasi aliyor, bununla challenge cikiyor ve WebView cozuyor (mypgallery ile ayni)
+    private val pageHeaders = mapOf(
+        "User-Agent"      to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer"         to mainUrl,
+        "Accept"          to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language" to "zh-CN,zh;q=0.9,en;q=0.8"
+    )
+
     override val mainPage = mainPageOf(
         "$mainUrl/video-series/4"  to "Censored JAV",
         "$mainUrl/video-series/5"  to "Uncensored JAV",
@@ -34,7 +42,7 @@ class XChina : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url      = if (page <= 1) request.data else "${request.data.trimEnd('/')}/$page"
-        val document = app.get(url, interceptor = cloudflareKiller).document
+        val document = app.get(url, headers = pageHeaders, interceptor = cloudflareKiller).document
         val home     = document.select("div.grid a[href^='/video/'].group.block").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
@@ -63,13 +71,13 @@ class XChina : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val url      = if (page <= 1) "$mainUrl/search?type=video&q=$query" else "$mainUrl/search?type=video&q=$query&page=$page"
-        val document = app.get(url, interceptor = cloudflareKiller).document
+        val document = app.get(url, headers = pageHeaders, interceptor = cloudflareKiller).document
         val results  = document.select("div.grid a[href^='/video/'].group.block").mapNotNull { it.toSearchResult() }
         return newSearchResponseList(results, results.isNotEmpty())
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val document        = app.get(url, interceptor = cloudflareKiller).document
+        val document        = app.get(url, headers = pageHeaders, interceptor = cloudflareKiller).document
         val title           = document.selectFirst("h1")?.ownText()?.trim()?.ifEmpty { null }
             ?: document.selectFirst("h1")?.text()?.trim()?.ifEmpty { null }
             ?: return null
@@ -92,9 +100,10 @@ class XChina : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document  = app.get(data, interceptor = cloudflareKiller).document
-        val videoDiv  = document.selectFirst("div#video-player") ?: return false
-        val dataSrc   = videoDiv.attr("data-src").ifEmpty { return false }
+        val document  = app.get(data, headers = pageHeaders, interceptor = cloudflareKiller).document
+        val dataSrc   = document.selectFirst("div#video-player")?.attr("data-src")?.ifEmpty { null }
+            ?: Regex("""/hls/[^"\s]+?\.m3u8""").find(document.html())?.value
+            ?: return false
         val streamUrl = fixUrl(dataSrc)
 
         callback.invoke(
@@ -105,10 +114,14 @@ class XChina : MainAPI() {
                 type    = ExtractorLinkType.M3U8
             ) {
                 this.referer = "$mainUrl/"
+                // cf_clearance cozen WebView UA'sina bagli; varsa onu kullan, yoksa sayfa UA'si
+                val cfHeaders = cloudflareKiller.getCookieHeaders(mainUrl).associate { (k, v) -> k to v }
+                val ua = if (cfHeaders.keys.any { it.equals("User-Agent", true) }) emptyMap()
+                         else mapOf("User-Agent" to pageHeaders.getValue("User-Agent"))
                 this.headers = mapOf(
-                    "Origin"  to mainUrl,
-                    "Referer" to "$mainUrl/"
-                ) + cloudflareKiller.getCookieHeaders(mainUrl).associate { (k, v) -> k to v }
+                    "Origin"     to mainUrl,
+                    "Referer"    to "$mainUrl/"
+                ) + ua + cfHeaders
             }
         )
         return true
