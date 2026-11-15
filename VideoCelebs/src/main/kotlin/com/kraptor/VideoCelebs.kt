@@ -84,9 +84,15 @@ class VideoCelebs : MainAPI() {
         val score =
             document.selectFirst("div.rating span.voters")?.text()?.trim()?.replace("%", "")?.substringBefore(" ")
                 ?.trim()
+        // span.runtime is gone on current pages; they carry <meta itemprop="duration" content="T15M49S">
         val duration = document.selectFirst("span.runtime")?.text()?.split(" ")?.first()?.trim()?.toIntOrNull()
+            ?: document.selectFirst("meta[itemprop=duration]")?.attr("content")?.let { iso ->
+                val h = Regex("""(\d+)H""").find(iso)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                val m = Regex("""(\d+)M""").find(iso)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                (h * 60 + m).takeIf { it > 0 }
+            }
         val recommendations = document.select("div.pupular_video ul.wpp-list li").mapNotNull { it.toRecommendationResult() }
-        val actors = document.select("div.entry-utility strong:contains(Actress) + a").map { Actor(it.text()) }
+        val actors = document.select("div.entry-utility a[href*=/actress/], div.entry-utility a[href*=/celebrity/]").map { Actor(it.text()) }
         val trailer = Regex("""embed\/(.*)\?rel""").find(document.html())?.groupValues?.get(1)
             ?.let { "https://www.youtube.com/embed/$it" }
 
