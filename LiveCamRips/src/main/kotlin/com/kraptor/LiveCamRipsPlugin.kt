@@ -11,6 +11,8 @@ class LiveCamRipsPlugin: Plugin() {
         registerMainAPI(LiveCamRips())
         registerExtractorAPI(Xpornium())
         registerExtractorAPI(Abstream())
+        registerExtractorAPI(UqloadVc())
+        registerExtractorAPI(VidaraTo())
         registerExtractorAPI(MixDrop())
         registerExtractorAPI(VidStack())
         registerExtractorAPI(LiveCamR())
