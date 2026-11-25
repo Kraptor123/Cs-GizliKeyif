@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
 class TurkHub : MainAPI() {
-    override var mainUrl              = "https://turkhub6s.lat"
+    override var mainUrl              = "https://turkhub6c.lat"
     override var name                 = "TurkHub"
     override val hasMainPage          = true
     override var lang                 = "tr"
